@@ -1,0 +1,11 @@
+# OASIS Files
+_build
+*.native
+*.byte
+*.docdir
+
+setup.data
+setup.log
+
+# Temporaries
+_logs
