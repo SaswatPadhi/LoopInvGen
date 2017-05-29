@@ -12,7 +12,7 @@ type proc_info = {
 
 let create () : proc_info =
   let open Process_info in
-  let pi = create_process "./dep/z3.bin" ["-in"] in
+  let pi = create_process "./_dep/z3.bin" ["-in"] in
     Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid))) ;
     {
       pid    = pi.pid ;

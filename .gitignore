@@ -8,4 +8,5 @@ setup.data
 setup.log
 
 # Temporaries
+_dep
 _logs
