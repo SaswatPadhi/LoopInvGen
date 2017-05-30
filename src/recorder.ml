@@ -10,14 +10,16 @@ let get_out_channel = function
   | Some filename -> Out_channel.create filename
 
 let main size forks seeds outfile metafile do_log do_names filename () =
-  (if do_log then Log.enable() else ()) ;
+  (if do_log then Log.enable ~msg:"RECORDER" () else ()) ;
   let open Sygus in
   let meta_chan = get_out_channel metafile in
   let s = load (get_in_channel filename)
-  in output_string meta_chan "Detected constants:\n  "
-   ; output_string meta_chan (Types.serialize_values s.consts) ; newline meta_chan
-   ; output_string meta_chan "Detected variables:\n"
-   ; output_string meta_chan (vars_to_string s) ; newline meta_chan
+  in output_string meta_chan ("Detected constants:\n  "
+                             ^ (Types.serialize_values s.consts) ^ "\n\n")
+   ; output_string meta_chan ("Variables in invariant:\n"
+                             ^ (vars_to_string ~inv_only:true s) ^ "\n\n")
+   ; output_string meta_chan ("Detected variables:\n"
+                             ^ (vars_to_string s) ^ "\n\n")
    ; if size < 1 then () else begin
        let out_chan = get_out_channel outfile in
        let seeds = (if seeds = [] then [`Nondeterministic]
@@ -46,7 +48,7 @@ let cmd =
       +> flag "-o" (optional string)               ~doc:"FILENAME output file for states, defaults to stdout"
       +> flag "-m" (optional string)               ~doc:"FILENAME output file for metadata, defaults to stdout"
       +> flag "-l" (no_arg)                        ~doc:"enable logging"
-      +> flag "-n" (no_arg)                        ~doc:"print variable names"
+      +> flag "-n" (no_arg)                        ~doc:"print variable names next to their values"
       +> anon (maybe_with_default "-" ("filename" %: file))
     )
     main

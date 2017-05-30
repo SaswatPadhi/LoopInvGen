@@ -3,14 +3,16 @@ open Core.Unix
 open Exceptions
 open Sexplib
 
-type proc_info = {
+type t = {
   pid    : Pid.t ;
   stdin  : Out_channel.t ;
   stdout : In_channel.t ;
   stderr : In_channel.t ;
 }
 
-let create () : proc_info =
+let query_for_model = [ "(check-sat)" ; "(get-model)" ]
+
+let create () : t =
   let open Process_info in
   let pi = create_process "./_dep/z3.bin" ["-in"] in
     Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid))) ;
@@ -21,42 +23,44 @@ let create () : proc_info =
       stderr = in_channel_of_descr pi.stdout ;
     }
 
-let close pi =
-  Out_channel.close pi.stdin ; ignore (waitpid pi.pid) ;
-  Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string pi.pid)))
+let close z3 =
+  Out_channel.close z3.stdin ; ignore (waitpid z3.pid) ;
+  Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.pid)))
 
-let flush_and_collect (pi : proc_info) : string =
-  Out_channel.output_string pi.stdin "()\n" ; Out_channel.flush pi.stdin ;
-  let read_string = ref "" in
+let flush_and_collect (z3 : t) : string =
+  Out_channel.output_string z3.stdin "()\n" ; Out_channel.flush z3.stdin ;
+  let read_lines = ref "" in
   let error_line l = ((String.prefix l 12) = "(error \"line" &&
                       (String.suffix l 36) = ": invalid command, symbol expected\")") in
   let rec read_line () : unit =
-    match In_channel.input_line pi.stdout with
-    | None -> raise (Internal_Exn ("Unexpected termination of z3 channels."))
-    | Some l when error_line l -> ()
-    | Some l -> read_string := (!read_string) ^ l ; read_line ()
-  in read_line () ; !read_string
+    let l = Option.value_exn (In_channel.input_line z3.stdout)
+    in if error_line l then () else (read_lines := (!read_lines) ^ l ; read_line ())
+  in read_line () ; read_lines := String.strip !read_lines
+   ; Log.debug (lazy ("Result:\n  " ^ Sexp.(to_string_hum (of_string (!read_lines)))))
+   ; (!read_lines)
 
-let run_queries ?local:(local=true) (pi : proc_info)
+let run_queries ?local:(local=true) (z3 : t)
                 (database : string list) (queries : string list) : string list =
+  Log.debug (lazy ("New" ^ (if local then " (local) " else " ") ^ "Z3 invocation:\n  " ^
+                   (String.concat ~sep:"\n  " (database @ queries)))) ;
   (*Out_channel.output_lines Out_channel.stdout queries ;*)
   if queries = []
   then begin
     if local then () else
-      Out_channel.output_lines pi.stdin database ;
-      Out_channel.flush pi.stdin ; [""]
+      Out_channel.output_lines z3.stdin database ;
+      Out_channel.flush z3.stdin ; []
     end
   else begin
     let results = ref [] in
-      (if local then Out_channel.output_string pi.stdin "(push)\n" else ()) ;
-      Out_channel.output_lines pi.stdin database ;
+      (if local then Out_channel.output_string z3.stdin "(push)\n" else ()) ;
+      Out_channel.output_lines z3.stdin database ;
       List.iter queries ~f:(fun q ->
-        Out_channel.output_string pi.stdin q ;
-        Out_channel.newline pi.stdin ;
-        results := (flush_and_collect pi) :: (!results)
+        Out_channel.output_string z3.stdin q ;
+        Out_channel.newline z3.stdin ;
+        results := (flush_and_collect z3) :: (!results)
       ) ;
-      (if local then Out_channel.output_string pi.stdin "(pop)\n" else ()) ;
-      Out_channel.flush pi.stdin ; List.rev (!results)
+      (if local then Out_channel.output_string z3.stdin "(pop)\n" else ()) ;
+      Out_channel.flush z3.stdin ; List.rev (!results)
   end
 
 let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
@@ -66,20 +70,29 @@ let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
              | Atom v -> v
              | List([(Atom "-") ; (Atom v)]) -> "-" ^ v
              | _ -> raise unexpected_exn
-  in match Types.deserialize_value vstr with
-     | None -> raise unexpected_exn
-     | Some v -> v
+  in Option.value_exn (Types.deserialize_value vstr)
 
-let z3_result_to_values (result : string) : (string * Types.value) list =
+let z3_result_to_values (result : string list) : (string * Types.value) list option =
   let open Sexp in
-  let unexpected_exn = Internal_Exn ("Unexpected z3 model: " ^ result) in
-  match (Sexp.of_string result) with
-  | List(Atom("model") :: varexps)
-    -> let open List in
-       map varexps ~f:(function
-                       | List(l) -> begin match (nth_exn l 1) , (nth_exn l 4) with
-                                     | (Atom n, v) -> (n, (z3_sexp_to_value v))
-                                     | _ -> raise unexpected_exn
-                                     end
-                       | _ -> raise unexpected_exn)
-  | _ -> raise unexpected_exn
+  match result with
+  | [ "sat" ; result ]
+    -> let unexpected_exn = Internal_Exn ("Unexpected z3 model: " ^ result) in
+       begin match Sexp.parse result with
+        | Done (List((Atom model) :: varexps), _)
+          -> let open List in
+             Some (map varexps ~f:(function
+                                   | List(l) -> begin match (nth_exn l 1) , (nth_exn l 4) with
+                                                 | (Atom n, v) -> (n, (z3_sexp_to_value v))
+                                                 | _ -> raise unexpected_exn
+                                                 end
+                                   | _ -> raise unexpected_exn))
+        | _ -> raise unexpected_exn
+       end
+  | _ -> None
+
+let implication_counter_example (z3 : t) (a : string) (b : string)
+                                : (string * Types.value) list option =
+  z3_result_to_values (
+    run_queries z3 [ ("(assert (" ^ a ^ "))")
+                   ; ("(assert (not (" ^ b ^ "))") ]
+                query_for_model)

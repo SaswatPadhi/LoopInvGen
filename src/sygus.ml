@@ -23,8 +23,8 @@ type sygus = {
   consts : value list ;
 }
 
-let vars_to_string ?sep:(sep="\t") (s : sygus) : string =
-  String.concat ~sep (List.map ~f:fst s.state_vars)
+let vars_to_string ?sep:(sep="\t") ?inv_only:(inv=true) (s : sygus) : string =
+  String.concat ~sep (List.map ~f:fst (if inv then s.inv_vars else s.state_vars))
 
 let state_to_string ?sep:(sep="\t") ?names:(names=true)
                     (s : sygus) (state : value list) : string =
@@ -125,7 +125,7 @@ let load chan : sygus =
           -> pre_name := pref ; trans_name := transf ; post_name := postf
         | _ -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp)))
       )
-      (input_sexps chan)
+      (input_rev_sexps chan)
   ; let state_var_names = List.map ~f:fst (!state_vars)
     in consts := List.dedup (!consts) ;
        Log.debug (lazy ("Variables in state: " ^ (String.concat ~sep:", " state_var_names))) ;

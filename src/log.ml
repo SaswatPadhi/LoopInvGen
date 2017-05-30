@@ -1,6 +1,6 @@
 open Core_extended.Logger
 
-let logger = create_default "log"
+let logger = create_default "_logs/SyGuSPIE.log"
 let () = clear_filter logger
 
 let enabled = ref false
@@ -12,6 +12,7 @@ let info  lstr = if !enabled then log logger (`Info  , (Lazy.force lstr)) else (
 let debug lstr = if !enabled then log logger (`Debug , (Lazy.force lstr)) else ()
 
 let disable () = enabled := false
-let enable ()  = enabled := true
-               ; info (lazy "")
-               ; info (lazy "========================================")
+let enable ?msg:(msg="") () =
+  enabled := true ;
+  info (lazy "") ;
+  info (lazy (msg ^ "========================================"))
