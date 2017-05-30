@@ -2,12 +2,12 @@ open Core
 open Core.Unix
 open Exceptions
 open Sexplib.Sexp
-open Sygus
-open Test_gen
+open SyGuS
+open GenTests
 open Types
 
-let setup (s : sygus) (z3 : Zproc.t) : unit =
-  ignore (Zproc.run_queries ~local:false z3 (
+let setup (s : sygus) (z3 : ZProc.t) : unit =
+  ignore (ZProc.run_queries ~local:false z3 (
     ("(set-logic " ^ s.logic ^ ")") ::
     (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^ (string_of_typ t) ^ ")"))
               (s.state_vars @ s.trans_vars))) [])
@@ -19,16 +19,16 @@ let filter_state ?trans:(trans=true) (model : (string * Types.value) list)
                                                         | Some n -> Some (n, v))
   else List.filter model ~f:(fun (n, _) -> String.suffix n 1 <> "!")
 
-let transition (s : sygus) (z3 : Zproc.t) (vals : value list) : value list option =
-  let results = Zproc.run_queries z3 (
+let transition (s : sygus) (z3 : ZProc.t) (vals : value list) : value list option =
+  let results = ZProc.run_queries z3 (
     (* assert the transition *)
     ("(assert " ^ (Sexp.to_string_hum s.trans.sexp) ^ ")") ::
     (* assert all known values *)
     (List.map2_exn ~f:(fun d (v,_) -> ("(assert (= " ^ v ^ " " ^ (serialize_value d) ^ "))"))
                    vals s.state_vars)
-  ) Zproc.query_for_model
+  ) ZProc.query_for_model
   in let open List in
-     match Zproc.z3_result_to_values results with
+     match ZProc.z3_result_to_values results with
      | None -> None
      | Some model
        -> let model = filter_state ~trans:true model
@@ -37,12 +37,12 @@ let transition (s : sygus) (z3 : Zproc.t) (vals : value list) : value list optio
                                   Option.value (Assoc.find model var ~equal:(fun a b -> a = b))
                                                ~default: v))
 
-let pre_state_gen (s : sygus) (z3 : Zproc.t) : value list Quickcheck.Generator.t =
-  let results = Zproc.run_queries z3
+let pre_state_gen (s : sygus) (z3 : ZProc.t) : value list Quickcheck.Generator.t =
+  let results = ZProc.run_queries z3
                                   ["(assert " ^ (Sexp.to_string_hum s.pre.sexp) ^ ")"]
-                                  Zproc.query_for_model
+                                  ZProc.query_for_model
   in let open List in
-     match Zproc.z3_result_to_values results with
+     match ZProc.z3_result_to_values results with
      | None -> raise (False_Pre_Exn (Sexp.to_string_hum s.pre.sexp))
      | Some m
        -> let model = filter ~f:(fun (v,_) -> mem ~equal:(=) s.pre.args v) m in
@@ -53,7 +53,7 @@ let pre_state_gen (s : sygus) (z3 : Zproc.t) : value list Quickcheck.Generator.t
                                                 | None -> generate (typ_gen t) ~size random
                                                 | Some (_,(_,d)) -> d))
 
-let simulate_from (s : sygus) (z3 : Zproc.t) (root : value list)
+let simulate_from (s : sygus) (z3 : ZProc.t) (root : value list)
                   : value list list Quickcheck.Generator.t =
   let open Quickcheck.Generator in
   let rec step root ~size random =
@@ -66,7 +66,7 @@ let simulate_from (s : sygus) (z3 : Zproc.t) (root : value list)
   in Log.debug (lazy ("New execution: "))
    ; create (step root)
 
-let simulate (s : sygus) (z3 : Zproc.t) : value list list Quickcheck.Generator.t =
+let simulate (s : sygus) (z3 : ZProc.t) : value list list Quickcheck.Generator.t =
   let open Quickcheck.Generator in
     (* Picking a random state, and then checking pre:
         (typ_list_gen (List.map ~f:snd (s.state_vars)) (fun l -> s.pre.func l = VBool true))
@@ -74,7 +74,7 @@ let simulate (s : sygus) (z3 : Zproc.t) : value list list Quickcheck.Generator.t
     (pre_state_gen s z3) >>= (simulate_from s z3)
 
 let run ~size ~seed (s : sygus) : value list list =
-  let z3 = Zproc.create ()
+  let z3 = ZProc.create ()
   in setup s z3
    ; let tests = Quickcheck.random_value ~size ~seed (simulate s z3)
-     in Zproc.close z3 ; tests
+     in ZProc.close z3 ; tests

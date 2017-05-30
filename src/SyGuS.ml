@@ -3,6 +3,7 @@ open Core
 open Exceptions
 open Sexplib.Sexp
 open Types
+open Utils
 
 type sygusF = {
   name : string ;
@@ -24,13 +25,13 @@ type sygus = {
 }
 
 let vars_to_string ?sep:(sep="\t") ?inv_only:(inv=true) (s : sygus) : string =
-  String.concat ~sep (List.map ~f:fst (if inv then s.inv_vars else s.state_vars))
+  List.to_string_map ~sep ~f:fst (if inv then s.inv_vars else s.state_vars)
 
 let state_to_string ?sep:(sep="\t") ?names:(names=true)
                     (s : sygus) (state : value list) : string =
-  String.concat ~sep (List.map2_exn state s.state_vars
-                                    ~f:(fun d (v, _) ->
-                                          (if names then (v ^ ": ") else "") ^ (serialize_value d)))
+  List.to_string_map2 ~sep state s.state_vars
+                       ~f:(fun d (v, _) -> (if names then (v ^ ": ") else "")
+                                         ^ (serialize_value d))
 
 (* TODO: Implement using z3's `ctx-solver-simplify` *)
 let simplify_sexp_using_z3 (_ : var list) (exp : Sexp.t) : Sexp.t = exp
@@ -61,7 +62,7 @@ let rec sexp_to_func (vars : string list) (exp : Sexp.t) : (value list -> value)
                   end
        end
   | List((Atom op) :: args)
-    -> let all_components = Th_bool.components @ Th_lia.components in
+    -> let all_components = Th_Bool.components @ Th_LIA.components in
        let fargs = map ~f:(sexp_to_func vars) args in
        let consts = concat_map ~f:snd fargs in
        let fargs = map ~f:fst fargs in
@@ -128,9 +129,12 @@ let load chan : sygus =
       (input_rev_sexps chan)
   ; let state_var_names = List.map ~f:fst (!state_vars)
     in consts := List.dedup (!consts) ;
-       Log.debug (lazy ("Variables in state: " ^ (String.concat ~sep:", " state_var_names))) ;
-       Log.debug (lazy ("Variables in invariant: " ^ (String.concat ~sep:", " (List.map ~f:fst (!inv_vars))))) ;
-       Log.debug (lazy ("Detected Constants: " ^ (serialize_values ~sep:", " (!consts)))) ;
+       Log.debug (lazy ("Variables in state: "
+                       ^ (String.concat ~sep:", " state_var_names))) ;
+       Log.debug (lazy ("Variables in invariant: "
+                       ^ (List.to_string_map ~sep:", " ~f:fst (!inv_vars)))) ;
+       Log.debug (lazy ("Detected Constants: "
+                       ^ (serialize_values ~sep:", " (!consts)))) ;
       {
         logic = !logic ;
         inv_vars = !inv_vars ;

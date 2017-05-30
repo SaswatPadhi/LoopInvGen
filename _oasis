@@ -1,11 +1,12 @@
-Name: SyGuSPIE
-Version: 0.1
-Synopsis: A library about Foo and Bar.
+Name: SyGuS.PIE
+Version: 0.6b
+Synopsis: A tool for synthesizing loop invariants.
 Authors: Saswat Padhi <padhi@cs.ucla.edu>
 License: LGPL with OCaml linking exception
 
-Description: FooBar allows to combine foo and bar efficiently. It also allows to interface with baz.
-Homepage: http://foobar.org
+Description: SyGuS.PIE uses the PIE technique for learning sufficient loop
+             invariants for benchmarks in SyGuS-INV format.
+Homepage: https://github.com/SaswatPadhi/SyGuS.PIE
 
 OASISFormat: 0.4
 BuildTools: ocamlbuild
@@ -13,6 +14,12 @@ Plugins: META (0.4), DevFiles (0.4)
 
 Executable "recorder"
   Path: src
-  MainIs: recorder.ml
+  MainIs: Recorder.ml
   CompiledObject: best
   BuildDepends: core, core_extended, threads
+
+Executable "synthesizer"
+  Path: src
+  MainIs: Synthesizer.ml
+  CompiledObject: best
+  BuildDepends: batteries, core, core_extended, threads

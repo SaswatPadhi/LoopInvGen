@@ -11,7 +11,7 @@ let get_out_channel = function
 
 let main size forks seeds outfile metafile do_log do_names filename () =
   (if do_log then Log.enable ~msg:"RECORDER" () else ()) ;
-  let open Sygus in
+  let open SyGuS in
   let meta_chan = get_out_channel metafile in
   let s = load (get_in_channel filename)
   in output_string meta_chan ("Detected constants:\n  "
