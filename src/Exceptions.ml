@@ -16,3 +16,7 @@ exception ClauseEncodingError
 (* a postcondition should raise this exception to indicate
    that the given test input should be ignored *)
 exception IgnoreTest
+
+(* a postcondition should raise this exception to indicate
+   that the given test input should be ignored *)
+exception AmbiguousTest

@@ -6,9 +6,10 @@ open Types
 exception Success
 
 type task = {
-  target : component;
-  inputs : Vector.t list;
-  components : component list }
+  target : component ;
+  inputs : Vector.t list ;
+  components : component list
+}
 
 let rec divide f arity target acc =
   if arity = 0 then
@@ -192,6 +193,6 @@ let solve_impl ?ast:(ast=false) task consts =
     all_solutions := [] ; synth_candidates := 0;
   (try solve_impl ~ast:ast task consts with Success -> ());
   if not (!quiet) then (print_endline "Synthesis Result: "; List.iter (fun v -> print_endline (Vector.string v)) all_solutions.contents) ;
-  List.rev_map (fun (((x,y),_),_) -> (x, (fun trans data -> y (trans data)))) all_solutions.contents
+  List.rev_map (fun (((x,y),_),_) -> (x, y)) all_solutions.contents
 
   let default_components = Th_Bool.components @ Th_LIA.components

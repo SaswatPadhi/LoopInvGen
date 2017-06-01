@@ -3,6 +3,8 @@ open Components
 open Escher_Core
 open Types
 
+let _unsupported_ = (fun l -> " **UNSUPPORTED** ")
+
 let apply_component (c : component) (args : Vector.t list) =
   if (c.name = "not" && (match (snd (fst (List.hd args)))
                          with Node ("not", _) -> true | _ -> false))

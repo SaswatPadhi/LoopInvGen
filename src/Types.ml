@@ -31,8 +31,11 @@ let typeof (v : value) : typ =
   | VBool(_)    -> TBool
   | _           -> TUnknown
 
-let of_int i = VInt(i)
-let of_bool b = VBool(b)
+let of_int i = (VInt i)
+let of_bool b = (VBool b)
+
+let vtrue = VBool true
+let vfalse = VBool false
 
 let from_int = function | VInt(i) -> i | _ -> raise (Internal_Exn "")
 let from_bool = function | VBool(b) -> b | _ -> raise (Internal_Exn "")
@@ -46,6 +49,13 @@ let deserialize_value (s : string) : value option =
     Some (VInt (int_of_string s))
   with Failure _ ->
     None
+
+let deserialize_value_to ~(t : typ) (s : string) : value option =
+  if t = TInt then
+    try Some (VInt (int_of_string s)) with _ -> None
+  else if t = TBool then
+    try Some (VBool (bool_of_string s)) with _ -> None
+  else None
 
 let serialize_value (v : value) : string =
   match v with

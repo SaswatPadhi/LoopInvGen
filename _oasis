@@ -32,7 +32,7 @@ Executable "test"
   Install:          false
   MainIs:           Test.ml
   CompiledObject:   best
-  BuildDepends:     alcotest, core, core_extended, threads
+  BuildDepends:     alcotest, batteries, core, core_extended, threads
 
 Test "test"
   Run$:             flag(tests)
