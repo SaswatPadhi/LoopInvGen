@@ -7,7 +7,7 @@ open GenTests
 open Types
 
 let setup (s : sygus) (z3 : ZProc.t) : unit =
-  ignore (ZProc.run_queries ~local:false z3 (
+  ignore (ZProc.run_queries ~local:false z3 ~db:(
     ("(set-logic " ^ s.logic ^ ")") ::
     (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^ (string_of_typ t) ^ ")"))
               (s.state_vars @ s.trans_vars))) [])
@@ -20,7 +20,7 @@ let filter_state ?trans:(trans=true) (model : (string * Types.value) list)
   else List.filter model ~f:(fun (n, _) -> String.suffix n 1 <> "!")
 
 let transition (s : sygus) (z3 : ZProc.t) (vals : value list) : value list option =
-  let results = ZProc.run_queries z3 (
+  let results = ZProc.run_queries z3 ~db:(
     (* assert the transition *)
     ("(assert " ^ (Sexp.to_string_hum s.trans.sexp) ^ ")") ::
     (* assert all known values *)
@@ -38,9 +38,10 @@ let transition (s : sygus) (z3 : ZProc.t) (vals : value list) : value list optio
                                                ~default: v))
 
 let pre_state_gen (s : sygus) (z3 : ZProc.t) : value list Quickcheck.Generator.t =
-  let results = ZProc.run_queries z3
-                                  ["(assert " ^ (Sexp.to_string_hum s.pre.sexp) ^ ")"]
-                                  ZProc.query_for_model
+  let results =
+    ZProc.run_queries z3
+                      ~db:["(assert " ^ (Sexp.to_string_hum s.pre.sexp) ^ ")"]
+                      ZProc.query_for_model
   in let open List in
      match ZProc.z3_result_to_values results with
      | None -> raise (False_Pre_Exn (Sexp.to_string_hum s.pre.sexp))

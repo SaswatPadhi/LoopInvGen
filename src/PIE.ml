@@ -47,23 +47,18 @@ let create_job ~f ~post ~features ~tests =
    post is the postcondition whose corresponding precondition formula we are
    trying to learn we associate some kind of description (of polymorphic type
    'c) with each feature and postcondition. *)
-let learnPreCond ?(k = 3) ?(strengthen = false) (job : ('a, 'b) job)
-                 : ('a feature with_note) CNF.t option =
+let learnPreCond ?(k = 3) ?(strengthen = false) ?(autoIncrK = false)
+                 (job : ('a, 'b) job) : ('a feature with_note) CNF.t option =
   let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
   let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
                                    dedup (make_f_vecs job.neg_tests)) in
-  try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
-                          pos_vecs neg_vecs
-      in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i - 1)))
-  with NoSuchFunction -> None
-
-let rec learnPreCondIncrK ?(k = 1) (job : ('a, 'b) job)
-                          : ('a feature with_note) CNF.t option =
-  let res = learnPreCond ~k job in
-    if res <> None then res else (
-      try learnPreCondIncrK ~k:(k + 1) job
-      with ClauseEncodingError -> None
-    )
+  let rec learnWithK k =
+    try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
+                            pos_vecs neg_vecs
+        in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i - 1)))
+    with NoSuchFunction -> if autoIncrK then learnWithK (k + 1) else None
+       | ClauseEncodingError -> None
+  in learnWithK k
 
 (* this function takes the same arguments as does learnSpec and returns groups
    of tests that illustrate a missing feature. Each group has the property that

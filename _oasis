@@ -13,13 +13,28 @@ BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 
 Executable "recorder"
-  Path: src
-  MainIs: Recorder.ml
-  CompiledObject: best
-  BuildDepends: core, core_extended, threads
+  Path:             src
+  Install:          false
+  MainIs:           Recorder.ml
+  CompiledObject:   best
+  BuildDepends:     core, core_extended, threads
 
 Executable "synthesizer"
-  Path: src
-  MainIs: Synthesizer.ml
-  CompiledObject: best
-  BuildDepends: batteries, core, core_extended, threads
+  Path:             src
+  Install:          false
+  MainIs:           Synthesizer.ml
+  CompiledObject:   best
+  BuildDepends:     batteries, core, core_extended, threads
+
+Executable "test"
+  Path:             src
+  Build$:           flag(tests)
+  Install:          false
+  MainIs:           Test.ml
+  CompiledObject:   best
+  BuildDepends:     alcotest, core, core_extended, threads
+
+Test "test"
+  Run$:             flag(tests)
+  Command:          $test
+  WorkingDirectory: lib_test

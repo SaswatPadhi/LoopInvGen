@@ -16,7 +16,7 @@ let truthAssignment_to_string (ta : truthAssignment) : string =
   "]"
 
 (* remove literals from conj that are inconsistent with the given example *)
-let pruneWithPositiveExamples (conj : conjunct) (example : truthAssignment)
+let pruneWithAPositiveExample (conj : conjunct) (example : truthAssignment)
                               : conjunct =
   List.filter conj ~f:(fun v -> Hashtbl.find_default example v ~default:true)
 
@@ -28,39 +28,39 @@ let pruneWithNegativeExamples (conj : conjunct) (costs : costAssignment)
                               (example : truthAssignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remaining accum =
-    if remaining = [] then accum else
-    begin
+    if remaining = [] then accum
+    else if conj = [] then raise NoSuchFunction
+    else begin
       (* for each variable in conj, count the negative examples it covers
         (i.e, on how many of the examples it has the truth value false) *)
       let counts = List.map conj
         ~f:(fun v -> (v, List.count remaining
-                                    ~f:(fun ex -> find_or_true ex v))) in
+                                    ~f:(fun ex -> not (find_or_true ex v)))) in
 
       (* find the variable with the largest inverted cost, computed as n/c
-        where c = cost of the variable and n = number of covered examples *)
+         where c = cost of the variable and n = number of covered examples *)
       let inverted_cost (v, n) = (float n) /. (Hashtbl.find_exn costs v) in
       let (cVar, cCnt) = Option.value_exn (
-        List.max_elt counts
-                    ~cmp:(fun vn1 vn2 ->
-                            compare (inverted_cost vn1) (inverted_cost vn2))
+        List.max_elt counts ~cmp:(fun vn1 vn2 -> compare (inverted_cost vn1)
+                                                        (inverted_cost vn2))
       ) in
       (* if no literals cover any of the remaining negative examples, then
-        there is no boolean function that properly classifies all of the
-        original positive and negative examples *)
+         there is no boolean function that properly classifies all of the
+         original positive and negative examples *)
       if cCnt = 0 then raise NoSuchFunction else
       begin
         (* keep the chosen variable and recurse:
-          filtering out this variable from the conjunction,
-          and filtering out the negative examples that it covers.
+           filtering out this variable from the conjunction,
+           and filtering out the negative examples that it covers.
 
-          We also filter out the negated version of the chosen variable.
-          This is necessary when we are using this function to find missing
-          tests, so we don't say that (X and (not X)) is a missing test.
-          When this function is used as part of learning a conjunction,
-          there will be no negative variables
-          (see the comment on learnConjunction about not including
-          negative literals), so it will be a no-op in that case. *)
-        helper (List.filter conj ~f:(fun v -> v <> cVar && v <> -cVar))
+           We also filter out the negated version of the chosen variable.
+           This is necessary when we are using this function to find missing
+           tests, so we don't say that (X and (not X)) is a missing test.
+           When this function is used as part of learning a conjunction,
+           there will be no negative variables
+           (see the comment on learnConjunction about not including
+           negative literals), so it will be a no-op in that case. *)
+        helper (List.filter conj ~f:(fun v -> v <> cVar))
                (List.filter remaining ~f:(fun ex -> find_or_true ex cVar))
                (cVar :: accum)
       end
@@ -74,29 +74,30 @@ let learnStrongConjunction (conj : conjunct) (costs: costAssignment)
                            (neg : truthAssignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remainingNeg accum =
-    if remainingNeg = [] then accum else
-    begin
+    if remainingNeg = [] then accum
+    else if conj = [] then raise NoSuchFunction
+    else begin
       (* for each variable in conj, count the negative examples it covers
-        (i.e, on how many of the examples it has the truth value false) *)
+         (i.e, on how many of the examples it has the truth value false) *)
       let counts = List.map conj
         ~f:(fun v -> (v, List.count remainingNeg
-                                    ~f:(fun ex -> find_or_true ex v))) in
+                                    ~f:(fun ex -> not (find_or_true ex v)))) in
 
       (* find the variable with the largest inverted cost, computed as n/c
-        where c = cost of the variable and n = number of covered examples *)
+         where c = cost of the variable and n = number of covered examples *)
       let inverted_cost (v, n) = (float n) /. (Hashtbl.find_exn costs v) in
       let (cVar, cCnt) = Option.value_exn (
         List.max_elt counts ~cmp:(fun vn1 vn2 -> compare (inverted_cost vn1)
                                                          (inverted_cost vn2))
       ) in
       (* if no literals cover any of the remaining negative examples, then
-        there is no boolean function that properly classifies all of the
-        original positive and negative examples *)
+         there is no boolean function that properly classifies all of the
+         original positive and negative examples *)
       if cCnt = 0 then raise NoSuchFunction else
       begin
         (* keep the chosen variable and recurse:
-          filtering out this variable from the conjunction,
-          and filtering out the negative examples that it covers. *)
+           filtering out this variable from the conjunction,
+           and filtering out the negative examples that it covers. *)
         let accum' = cVar :: accum in
         let helper' = helper (List.filter conj ~f:(fun v -> v <> cVar)) in
 
@@ -142,29 +143,28 @@ let learnConjunction ?(strengthen = false) (vars : conjunct)
   (* the initial conjunction is the AND of all variables *)
   let conj = vars in
   if strengthen then learnStrongConjunction conj costs pos neg
-  else let conj = List.fold pos ~init:conj ~f:pruneWithPositiveExamples
+  else let conj = List.fold pos ~init:conj ~f:pruneWithAPositiveExample
        in pruneWithNegativeExamples conj costs neg
 
 (* produce all k-tuples (considered as sets) of numbers from 1 to n *)
 let allKTuples (k : int) (n : int) : conjunct list =
-  let range = List.range ~stop:`inclusive in
+  let srange = List.range ~stop:`inclusive in
   let rec aux k l rest =
     begin match k with
      | 1 -> rest @ l
      | _ -> let next = List.(
               concat_map l ~f:(fun (x::xs as l) ->
-                                 map (range (x+1) n) ~f:(fun v -> v::l))
+                                 map (srange (x+1) n) ~f:(fun v -> v::l))
               ) in aux (k - 1) next (rest @ l)
     end in
-  let tuples = aux k (List.map (range 1 n) ~f:(fun x -> [x])) [[]] in
+  let tuples = aux k (List.map (srange 1 n) ~f:(fun x -> [x])) [[]] in
     (* include all k-tuples with negative literals as well *)
     List.(concat_map tuples
-                     ~f:(fun tuple ->
-                           fold tuple ~init:[[]]
-                                ~f:(fun curr x ->
-                                      let x' = x + n
-                                      in (map curr ~f:(fun l -> x::l))
-                                       @ (map curr ~f:(fun l -> x'::l)))))
+                     ~f:(fun t -> fold t ~init:[[]]
+                                       ~f:(fun c x ->
+                                             let x' = x + n
+                                             in (map c ~f:(fun l -> x::l))
+                                              @ (map c ~f:(fun l -> x'::l)))))
 
 (* Given n variables over a k-CNF formula to learn, we create one variable
    per possible k-clause to use in the reduction to conjunction learning *)
@@ -196,17 +196,15 @@ let learnKCNF ?(k = 3) ?(strengthen = false) ~(n : int)
                 (List.map varEncoding ~f:(fun (i, tuple) -> (i, 1.0))) in
   let augmentExamples =
     List.(map ~f:(fun ex -> foldi ex ~init:[]
-                                  ~f:(fun i curr b -> (i, b) ::
-                                                      (i + n, not b) :: curr)))
+                                  ~f:(fun i curr b -> (i+1, b) ::
+                                                      (i+n+1, not b) :: curr)))
   (* translate an example on the original variables
      to one on the new variables *)
- in let encodeExamples ex =
-      let ex = Hashtbl.Poly.of_alist_exn ex in Hashtbl.Poly.of_alist_exn (
-        List.map varEncoding
-                 ~f:(fun (i, clause) ->
-                       (i, List.exists clause
-                           ~f:(fun v -> Hashtbl.find_default ex v
-                                                             ~default:true))))
+  in let encodeExamples ex =
+       let ex = Hashtbl.Poly.of_alist_exn ex in Hashtbl.Poly.of_alist_exn (
+         List.map varEncoding
+                  ~f:(fun (i, c) ->
+                        (i, List.exists c ~f:(Hashtbl.find_exn ex))))
   in let pos = List.map ~f:encodeExamples (augmentExamples pos)
   in let neg = List.map ~f:encodeExamples (augmentExamples neg)
   (* learn a conjunction on the new variables *)

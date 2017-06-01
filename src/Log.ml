@@ -12,7 +12,7 @@ let info  lstr = if !enabled then log logger (`Info  , (Lazy.force lstr)) else (
 let debug lstr = if !enabled then log logger (`Debug , (Lazy.force lstr)) else ()
 
 let disable () = enabled := false
-let enable ?msg:(msg="") () =
+let enable ?(msg = "") () =
   enabled := true ;
   info (lazy "") ;
   info (lazy (msg ^ "========================================"))
