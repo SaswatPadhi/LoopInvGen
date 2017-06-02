@@ -19,10 +19,10 @@ Executable "recorder"
   CompiledObject:   best
   BuildDepends:     core, core_extended, threads
 
-Executable "synthesizer"
+Executable "verifier"
   Path:             src
   Install:          false
-  MainIs:           Synthesizer.ml
+  MainIs:           Verifier.ml
   CompiledObject:   best
   BuildDepends:     batteries, core, core_extended, threads
 

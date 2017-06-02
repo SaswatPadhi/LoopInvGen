@@ -5,9 +5,9 @@ open Exceptions
 open Types
 open Utils
 
-type note = string
+type desc = string
 type 'a feature = 'a -> bool
-type 'a with_note = 'a * note
+type 'a with_desc = 'a * desc
 type ('a, 'b) postcond = 'a -> ('b, exn) Result.t -> bool
 
 type 'a conflict = {
@@ -20,7 +20,7 @@ type ('a, 'b) job = {
   f : 'a -> 'b ;
   farg_names : string list ;
   farg_types : Types.typ list ;
-  features : 'a feature with_note list ;
+  features : 'a feature with_desc list ;
   neg_tests : ('a * (bool list lazy_t)) list ;
   pos_tests : ('a * (bool list lazy_t)) list ;
   post : ('a, 'b) postcond ;
@@ -43,7 +43,22 @@ let create_job ~f ~args ~post ~features ~tests : (value list, value) job =
      ; neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
      }
 
-let add_features ~(job : ('a, 'b) job) (features : 'a feature with_note list)
+let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : ('a, 'b) job =
+  let (pos, neg) = List.fold ~init:([],[]) tests
+    ~f:(fun (l1,l2) t -> try if job.post t (Result.try_with (fun () -> job.f t))
+                             then (t :: l1, l2) else (l1, t :: l2)
+                         with IgnoreTest -> (t :: l1, l2)
+                            | _ -> (l1, t :: l2))
+  in let compute_fvec t =
+       List.map job.features ~f:(fun (f, _) -> try f t with _ -> false)
+  in { job with
+         pos_tests = List.map pos ~f:(fun t -> (t, lazy (compute_fvec t)))
+                   @ job.pos_tests ;
+         neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
+                   @ job.neg_tests ;
+     }
+
+let add_features ~(job : ('a, 'b) job) (features : 'a feature with_desc list)
                  : ('a, 'b) job =
   let add_to_fvec fs (t, fv) =
     (t, lazy (List.map fs ~f:(fun (f, _) -> try f t with _ -> false)
@@ -53,35 +68,6 @@ let add_features ~(job : ('a, 'b) job) (features : 'a feature with_note list)
          pos_tests = List.map job.pos_tests ~f:(add_to_fvec features) ;
          neg_tests = List.map job.neg_tests ~f:(add_to_fvec features) ;
      }
-
-(* k is the maximum clause length for the formula we will provide (i.e., it's
-   a k-cnf formula) f is the function whose spec we are inferring tests is a
-   set of inputs on which to test f features is a set of predicates on inputs
-   that we use as features for our learning.
-
-   If the flag strengthen is true, we attempt to find a formula that falsifies
-   all negative examples and satisfies at least one positive example but might
-   falsify others. This is useful if we are trying to find a simple
-   strengthening of the "actual" precondition.
-
-   costs is an optional mapping from the nth feature (numbered 1 through n
-   according to their order) to a cost (float) - lower is better.
-   
-   post is the postcondition whose corresponding precondition formula we are
-   trying to learn we associate some kind of description (of polymorphic type
-   'c) with each feature and postcondition. *)
-let learnPreCond ?(k = 3) ?(strengthen = false) ?(auto_incr_k = false)
-                 (job : ('a, 'b) job) : ('a feature with_note) CNF.t option =
-  let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
-  let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
-                                   dedup (make_f_vecs job.neg_tests)) in
-  let rec learnWithK k =
-    try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
-                            pos_vecs neg_vecs
-        in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i - 1)))
-    with NoSuchFunction -> if auto_incr_k then learnWithK (k + 1) else None
-       | ClauseEncodingError -> None
-  in learnWithK k
 
 (* this function takes the same arguments as does learnSpec and returns groups
    of tests that illustrate a missing feature. Each group has the property that
@@ -108,7 +94,7 @@ let conflictingTests (job : ('a, 'b) job) : 'a conflict list =
 (* Synthesize a new feature to resolve a conflict group. *)
 let synthFeatures ?(consts = []) ~(job : (value list, value) job)
                   (c_group : value list conflict)
-                  : value list feature with_note list =
+                  : value list feature with_desc list =
   let group_size = List.((length c_group.pos) + (length c_group.neg))
   in let tab = Hashtbl.Poly.create () ~size:group_size
   in List.iter c_group.pos ~f:(fun v -> Hashtbl.add_exn tab ~key:v ~data:vtrue)
@@ -134,12 +120,12 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
        components = default_components
      }
   in let solutions = solve f_synth_task consts
-  in List.map solutions ~f:(fun (note, f) -> (fun v -> (f v) = vtrue), note)
+  in List.map solutions ~f:(fun (desc, f) -> (fun v -> (f v) = vtrue), desc)
 
 let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
                           ?(max_c_group_size = 16)
                           (c_group' : value list conflict)
-                          : value list feature with_note list =
+                          : value list feature with_desc list =
   let group_size = List.((length c_group'.pos) + (length c_group'.neg))
   in let c_group = if group_size < max_c_group_size then c_group'
                    else {
@@ -151,7 +137,7 @@ let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
 
 let rec resolveConflicts ?(consts = []) ~(job : (value list, value) job)
                          (c_groups : value list conflict list)
-                         : value list feature with_note list =
+                         : value list feature with_desc list =
   if c_groups = [] then []
   else let new_features =
          resolveSingleConflict ~consts ~job (List.hd_exn c_groups)
@@ -166,9 +152,38 @@ let rec augmentFeatures ?(consts = []) (job : (value list, value) job)
           in if new_features = [] then raise NoSuchFunction
              else add_features ~job new_features
 
-let augmentAndLearnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
-                           ?(consts = []) ~f ~args ~post ~features ~tests ()
-                           : ('a feature with_note) CNF.t option =
-  learnPreCond ~strengthen ~k ~auto_incr_k
-               (augmentFeatures ~consts (create_job ~f ~args ~post
-                                                    ~features ~tests))
+(* k is the maximum clause length for the formula we will provide (i.e., it's
+   a k-cnf formula) f is the function whose spec we are inferring tests is a
+   set of inputs on which to test f features is a set of predicates on inputs
+   that we use as features for our learning.
+
+   If the flag strengthen is true, we attempt to find a formula that falsifies
+   all negative examples and satisfies at least one positive example but might
+   falsify others. This is useful if we are trying to find a simple
+   strengthening of the "actual" precondition.
+
+   costs is an optional mapping from the nth feature (numbered 1 through n
+   according to their order) to a cost (float) - lower is better.
+   
+   post is the postcondition whose corresponding precondition formula we are
+   trying to learn we associate some kind of description (of polymorphic type
+   'c) with each feature and postcondition. *)
+let learnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
+                 ?(consts = []) ?(disable_synth = false) (job : ('a, 'b) job)
+                 : ('a feature with_desc) CNF.t option =
+  let job = if disable_synth then job else augmentFeatures ~consts job in
+  let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
+  let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
+                                   dedup (make_f_vecs job.neg_tests)) in
+  let rec learnWithK k =
+    try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
+                            pos_vecs neg_vecs
+        in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i - 1)))
+    with NoSuchFunction -> if auto_incr_k then learnWithK (k + 1) else None
+       | ClauseEncodingError -> None
+  in learnWithK k
+
+let cnf_opt_to_desc (pred : ('a feature with_desc) CNF.t option) : desc =
+  match pred with
+  | None -> "false"
+  | Some pred -> CNF.to_string pred ~stringify:snd

@@ -24,13 +24,8 @@ let conflicts_to_string cgroup =
    ^ (List.to_string_map cgroup.neg ~sep:" ; " ~f:tests_to_string)
    ^ "}"
 
-let precond_to_string (precond : ('a feature with_note) CNF.t option) : string =
-  match precond with
-  | None -> "false"
-  | Some precond -> CNF.to_string precond ~stringify:snd
-
 let abs_conflict_failure () =
-  let res = precond_to_string (learnPreCond abs_job)
+  let res = cnf_opt_to_desc (learnPreCond abs_job ~disable_synth:true)
   in Alcotest.(check string) "identical" "false" res
 
 let abs_conflict_group () =
@@ -39,14 +34,15 @@ let abs_conflict_group () =
   in Alcotest.(check string) "identical" "Pos:{[0]} + Neg:{[-2] ; [-1]}" res
 
 let abs_precond_1_cnf () =
-  let res = precond_to_string (
-    learnPreCond ~k:1 (add_features ~job:abs_job
-                         [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ]))
+  let res = cnf_opt_to_desc (
+    learnPreCond ~k:1 ~auto_incr_k:false ~disable_synth:true
+                 (add_features ~job:abs_job
+                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ]))
   in Alcotest.(check string) "identical" "false" res
 
 let abs_precond_auto_1 () =
-  let res = precond_to_string (
-    learnPreCond ~k:1 ~auto_incr_k:true
+  let res = cnf_opt_to_desc (
+    learnPreCond ~k:1 ~auto_incr_k:true ~disable_synth:true
                  (add_features ~job:abs_job
                     [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ]))
   in Alcotest.(check string) "identical" "(or (= x (+ x x)) (> x 0))" res
@@ -57,15 +53,16 @@ let abs_feature_synthesis () =
   in Alcotest.(check string) "identical" "(= 0 x)" res
 
 let abs_zero_features () =
-  let res = precond_to_string (
-    augmentAndLearnPreCond ()
+  let res = cnf_opt_to_desc (
+    learnPreCond (
+      create_job
       ~f:(fun [ VInt x ] -> VInt (if x > 0 then x else -x))
       ~args:([ "x", TInt ])
       ~post:(fun inp res -> match inp , res with
                             | [ VInt x ], Ok (VInt y) -> x = y
                             | _ -> false)
       ~features:[ ]
-      ~tests:(List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [VInt i])))
+      ~tests:(List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [VInt i]))))
   in Alcotest.(check string) "identical" "(>= x 0)" res
 
 let all = [

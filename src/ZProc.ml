@@ -104,6 +104,21 @@ let implication_counter_example (z3 : t) (a : string) (b : string)
     run_queries z3 ~db:[ ("(assert " ^ a ^ ")") ; ("(assert (not " ^ b ^ "))") ]
                 query_for_model)
 
+let simplify (z3 : t) (q : string) : string =
+  let open Sexp in
+  let [goal] =
+    run_queries z3 ~db:["(assert " ^ q ^ ")"]
+                ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
+  in let unexpected_exn = Internal_Exn ("Unexpected z3 goals: " ^ goal)
+  in match Sexp.parse goal with
+     | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)
+       -> let goals = List.filter_map goalexpr
+                        ~f:(function Atom(_) -> None
+                                   | l -> Some (to_string_hum l))
+          in let goalstr = String.concat ~sep:" " goals
+          in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"
+     | _ -> raise unexpected_exn
+
 let model_to_string ?(rowsep = "\n") ?(colsep = ": ") (model : model) : string =
   String.concat ~sep:rowsep (
     List.map model ~f:(fun (n, v) -> n ^ colsep ^ (Types.serialize_value v)))
