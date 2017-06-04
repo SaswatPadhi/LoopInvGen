@@ -52,7 +52,7 @@ let apply_component (c : component) (args : Vector.t list) =
     in (((new_str, new_prog), Node (c.name, List.map (fun ((_,x),_) -> x) args)), result))
 
 (* Upper bound on the heuristic value a solution may take *)
-let max_h = ref 20
+let max_h = ref 15
 
 let expand_ = ref "size"
 let goal_graph = ref false
@@ -182,7 +182,10 @@ let solve_impl ?ast:(ast=false) task consts =
     <- List.fold_left (fun p i -> VSet.add ((((string_of_int i), (fun ars -> VInt i)), Leaf ("const_" ^ (string_of_int i))),
                                             Array.make vector_size (VInt i)) p)
                       (VSet.singleton zero)
-                      (BatList.sort_unique compare (1::(BatList.filter_map (fun v -> match v with VInt x -> Some x | _ -> None) consts)));
+                      (BatList.sort_unique compare (1 :: (-1) :: 2 :: 3 :: 5 ::
+                                                    (BatList.filter_map (fun v -> match v with
+                                                                                  | VInt x -> Some x
+                                                                                  | _ -> None) consts)));
   bool_array.(1)   <- VSet. add btrue (VSet.singleton bfalse);
   List.iter (fun input ->
     let array = match (snd input).(1) with

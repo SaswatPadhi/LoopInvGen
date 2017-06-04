@@ -43,7 +43,8 @@ let strengthenForInductiveness ~(sygus : SyGuS.t) ~(states : value list list)
                                  ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
          VPIE.learnVPreCond ~consts:sygus.consts ~z3 ~simplify:false
-                            ~eval_term:invf_call (
+                            ~eval_term:("(and " ^ invf_call ^ " " ^
+                                        trans_desc ^ ")") (
            (PIE.create_pos_job ()
               ~f:(Simulator.build_function invf'_call
                     ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
@@ -66,7 +67,7 @@ let checkIfWeakerThanPre (inv : PIE.desc) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   ZProc.implication_counter_example z3 sygus.pre.expr inv
 
 let learnInvariant ~(states : value list list) ?(max_restarts = 8)
-                   ?(max_steps_on_restart = 128) ?(base_random_seed = "PIE")
+                   ?(max_steps_on_restart = 32) ?(base_random_seed = "PIE")
                    (sygus : SyGuS.t) : PIE.desc option =
   let rec helper z3 states tries seed =
     let inv = learnStrongerThanPost sygus ~states ~z3

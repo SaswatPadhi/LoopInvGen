@@ -6,9 +6,7 @@ open SyGuS
 let main size forks seeds outfile do_log filename () =
   (if do_log then Log.enable ~msg:"RECORDER" () else ()) ;
   let s = SyGuS.load (Utils.get_in_channel filename)
-  in (if s.state_vars <> s.inv_vars
-      then raise (Internal_Exn "Invariant over restricted states."))
-   ; if size < 1 then ()
+  in if size < 1 then ()
      else begin
        let out_chan = Utils.get_out_channel outfile in
        let seeds = (if seeds = [] then [`Nondeterministic]

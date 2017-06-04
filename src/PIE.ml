@@ -58,19 +58,20 @@ let create_job ~f ~args ~post ?(features = []) ~tests ()
          neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
      }
 
-let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : ('a, 'b) job =
+let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
   let (pos, neg) = split_tests (List.dedup tests) ~f:job.f ~post:job.post
-  in let pos = List.(filter pos ~f:(fun t -> not (exists job.neg_tests
+  in let pos = List.(filter pos ~f:(fun t -> not (exists job.pos_tests
                                                     ~f:(fun (p, _) -> p = t))))
   in let neg = List.(filter neg ~f:(fun t -> not (exists job.neg_tests
                                                     ~f:(fun (n, _) -> n = t))))
   in let compute_fvec = compute_feature_vector job.features
-  in { job with
+  in ({ job with
          pos_tests = List.map pos ~f:(fun t -> (t, lazy (compute_fvec t)))
                    @ job.pos_tests ;
          neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
                    @ job.neg_tests ;
-     }
+      },
+      List.(length pos + length neg))
 
 let add_features ~(job : ('a, 'b) job) (features : 'a feature with_desc list)
                  : ('a, 'b) job =
@@ -136,7 +137,7 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
   in List.map solutions ~f:(fun (desc, f) -> (fun v -> (f v) = vtrue), desc)
 
 let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
-                          ?(max_c_group_size = 16)
+                          ?(max_c_group_size = 24)
                           (c_group' : value list conflict)
                           : value list feature with_desc list =
   let group_size = List.((length c_group'.pos) + (length c_group'.neg))
@@ -153,7 +154,7 @@ let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
    ; new_features
 
 let rec resolveConflicts ?(consts = []) ~(job : (value list, value) job)
-                         ?(max_c_group_size = 16)
+                         ?(max_c_group_size = 24)
                          (c_groups : value list conflict list)
                          : value list feature with_desc list =
   if c_groups = [] then []
@@ -163,16 +164,16 @@ let rec resolveConflicts ?(consts = []) ~(job : (value list, value) job)
           else resolveConflicts ~consts ~job ~max_c_group_size
                                 (List.tl_exn c_groups)
 
-let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 16)
-                        (job : (value list, value) job)
-                        : (value list, value) job =
+let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 24)
+                        ?(disable_synth = false) (job : (value list, value) job)
+                        : (value list, value) job option =
   let c_groups = conflictingTests job
-  in if c_groups = [] then job
+  in if c_groups = [] then Some job
+     else if disable_synth then None
      else let new_features = resolveConflicts c_groups ~consts ~job
                                               ~max_c_group_size
           in if new_features = []
-             then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
-                  ; raise NoSuchFunction)
+             then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED")) ; None)
              else augmentFeatures ~consts (add_features ~job new_features)
 
 (* k is the maximum clause length for the formula we will provide (i.e., it's
@@ -192,7 +193,7 @@ let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 16)
    trying to learn we associate some kind of description (of polymorphic type
    'c) with each feature and postcondition. *)
 let learnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
-                 ?(consts = []) ?(max_c_group_size = 20)
+                 ?(consts = []) ?(max_c_group_size = 24)
                  ?(disable_synth = false) (job : ('a, 'b) job)
                  : ('a feature with_desc) CNF.t option =
   Log.debug (lazy ("Learning with "
@@ -200,19 +201,21 @@ let learnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
                   ^ " POS + "
                   ^ (string_of_int (List.length job.neg_tests))
                   ^ " NEG tests")) ;
-  let job = if disable_synth then job
-            else augmentFeatures ~consts ~max_c_group_size job in
-  let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
-  let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
-                                   dedup (make_f_vecs job.neg_tests)) in
-  let rec learnWithK k =
-    Log.debug (lazy ("Attempting with K = " ^ (string_of_int k))) ;
-    try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
-                            pos_vecs neg_vecs
-        in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i - 1)))
-    with NoSuchFunction -> if auto_incr_k then learnWithK (k + 1) else None
-       | ClauseEncodingError -> None
-  in learnWithK k
+  match augmentFeatures ~consts ~max_c_group_size ~disable_synth job with
+  | None -> None
+  | Some job -> begin
+      let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
+      let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
+                                      dedup (make_f_vecs job.neg_tests)) in
+      let rec learnWithK k =
+        Log.debug (lazy ("Attempting with K = " ^ (string_of_int k))) ;
+        try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
+                                pos_vecs neg_vecs
+            in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i-1)))
+        with NoSuchFunction -> if auto_incr_k then learnWithK (k + 1) else None
+          | ClauseEncodingError -> None
+      in learnWithK k
+    end
 
 let cnf_opt_to_desc (pred : ('a feature with_desc) CNF.t option) : desc =
   match pred with

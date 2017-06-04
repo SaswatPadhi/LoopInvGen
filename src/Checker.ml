@@ -7,23 +7,19 @@ let checkInvariant (inv : string) ~(sygus : SyGuS.t) : bool =
   let open ZProc in
   let z3 = create ()
    in Simulator.setup sygus z3
-    ; ignore (run_queries ~local:false z3 []
-                ~db:[("(define-fun invf ("
-                    ^ (List.to_string_map sygus.inv_vars ~sep:" "
-                          ~f:(fun (s, t) -> "(" ^ s ^ " " ^
-                                            (Types.string_of_typ t) ^ ")"))
-                    ^ ") Bool " ^ inv ^ ")")])
-    ; let result =
-        match [ (implication_counter_example z3 sygus.pre.expr inv)
+    ; ignore (run_queries ~local:false z3 [] ~db:[ inv ])
+    ; let inv_call =
+        "(" ^ sygus.inv_name ^ " " ^
+        (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst) ^ ")" in
+      let result =
+        match [ (implication_counter_example z3 sygus.pre.expr inv_call)
               ; (implication_counter_example z3
-                   ("(and " ^ sygus.trans.expr ^ " " ^ "(invf "
-                   ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst)
-                   ^ "))")
-                   ("(invf "
+                   ("(and " ^ sygus.trans.expr ^ " " ^ inv_call ^ ")")
+                   ("(" ^ sygus.inv_name ^ " "
                    ^ (List.to_string_map sygus.inv_vars ~sep:" "
                                          ~f:(fun (s, _) -> s ^ "!"))
                    ^ ")"))
-              ; (implication_counter_example z3 inv sygus.post.expr) ]
+              ; (implication_counter_example z3 inv_call sygus.post.expr) ]
         with [ None ; None ; None ] -> true | _ -> false
       in ZProc.close z3 ; result
 

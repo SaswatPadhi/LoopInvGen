@@ -7,38 +7,39 @@ CHECKER="./Checker.native"
 RECORDER="./Recorder.native"
 VERIFIER="./Verifier.native"
 
-STEPS=1536
+STEPS=768
+MAX_STATES=2048
+
 TIMEOUT=300s
+
+CHECKER_LOG=""
 RECORDER_LOG=""
 VERIFIER_LOG=""
 
+CHECK="no"
+REMOVE_LOGS="no"
+
 usage() {
-  echo "Usage: $0 [-l {none} <none|verifier|all>] [-s {$STEPS} <count>] [-t {300} <seconds>] testcase" 1>&2 ;
+  echo "Usage: $0 -c -l -r [-s {$STEPS} <count>] [-t {300} <seconds>] testcase" 1>&2 ;
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :l:s:t: --long logging:,simulation-steps:,timeout: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :clrs:t: --long check,logging,remove-logs,simulation-steps:,timeout: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 while true ; do
   case "$1" in
+    -c | --check )
+         CHECK="yes" ; shift ;;
     -l | --logging )
-         l="$2"
-         if [ $l = "none" ] ; then
-           RECORDER_LOG=""
-           VERIFIER_LOG=""
-         elif [ $l = "all" ] ; then
-           RECORDER_LOG="-l"
-           VERIFIER_LOG="-l"
-         elif [ $l = "verifier" ] ; then
-           RECORDER_LOG=""
-           VERIFIER_LOG="-l"
-         else
-           usage
-         fi
-         shift ; shift ;;
+         CHECKER_LOG=""
+         RECORDER_LOG=""
+         VERIFIER_LOG="-l"
+         shift ;;
+    -r | --remove-logs )
+         REMOVE_LOGS="yes" ; shift ;;
     -s | --simulation-steps )
          STEPS=$2
          (( STEPS > 0 )) || usage
@@ -73,18 +74,31 @@ $RECORDER -s $STEPS -r "seed0" -o $TESTCASE_STATE"0" $TESTCASE \
 wait
 
 grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN \
-  | sort -u > $TESTCASE_ALL_STATES
-rm -rf $TESTCASE_STATE_PATTERN
+  | sort -u | shuf | head -n $MAX_STATES \
+  > $TESTCASE_ALL_STATES
+
+if [ $REMOVE_LOGS = "yes" ]; then
+  rm -rf $TESTCASE_STATE_PATTERN
+fi
 
 timeout --kill-after=$TIMEOUT $TIMEOUT \
         $VERIFIER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
                   $VERIFIER_LOG >&2
-
-if [ $? == 0 ] ; then
+RESULT_CODE=$?
+if [ $RESULT_CODE == 0 ] && [ $REMOVE_LOGS = "yes" ] ; then
   rm -rf $TESTCASE_ALL_STATES
-  $CHECKER -i $TESTCASE_INVARIANT $TESTCASE_LOG $TESTCASE
-elif [ $? == 124 || $? == 137 ] ; then
-  echo "TIMEOUT"
+fi
+
+if [ $CHECK = "yes" ]; then
+  if [ $RESULT_CODE == 0 ] ; then
+    $CHECKER -i $TESTCASE_INVARIANT $CHECKER_LOG $TESTCASE
+  elif [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ] ; then
+    echo "TIMEOUT"
+  else
+    echo "FAIL"
+  fi
 else
-  echo "FAIL"
+  if [ $RESULT_CODE == 0 ] ; then
+    cat $TESTCASE_INVARIANT ; echo
+  fi
 fi

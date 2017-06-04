@@ -39,9 +39,9 @@ let flush_and_collect (z3 : t) : string =
    ; Out_channel.flush z3.stdin
    ; let lines = ref [] in
      let rec read_line () : unit =
-       let l = Option.value_exn (In_channel.input_line z3.stdout)
+       let l = Option.value (In_channel.input_line z3.stdout) ~default:""
         in if l = last_line then ()
-           else (lines := l :: (!lines) ; read_line ())
+           else if l <> "" then (lines := l :: (!lines) ; read_line ())
        in read_line () ; lines := List.rev (!lines)
         ; Log.debug (lazy (String.concat ("Result:" :: (!lines))
                                          ~sep:Log.indented_sep))

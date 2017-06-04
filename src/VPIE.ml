@@ -5,7 +5,7 @@ open Utils
 
 let rec learnVPreCond ?(strengthen = false) ?(describe = PIE.cnf_opt_to_desc)
                       ?(k = 1) ?(auto_incr_k = true) ?(disable_synth = false)
-                      ?(max_c_group_size = 20) ?(max_tries = 512) ?(consts = [])
+                      ?(max_c_group_size = 24) ?(max_tries = 512) ?(consts = [])
                       ?(simplify = true) ?(base_random_seed = "PIE")
                       ?(eval_term = "true") ~(z3 : ZProc.t)
                       ((job, post_desc) : ('a, 'b) job with_desc) : desc =
@@ -39,8 +39,11 @@ let rec learnVPreCond ?(strengthen = false) ?(describe = PIE.cnf_opt_to_desc)
                                     ~f:(fun v n -> n ^ " = " ^
                                                    (serialize_value v)))
                                ^ "}"))
-             ; learnVPreCond ~strengthen ~describe ~k ~auto_incr_k ~consts ~z3
-                             ~disable_synth ~max_c_group_size ~base_random_seed
-                             ~max_tries:(max_tries - 1) ~simplify ~eval_term
-                             ((add_tests ~job [test]), post_desc)
+             ; let (job, tests_added) = add_tests ~job [test]
+                in if tests_added < 1 then "false"
+                   else learnVPreCond ~strengthen ~describe ~k ~auto_incr_k
+                                      ~disable_synth ~max_c_group_size
+                                      ~max_tries:(max_tries - 1) ~consts
+                                      ~simplify ~base_random_seed ~eval_term
+                                      ~z3 (job, post_desc)
   end

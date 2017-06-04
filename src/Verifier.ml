@@ -1,5 +1,6 @@
 open Core
 open Core.Out_channel
+open Utils
 
 let main statefile outfile do_log filename () =
   (if do_log then Log.enable ~msg:"VERIFIER" () else ()) ;
@@ -12,7 +13,11 @@ let main statefile outfile do_log filename () =
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let inv = LoopInvGen.learnInvariant sygus ~states
      in let out_chan = Utils.get_out_channel outfile
-     in output_string out_chan (Option.value inv ~default:"false")
+     in output_string out_chan (
+          "(define-fun " ^ sygus.inv_name ^ " (" ^
+          (List.to_string_map sygus.inv_vars ~sep:" "
+             ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t) ^ ")")) ^
+          ") Bool " ^ (Option.value inv ~default:"false") ^ ")")
       ; Out_channel.close out_chan
 
 let cmd =
