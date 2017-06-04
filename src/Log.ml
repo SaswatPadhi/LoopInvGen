@@ -4,6 +4,8 @@ let logger = create_default "_logs/SyGuSPIE.log"
 let () = clear_filter logger
 
 let enabled = ref false
+let indent = Core.String.make 42 ' '
+let indented_sep = "\n  " ^ indent
 
 let fatal lstr = if !enabled then log logger (`Fatal , (Lazy.force lstr)) else ()
 let error lstr = if !enabled then log logger (`Error , (Lazy.force lstr)) else ()

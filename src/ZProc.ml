@@ -12,7 +12,11 @@ type t = {
 
 type model = (string * Types.value) list
 
-let query_for_model = [ "(check-sat)" ; "(get-model)" ]
+let query_for_model ?(eval_term = "true") () =
+  [ "(check-sat)"
+  (* forces Z3 to generate complete models over variables in `eval_term` *)
+  ; "(eval " ^ eval_term ^ " :completion true)"
+  ; "(get-model)" ]
 
 let create () : t =
   let open Process_info in
@@ -30,22 +34,22 @@ let close z3 =
   Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.pid)))
 
 let flush_and_collect (z3 : t) : string =
-  Out_channel.output_string z3.stdin "\n()\n" ; Out_channel.flush z3.stdin ;
-  let read_lines = ref "" in
-  let error_line l = (
-    (String.prefix l 12) = "(error \"line" &&
-    (String.suffix l 36) = ": invalid command, symbol expected\")") in
-  let rec read_line () : unit =
-    let l = Option.value_exn (In_channel.input_line z3.stdout)
-    in if error_line l then ()
-       else (read_lines := (!read_lines) ^ l ; read_line ())
-  in read_line () ; read_lines := String.strip !read_lines
-   ; Log.debug (lazy ("Result:\n  "
-                     ^ Sexp.(to_string_hum (of_string (!read_lines)))))
-   ; (!read_lines)
+  let last_line = "ABRACADABRA.ABRACADABRA^ABRACADABRA"
+  in Out_channel.output_string z3.stdin ("\n(echo \"" ^ last_line ^ "\")\n")
+   ; Out_channel.flush z3.stdin
+   ; let lines = ref [] in
+     let rec read_line () : unit =
+       let l = Option.value_exn (In_channel.input_line z3.stdout)
+        in if l = last_line then ()
+           else (lines := l :: (!lines) ; read_line ())
+       in read_line () ; lines := List.rev (!lines)
+        ; Log.debug (lazy (String.concat ("Result:" :: (!lines))
+                                         ~sep:Log.indented_sep))
+        ; String.concat ~sep:" " (!lines)
 
 let create_local ?(db = []) (z3 : t) : unit =
-  Log.debug (lazy (String.concat ~sep:"\n  " ("Created Z3 local." :: db))) ;
+  Log.debug (lazy (String.concat ("Created Z3 local." :: db)
+                                 ~sep:Log.indented_sep)) ;
   Out_channel.output_lines z3.stdin ("(push)" :: db) ;
   Out_channel.flush z3.stdin
 
@@ -57,8 +61,8 @@ let close_local (z3 : t) : unit =
 let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
   (if local then create_local z3 else ()) ;
-  Log.debug (lazy ("New Z3 call:\n  " ^
-                   (String.concat ~sep:"\n  " (db @ queries)))) ;
+  Log.debug (lazy (String.concat ("New Z3 call:" :: (db @ queries))
+                                 ~sep:Log.indented_sep)) ;
   if queries = []
   then begin
     if local then () else
@@ -90,7 +94,7 @@ let z3_result_to_values (result : string list) : model option =
   let unexpected_exn = Internal_Exn ("Unexpected z3 model: " ^ (String.concat ~sep:"\n" result)) in
     match result with
     | "unsat" :: _ -> None
-    | [ "sat" ; result ]
+    | [ "sat" ; _ ; result ]
       -> begin match Sexp.parse result with
           | Done (List((Atom model) :: varexps), _)
             -> let open List in
@@ -105,17 +109,21 @@ let z3_result_to_values (result : string list) : model option =
         end
     | _ -> raise unexpected_exn
 
-let implication_counter_example (z3 : t) ?(db = []) (a : string) (b : string)
-                                : model option =
+let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
+                                (a : string) (b : string) : model option =
   z3_result_to_values (
     run_queries z3 ~db:(db @ [ "(assert (not (=> " ^ a ^ " " ^ b ^")))" ])
-                query_for_model)
+                (query_for_model ~eval_term ()))
 
 let simplify (z3 : t) (q : string) : string =
   let open Sexp in
-  let [goal] =
-    run_queries z3 ~db:["(assert " ^ q ^ ")"]
-                ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
+  let goal =
+    match
+      run_queries z3 ~db:["(assert " ^ q ^ ")"]
+                  ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
+    with [ goal ] -> goal
+        | goals -> raise (Internal_Exn ("Unexpected goals:\n"
+                                       ^ (String.concat ~sep:"\n" goals)))
   in let unexpected_exn = Internal_Exn ("Unexpected z3 goals: " ^ goal)
   in match Sexp.parse goal with
      | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)

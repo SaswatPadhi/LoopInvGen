@@ -3,16 +3,17 @@
 LOG_PATH="_logs"
 SYGUS_EXT=".sl"
 
+CHECKER="./Checker.native"
 RECORDER="./Recorder.native"
 VERIFIER="./Verifier.native"
 
 STEPS=1536
-TIMEOUT=5m
+TIMEOUT=300s
 RECORDER_LOG=""
 VERIFIER_LOG=""
 
 usage() {
-  echo "Usage: $0 [-l {none} <none|verifier|all>] [-s {$STEPS} <uint>] [-t {5m} <duration>] benchmark" 1>&2 ;
+  echo "Usage: $0 [-l {none} <none|verifier|all>] [-s {$STEPS} <count>] [-t {300} <seconds>] testcase" 1>&2 ;
   exit 1 ;
 }
 
@@ -45,36 +46,45 @@ while true ; do
     -t | --timeout )
          TIMEOUT=$2
          (( TIMEOUT > 0 )) || usage
+         TIMEOUT="$2s"
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
   esac
 done
 
-BENCHMARK="$1"
+TESTCASE="$1"
 
-BENCHMARK_NAME="`basename "$BENCHMARK" "$SYGUS_EXT"`"
-BENCHMARK_PREFIX="$LOG_PATH/$BENCHMARK_NAME"
-BENCHMARK_STATE="$BENCHMARK_PREFIX.s"
-BENCHMARK_STATE_PATTERN="$BENCHMARK_STATE"?
-BENCHMARK_ALL_STATES="$BENCHMARK_PREFIX.states"
-BENCHMARK_INVARIANT="$BENCHMARK_PREFIX.inv"
+TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
+TESTCASE_PREFIX="$LOG_PATH/$TESTCASE_NAME"
+TESTCASE_STATE="$TESTCASE_PREFIX.s"
+TESTCASE_STATE_PATTERN="$TESTCASE_STATE"?
+TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
+TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
 for i in `seq 1 4` ; do
-  $RECORDER -s $STEPS -r "seed$i" -o $BENCHMARK_STATE$i $BENCHMARK \
-            $RECORDER_LOG > /dev/null &
+  $RECORDER -s $STEPS -r "seed$i" -o $TESTCASE_STATE$i $TESTCASE \
+            $RECORDER_LOG >&2 &
 done
 
-$RECORDER -s $STEPS -r "seed0" -o $BENCHMARK_STATE"0" $BENCHMARK \
-          $RECORDER_LOG > /dev/null
+$RECORDER -s $STEPS -r "seed0" -o $TESTCASE_STATE"0" $TESTCASE \
+          $RECORDER_LOG >&2
 
 wait
 
-grep -hv "^[[:space:]]*$" $BENCHMARK_STATE_PATTERN \
-  | sort -u > $BENCHMARK_ALL_STATES
-rm -rf $BENCHMARK_STATE_PATTERN
+grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN \
+  | sort -u > $TESTCASE_ALL_STATES
+rm -rf $TESTCASE_STATE_PATTERN
 
 timeout --kill-after=$TIMEOUT $TIMEOUT \
-        $VERIFIER -s $BENCHMARK_ALL_STATES -o $BENCHMARK_INVARIANT $BENCHMARK \
-                  $VERIFIER_LOG > /dev/null
-if [ $? == 0 ] ; then rm -rf $BENCHMARK_ALL_STATES ; fi
+        $VERIFIER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
+                  $VERIFIER_LOG >&2
+
+if [ $? == 0 ] ; then
+  rm -rf $TESTCASE_ALL_STATES
+  $CHECKER -i $TESTCASE_INVARIANT $TESTCASE_LOG $TESTCASE
+elif [ $? == 124 || $? == 137 ] ; then
+  echo "TIMEOUT"
+else
+  echo "FAIL"
+fi

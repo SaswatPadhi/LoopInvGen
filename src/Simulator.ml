@@ -44,7 +44,7 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
     (List.map2_exn ~f:(fun d (v,_) -> ("(assert (= " ^ v ^ " " ^
                                        (serialize_value d) ^ "))"))
                    vals s.state_vars)
-  ) ZProc.query_for_model
+  ) (ZProc.query_for_model ())
   in let open List in
      match ZProc.z3_result_to_values results with
      | None -> None
@@ -58,7 +58,7 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
 let pre_state_gen (s : SyGuS.t) (z3 : ZProc.t)
                   : ZProc.model Quickcheck.Generator.t =
   let results = ZProc.run_queries z3 ~db:["(assert " ^ s.pre.expr ^ ")"]
-                                  ZProc.query_for_model
+                                  (ZProc.query_for_model ())
   in let open List in
      match ZProc.z3_result_to_values results with
      | None -> raise (False_Pre_Exn s.pre.expr)

@@ -21,3 +21,11 @@ module List = struct
                 ~(f : int -> 'a) (start_i : int) (stop_i : int) : 'a list =
     List.(map (range ~stride ~start ~stop start_i stop_i) ~f)
 end
+
+let get_in_channel = function
+  | "-"      -> In_channel.stdin
+  | filename -> In_channel.create filename
+
+let get_out_channel = function
+  | None -> Out_channel.stdout
+  | Some filename -> Out_channel.create filename

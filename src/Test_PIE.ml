@@ -19,9 +19,11 @@ let abs_job = create_job ()
 let conflicts_to_string cgroup =
   let tests_to_string vs = "[" ^ (serialize_values ~sep:"," vs) ^ "]"
   in "Pos:{"
-   ^ (List.to_string_map cgroup.pos ~sep:" ; " ~f:tests_to_string)
+   ^ (List.to_string_map (List.sort cgroup.pos ~cmp:compare)
+                         ~sep:" ; " ~f:tests_to_string)
    ^ "} + Neg:{"
-   ^ (List.to_string_map cgroup.neg ~sep:" ; " ~f:tests_to_string)
+   ^ (List.to_string_map (List.sort cgroup.neg ~cmp:compare)
+                         ~sep:" ; " ~f:tests_to_string)
    ^ "}"
 
 let abs_conflict_failure () =

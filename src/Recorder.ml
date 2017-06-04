@@ -1,34 +1,30 @@
 open Core
 open Core.Out_channel
-
-let get_in_channel = function
-  | "-"      -> In_channel.stdin
-  | filename -> In_channel.create filename
-
-let get_out_channel = function
-  | None -> Out_channel.stdout
-  | Some filename -> Out_channel.create filename
+open Exceptions
+open SyGuS
 
 let main size forks seeds outfile do_log filename () =
   (if do_log then Log.enable ~msg:"RECORDER" () else ()) ;
-  let s = SyGuS.load (get_in_channel filename) in
-  if size < 1 then ()
-  else begin
-    let out_chan = get_out_channel outfile in
-    let seeds = (if seeds = [] then [`Nondeterministic]
-                 else List.map ~f:(fun s -> `Deterministic s) seeds)
-    in List.iter seeds
-         ~f:(fun seed ->
-               newline out_chan ;
-               let states = Simulator.run s ~size ~seed
-               in List.iter states
-                     ~f:(fun state ->
-                           output_string out_chan (
-                             Types.serialize_values state) ;
-                           newline out_chan)
-             )
-     ; Out_channel.close out_chan
-  end
+  let s = SyGuS.load (Utils.get_in_channel filename)
+  in (if s.state_vars <> s.inv_vars
+      then raise (Internal_Exn "Invariant over restricted states."))
+   ; if size < 1 then ()
+     else begin
+       let out_chan = Utils.get_out_channel outfile in
+       let seeds = (if seeds = [] then [`Nondeterministic]
+                   else List.map ~f:(fun s -> `Deterministic s) seeds)
+       in List.iter seeds
+           ~f:(fun seed ->
+                 newline out_chan ;
+                 let states = Simulator.run s ~size ~seed
+                 in List.iter states
+                       ~f:(fun state ->
+                             output_string out_chan (
+                               Types.serialize_values state) ;
+                             newline out_chan)
+               )
+       ; Out_channel.close out_chan
+     end
 
 let cmd =
   Command.basic

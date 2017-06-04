@@ -153,8 +153,11 @@ let allKTuples (k : int) (n : int) : conjunct list =
     begin match k with
      | 1 -> rest @ l
      | _ -> let next = List.(
-              concat_map l ~f:(fun (x::xs as l) ->
-                                 map (srange (x+1) n) ~f:(fun v -> v::l))
+              concat_map l ~f:(fun l ->
+                                 match l with
+                                 | [] -> []
+                                 | x :: xs
+                                   -> map (srange (x+1) n) ~f:(fun v -> v::l))
               ) in aux (k - 1) next (rest @ l)
     end in
   let tuples = aux k (List.map (srange 1 n) ~f:(fun x -> [x])) [[]] in

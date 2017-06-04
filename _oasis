@@ -12,6 +12,9 @@ OASISFormat: 0.4
 BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 
+
+
+
 Executable "recorder"
   Path:             src
   Install:          false
@@ -25,6 +28,16 @@ Executable "verifier"
   MainIs:           Verifier.ml
   CompiledObject:   best
   BuildDepends:     batteries, core, core_extended, threads
+
+Executable "checker"
+  Path:             src
+  Install:          false
+  MainIs:           Checker.ml
+  CompiledObject:   best
+  BuildDepends:     core, core_extended, threads
+
+
+
 
 Executable "test"
   Path:             src

@@ -147,8 +147,9 @@ let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
                        neg = List.take c_group'.neg (max_c_group_size / 2)
                    }
   in let new_features = synthFeatures ~consts ~job c_group
-  in Log.debug (lazy ("Synthesized features:\n  "
-                     ^ (List.to_string_map new_features ~sep:"\n  " ~f:snd)))
+  in Log.debug (lazy ("Synthesized features:" ^ Log.indented_sep ^
+                      (List.to_string_map new_features
+                         ~sep:Log.indented_sep ~f:snd)))
    ; new_features
 
 let rec resolveConflicts ?(consts = []) ~(job : (value list, value) job)
@@ -191,7 +192,7 @@ let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 16)
    trying to learn we associate some kind of description (of polymorphic type
    'c) with each feature and postcondition. *)
 let learnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
-                 ?(consts = []) ?(max_c_group_size = 16)
+                 ?(consts = []) ?(max_c_group_size = 20)
                  ?(disable_synth = false) (job : ('a, 'b) job)
                  : ('a feature with_desc) CNF.t option =
   Log.debug (lazy ("Learning with "
