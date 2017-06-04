@@ -1,24 +1,45 @@
 open Core
 open PIE
+open Types
+open Utils
 
-let rec learnVPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
-                      ?(consts = []) ?(disable_synth = false) ?(max_tries = 512)
-                      ?(cnf_opt_to_desc = PIE.cnf_opt_to_desc) ~(z3 : ZProc.t)
-                      ((job, post_desc) : ('a, 'b) job with_desc) : desc =
+let rec learnVPreCond ?(strengthen = false) ?(describe = PIE.cnf_opt_to_desc)
+                      ?(k = 1) ?(auto_incr_k = true) ?(disable_synth = false)
+                      ?(max_c_group_size = 16) ?(max_tries = 512) ?(consts = [])
+                      ?(simplify = true) ?(base_random_seed = "PIE")
+                      ~(z3 : ZProc.t) ((job, post_desc) : ('a, 'b) job with_desc)
+                      : desc =
   if max_tries < 1 then cnf_opt_to_desc None
   else begin
     let precond = learnPreCond ~strengthen ~k ~auto_incr_k ~consts
-                               ~disable_synth job
-    in let pre_desc = cnf_opt_to_desc precond
+                               ~max_c_group_size ~disable_synth job
+    in let pre_desc = describe precond
     in Log.debug (lazy ("Candidate Precondition: " ^ pre_desc))
      ; match ZProc.implication_counter_example z3 pre_desc post_desc with
-       | None -> ZProc.simplify z3 pre_desc
+       | None -> let pre_desc =
+                   if simplify then ZProc.simplify z3 pre_desc else pre_desc
+                 in Log.debug (lazy ("Verified Precondition: " ^ pre_desc))
+                  ; pre_desc
        | Some model
          -> let model = Hashtbl.Poly.of_alist_exn model in
-            let test = List.map job.farg_names ~f:(Hashtbl.find_exn model)
-            in Log.debug (lazy ("Counter example: "
-                               ^ (Types.serialize_values ~sep:", " test)))
-             ; learnVPreCond ~strengthen ~k ~auto_incr_k ~consts ~disable_synth
-                             ~max_tries:(max_tries - 1) ~cnf_opt_to_desc ~z3
+            let test =
+              List.map2_exn job.farg_names job.farg_types
+                ~f:(fun n t -> match Hashtbl.find model n with
+                               | Some v -> v
+                               | None
+                                 -> let open Quickcheck
+                                    in random_value (GenTests.typ_gen t) ~size:1
+                                         ~seed:(`Deterministic (
+                                           base_random_seed ^
+                                           (string_of_int max_tries))))
+            in Log.debug (lazy ("Counter example: {"
+                               ^ (List.to_string_map2
+                                    test job.farg_names ~sep:", "
+                                    ~f:(fun v n -> n ^ " = " ^
+                                                   (serialize_value v)))
+                               ^ "}"))
+             ; learnVPreCond ~strengthen ~describe ~k ~auto_incr_k ~consts
+                             ~disable_synth ~max_c_group_size ~z3 ~simplify
+                             ~max_tries:(max_tries - 1) ~base_random_seed
                              ((add_tests ~job [test]), post_desc)
   end

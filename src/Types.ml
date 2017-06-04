@@ -40,6 +40,13 @@ let vfalse = VBool false
 let from_int = function | VInt(i) -> i | _ -> raise (Internal_Exn "")
 let from_bool = function | VBool(b) -> b | _ -> raise (Internal_Exn "")
 
+let deserialize_value_to ~(t : typ) (s : string) : value option =
+  if t = TInt then
+    try Some (VInt (int_of_string s)) with _ -> None
+  else if t = TBool then
+    try Some (VBool (bool_of_string s)) with _ -> None
+  else None
+
 let deserialize_value (s : string) : value option =
   if s = "-<ERROR>-" then Some VError
   else if s = "-<UNKNOWN>-" then Some VDontCare
@@ -50,12 +57,8 @@ let deserialize_value (s : string) : value option =
   with Failure _ ->
     None
 
-let deserialize_value_to ~(t : typ) (s : string) : value option =
-  if t = TInt then
-    try Some (VInt (int_of_string s)) with _ -> None
-  else if t = TBool then
-    try Some (VBool (bool_of_string s)) with _ -> None
-  else None
+let deserialize_values ?(sep = '\t') (s : string) : value option list =
+  let open Core in List.map (String.split ~on:sep s) ~f:deserialize_value
 
 let serialize_value (v : value) : string =
   match v with
@@ -64,9 +67,8 @@ let serialize_value (v : value) : string =
   | VError       -> "-<ERROR>-"
   | VDontCare    -> "-<UNKNOWN>-"
 
-let serialize_values ?sep:(sep="\t") (vs : value list) : string =
-  let open Core
-  in String.concat ~sep (List.map ~f:serialize_value vs)
+let serialize_values ?(sep = "\t") (vs : value list) : string =
+  let open Core in String.concat ~sep (List.map vs ~f:serialize_value)
 
 let rec print_data chan (data : value) : unit =
   Core.Out_channel.output_string chan (serialize_value data)

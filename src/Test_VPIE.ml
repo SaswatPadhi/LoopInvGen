@@ -2,14 +2,13 @@ open Core
 open Types
 open VPIE
 
-let abs_job = PIE.create_job
+let abs_job = PIE.create_job ()
   ~f:(fun [ VInt x ] -> VInt (if x > 0 then x else -x))
   ~args:([ "x", TInt ])
   ~post:(fun inp res ->
            match inp , res with
            | [ VInt x ], Ok (VInt y) -> x = y
            | _ -> false)
-  ~features:[ ]
   ~tests:(List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [VInt i]))
 
 let abs_post_desc = "(or (and (>= x 0) (= x x))

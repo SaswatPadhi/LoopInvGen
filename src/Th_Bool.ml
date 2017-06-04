@@ -9,7 +9,7 @@ let components = [
     apply = (function
              | [VBool x] -> VBool (not x)
              | _ -> VError);
-    dump = (fun l -> "(! " ^ (List.hd l) ^ ")")
+    dump = (fun l -> "(not " ^ (List.hd l) ^ ")")
   } ;
   {
     name = "and";

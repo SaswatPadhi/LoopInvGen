@@ -37,37 +37,43 @@ let flush_and_collect (z3 : t) : string =
     (String.suffix l 36) = ": invalid command, symbol expected\")") in
   let rec read_line () : unit =
     let l = Option.value_exn (In_channel.input_line z3.stdout)
-    in Log.debug (lazy ("  >> Received: " ^ l))
-     ; if error_line l then ()
+    in if error_line l then ()
        else (read_lines := (!read_lines) ^ l ; read_line ())
   in read_line () ; read_lines := String.strip !read_lines
    ; Log.debug (lazy ("Result:\n  "
                      ^ Sexp.(to_string_hum (of_string (!read_lines)))))
    ; (!read_lines)
 
+let create_local ?(db = []) (z3 : t) : unit =
+  Log.debug (lazy (String.concat ~sep:"\n  " ("Created Z3 local." :: db))) ;
+  Out_channel.output_lines z3.stdin ("(push)" :: db) ;
+  Out_channel.flush z3.stdin
+
+let close_local (z3 : t) : unit =
+  Log.debug (lazy ("Closed Z3 local.")) ;
+  Out_channel.output_lines z3.stdin ["(pop)"] ;
+  Out_channel.flush z3.stdin
+
 let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
-  Log.debug (lazy ("New" ^ (if local then " (local) " else " ") ^ "Z3 call:\n  "
-                  ^ (String.concat ~sep:"\n  " (db @ queries)))) ;
-  (*Out_channel.output_lines Out_channel.stdout queries ;*)
+  (if local then create_local z3 else ()) ;
+  Log.debug (lazy ("New Z3 call:\n  " ^
+                   (String.concat ~sep:"\n  " (db @ queries)))) ;
   if queries = []
   then begin
     if local then () else
       Out_channel.output_lines z3.stdin db ;
       Out_channel.flush z3.stdin ; []
     end
-  else begin
-    let results = ref [] in
-      (if local then Out_channel.output_string z3.stdin "(push)\n" else ()) ;
-      Out_channel.output_lines z3.stdin db ;
-      List.iter queries ~f:(fun q ->
-        Out_channel.output_string z3.stdin q ;
-        Out_channel.newline z3.stdin ;
-        results := (flush_and_collect z3) :: (!results)
-      ) ;
-      (if local then Out_channel.output_string z3.stdin "(pop)\n" else ()) ;
-      Out_channel.flush z3.stdin ; List.rev (!results)
-  end
+  else let results = ref []
+       in Out_channel.output_lines z3.stdin db
+        ; List.iter queries ~f:(fun q ->
+            Out_channel.output_string z3.stdin q ;
+            Out_channel.newline z3.stdin ;
+            results := (flush_and_collect z3) :: (!results)
+          )
+        ; (if local then close_local z3 else ())
+        ; Out_channel.flush z3.stdin ; List.rev (!results)
 
 let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
   let open Sexp in
@@ -81,27 +87,28 @@ let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
 
 let z3_result_to_values (result : string list) : model option =
   let open Sexp in
-  match result with
-  | [ "sat" ; result ]
-    -> let unexpected_exn = Internal_Exn ("Unexpected z3 model: " ^ result) in
-       begin match Sexp.parse result with
-        | Done (List((Atom model) :: varexps), _)
-          -> let open List in
-             Some (map varexps ~f:(
-               function
-               | List(l) -> begin match (nth_exn l 1) , (nth_exn l 4) with
-                             | (Atom n, v) -> (n, (z3_sexp_to_value v))
-                             | _ -> raise unexpected_exn
-                            end
-               | _ -> raise unexpected_exn))
-        | _ -> raise unexpected_exn
-       end
-  | _ -> None
+  let unexpected_exn = Internal_Exn ("Unexpected z3 model: " ^ (String.concat ~sep:"\n" result)) in
+    match result with
+    | "unsat" :: _ -> None
+    | [ "sat" ; result ]
+      -> begin match Sexp.parse result with
+          | Done (List((Atom model) :: varexps), _)
+            -> let open List in
+              Some (map varexps ~f:(
+                function
+                | List(l) -> begin match (nth_exn l 1) , (nth_exn l 4) with
+                              | (Atom n, v) -> (n, (z3_sexp_to_value v))
+                              | _ -> raise unexpected_exn
+                              end
+                | _ -> raise unexpected_exn))
+          | _ -> raise unexpected_exn
+        end
+    | _ -> raise unexpected_exn
 
-let implication_counter_example (z3 : t) (a : string) (b : string)
+let implication_counter_example (z3 : t) ?(db = []) (a : string) (b : string)
                                 : model option =
   z3_result_to_values (
-    run_queries z3 ~db:[ ("(assert " ^ a ^ ")") ; ("(assert (not " ^ b ^ "))") ]
+    run_queries z3 ~db:(db @ [ "(assert (not (=> " ^ a ^ " " ^ b ^")))" ])
                 query_for_model)
 
 let simplify (z3 : t) (q : string) : string =
@@ -113,7 +120,9 @@ let simplify (z3 : t) (q : string) : string =
   in match Sexp.parse goal with
      | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)
        -> let goals = List.filter_map goalexpr
-                        ~f:(function Atom(_) -> None
+                        ~f:(function Atom("true") -> Some "true"
+                                   | Atom("false") -> Some "false"
+                                   | Atom(_) -> None
                                    | l -> Some (to_string_hum l))
           in let goalstr = String.concat ~sep:" " goals
           in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"

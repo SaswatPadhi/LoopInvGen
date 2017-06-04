@@ -26,31 +26,45 @@ type ('a, 'b) job = {
   post : ('a, 'b) postcond ;
 }
 
-(* Creates a new job with appropriate lazy computations.
-   Our jobs deal with Types.value to enable feature synthesis with Escher. *)
-let create_job ~f ~args ~post ~features ~tests : (value list, value) job =
-  let (pos, neg) = List.fold ~init:([],[]) tests
+let split_tests tests ~f ~post =
+  List.fold ~init:([],[]) tests
     ~f:(fun (l1,l2) t -> try if post t (Result.try_with (fun () -> f t))
                              then (t :: l1, l2) else (l1, t :: l2)
-                         with IgnoreTest -> (t :: l1, l2)
+                         with IgnoreTest -> (l1, l2)
                             | _ -> (l1, t :: l2))
-  in let compute_fvec t =
-       List.map features ~f:(fun (f, _) -> try f t with _ -> false)
+
+let compute_feature_vector features test =
+  List.map features ~f:(fun (f, _) -> try f test with _ -> false)
+
+(* Creates a new job with appropriate lazy computations.
+   Our jobs deal with Types.value to enable feature synthesis with Escher. *)
+let create_pos_job ~f ~args ~post ?(features = []) ~pos_tests ()
+                   : (value list, value) job =
+  let compute_fvec = compute_feature_vector features
   in { f ; post ; features
      ; farg_names = List.map args ~f:fst
      ; farg_types = List.map args ~f:snd
-     ; pos_tests = List.map pos ~f:(fun t -> (t, lazy (compute_fvec t)))
-     ; neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
+     ; pos_tests = List.map pos_tests ~f:(fun t -> (t, lazy (compute_fvec t)))
+     ; neg_tests = []
+     }
+
+(* Creates a new job with appropriate lazy computations.
+   Our jobs deal with Types.value to enable feature synthesis with Escher. *)
+let create_job ~f ~args ~post ?(features = []) ~tests ()
+               : (value list, value) job =
+  let (pos, neg) = split_tests (List.dedup tests) ~f ~post
+  in let compute_fvec = compute_feature_vector features
+  in { (create_pos_job () ~f ~args ~post ~features ~pos_tests:pos) with
+         neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
      }
 
 let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : ('a, 'b) job =
-  let (pos, neg) = List.fold ~init:([],[]) tests
-    ~f:(fun (l1,l2) t -> try if job.post t (Result.try_with (fun () -> job.f t))
-                             then (t :: l1, l2) else (l1, t :: l2)
-                         with IgnoreTest -> (t :: l1, l2)
-                            | _ -> (l1, t :: l2))
-  in let compute_fvec t =
-       List.map job.features ~f:(fun (f, _) -> try f t with _ -> false)
+  let (pos, neg) = split_tests (List.dedup tests) ~f:job.f ~post:job.post
+  in let pos = List.(filter pos ~f:(fun t -> not (exists job.neg_tests
+                                                    ~f:(fun (p, _) -> p = t))))
+  in let neg = List.(filter neg ~f:(fun t -> not (exists job.neg_tests
+                                                    ~f:(fun (n, _) -> n = t))))
+  in let compute_fvec = compute_feature_vector job.features
   in { job with
          pos_tests = List.map pos ~f:(fun t -> (t, lazy (compute_fvec t)))
                    @ job.pos_tests ;
@@ -61,8 +75,7 @@ let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : ('a, 'b) job =
 let add_features ~(job : ('a, 'b) job) (features : 'a feature with_desc list)
                  : ('a, 'b) job =
   let add_to_fvec fs (t, fv) =
-    (t, lazy (List.map fs ~f:(fun (f, _) -> try f t with _ -> false)
-             @ (Lazy.force fv)))
+    (t, lazy ((compute_feature_vector fs t) @ (Lazy.force fv)))
   in { job with
          features = features @ job.features ;
          pos_tests = List.map job.pos_tests ~f:(add_to_fvec features) ;
@@ -108,7 +121,7 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
          codomain = TBool;
          apply = (Hashtbl.find_default tab ~default:VDontCare);
          name = "synth";
-         dump = Escher_Components._unsupported_
+         dump = _unsupported_
        };
        inputs = List.mapi job.farg_names ~f:(fun i n ->
           (((n, (fun ars -> List.nth_exn ars i)), Leaf n),
@@ -133,24 +146,33 @@ let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
                        pos = List.take c_group'.pos (max_c_group_size / 2) ;
                        neg = List.take c_group'.neg (max_c_group_size / 2)
                    }
-  in synthFeatures ~consts ~job c_group
+  in let new_features = synthFeatures ~consts ~job c_group
+  in Log.debug (lazy ("Synthesized features:\n  "
+                     ^ (List.to_string_map new_features ~sep:"\n  " ~f:snd)))
+   ; new_features
 
 let rec resolveConflicts ?(consts = []) ~(job : (value list, value) job)
+                         ?(max_c_group_size = 16)
                          (c_groups : value list conflict list)
                          : value list feature with_desc list =
   if c_groups = [] then []
-  else let new_features =
-         resolveSingleConflict ~consts ~job (List.hd_exn c_groups)
+  else let new_features = resolveSingleConflict ~consts ~job ~max_c_group_size
+                                                (List.hd_exn c_groups)
        in if not (new_features = []) then new_features
-          else resolveConflicts ~consts ~job (List.tl_exn c_groups)
+          else resolveConflicts ~consts ~job ~max_c_group_size
+                                (List.tl_exn c_groups)
 
-let rec augmentFeatures ?(consts = []) (job : (value list, value) job)
+let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 16)
+                        (job : (value list, value) job)
                         : (value list, value) job =
   let c_groups = conflictingTests job
   in if c_groups = [] then job
-     else let new_features = resolveConflicts ~consts ~job c_groups
-          in if new_features = [] then raise NoSuchFunction
-             else add_features ~job new_features
+     else let new_features = resolveConflicts c_groups ~consts ~job
+                                              ~max_c_group_size
+          in if new_features = []
+             then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
+                  ; raise NoSuchFunction)
+             else augmentFeatures ~consts (add_features ~job new_features)
 
 (* k is the maximum clause length for the formula we will provide (i.e., it's
    a k-cnf formula) f is the function whose spec we are inferring tests is a
@@ -169,13 +191,21 @@ let rec augmentFeatures ?(consts = []) (job : (value list, value) job)
    trying to learn we associate some kind of description (of polymorphic type
    'c) with each feature and postcondition. *)
 let learnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
-                 ?(consts = []) ?(disable_synth = false) (job : ('a, 'b) job)
+                 ?(consts = []) ?(max_c_group_size = 16)
+                 ?(disable_synth = false) (job : ('a, 'b) job)
                  : ('a feature with_desc) CNF.t option =
-  let job = if disable_synth then job else augmentFeatures ~consts job in
+  Log.debug (lazy ("Learning with "
+                  ^ (string_of_int (List.length job.pos_tests))
+                  ^ " POS + "
+                  ^ (string_of_int (List.length job.neg_tests))
+                  ^ " NEG tests")) ;
+  let job = if disable_synth then job
+            else augmentFeatures ~consts ~max_c_group_size job in
   let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
   let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
                                    dedup (make_f_vecs job.neg_tests)) in
   let rec learnWithK k =
+    Log.debug (lazy ("Attempting with K = " ^ (string_of_int k))) ;
     try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
                             pos_vecs neg_vecs
         in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i - 1)))
