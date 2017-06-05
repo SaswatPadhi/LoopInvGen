@@ -1,5 +1,6 @@
 open Core
 open Core.Out_channel
+open SyGuS
 open Utils
 
 let main statefile outfile do_log filename () =
@@ -10,6 +11,8 @@ let main statefile outfile do_log filename () =
                  ~f:(fun l -> map (Types.deserialize_values l)
                                   ~f:(fun v -> Option.value_exn v)))
   in In_channel.close in_chan
+   ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
+                      " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let inv = LoopInvGen.learnInvariant sygus ~states
      in let out_chan = Utils.get_out_channel outfile
@@ -22,7 +25,7 @@ let main statefile outfile do_log filename () =
 
 let cmd =
   Command.basic
-    ~summary: "Attempt to infer a loop invariant sufficient for proving correctness."
+    ~summary: "Attempts to infer a loop invariant sufficient for proving correctness."
     Command.Spec.(
       empty
       +> flag "-s" (required string)  ~doc:"FILENAME states file containing program states"

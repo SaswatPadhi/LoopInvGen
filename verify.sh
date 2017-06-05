@@ -7,10 +7,10 @@ CHECKER="./Checker.native"
 RECORDER="./Recorder.native"
 VERIFIER="./Verifier.native"
 
-STEPS=768
-MAX_STATES=2048
+STEPS=1024
+MAX_STATES=4096
 
-TIMEOUT=300s
+TIMEOUT=360s
 
 CHECKER_LOG=""
 RECORDER_LOG=""
@@ -20,7 +20,7 @@ CHECK="no"
 REMOVE_LOGS="no"
 
 usage() {
-  echo "Usage: $0 -c -l -r [-s {$STEPS} <count>] [-t {300} <seconds>] testcase" 1>&2 ;
+  echo "Usage: $0 -c -l -r [-s {$STEPS} <count>] [-t {360} <seconds>] testcase" 1>&2 ;
   exit 1 ;
 }
 
@@ -34,8 +34,6 @@ while true ; do
     -c | --check )
          CHECK="yes" ; shift ;;
     -l | --logging )
-         CHECKER_LOG=""
-         RECORDER_LOG=""
          VERIFIER_LOG="-l"
          shift ;;
     -r | --remove-logs )
@@ -74,7 +72,7 @@ $RECORDER -s $STEPS -r "seed0" -o $TESTCASE_STATE"0" $TESTCASE \
 wait
 
 grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN \
-  | sort -u | shuf | head -n $MAX_STATES \
+  | sort -u | sort -R --random-source=/dev/zero | head -n $MAX_STATES \
   > $TESTCASE_ALL_STATES
 
 if [ $REMOVE_LOGS = "yes" ]; then

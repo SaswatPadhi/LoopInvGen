@@ -1,3 +1,4 @@
+open BFL
 open Core
 open Exceptions
 open PIE
@@ -27,7 +28,9 @@ let conflicts_to_string cgroup =
    ^ "}"
 
 let abs_conflict_failure () =
-  let res = cnf_opt_to_desc (learnPreCond abs_job ~disable_synth:true)
+  let res = cnf_opt_to_desc (
+              learnPreCond abs_job ~conf:{ PIE.default_config with
+                                             disable_synth = true })
   in Alcotest.(check string) "identical" "false" res
 
 let abs_conflict_group () =
@@ -37,16 +40,22 @@ let abs_conflict_group () =
 
 let abs_precond_1_cnf () =
   let res = cnf_opt_to_desc (
-    learnPreCond ~k:1 ~auto_incr_k:false ~disable_synth:true
-                 (add_features ~job:abs_job
-                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ]))
+    learnPreCond (add_features ~job:abs_job
+                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ])
+                 ~conf:{ PIE.default_config with
+                           disable_synth = true ;
+                           for_BFL = { BFL.default_config with
+                                         k = 1 ; auto_incr_k = false }})
   in Alcotest.(check string) "identical" "false" res
 
 let abs_precond_auto_1 () =
   let res = cnf_opt_to_desc (
-    learnPreCond ~k:1 ~auto_incr_k:true ~disable_synth:true
-                 (add_features ~job:abs_job
-                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ]))
+    learnPreCond (add_features ~job:abs_job
+                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ])
+                 ~conf:{ PIE.default_config with
+                           disable_synth = true ;
+                           for_BFL = { BFL.default_config with
+                                         k = 1 ; auto_incr_k = true }})
   in Alcotest.(check string) "identical" "(or (= x (+ x x)) (> x 0))" res
 
 let abs_feature_synthesis () =
@@ -64,7 +73,7 @@ let abs_zero_features () =
                             | [ VInt x ], Ok (VInt y) -> x = y
                             | _ -> false)
       ~tests:(List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [VInt i]))))
-  in Alcotest.(check string) "identical" "(>= x 0)" res
+  in Alcotest.(check string) "identical" "(> x -1)" res
 
 let all = [
   "Abs Conflict Failure",   `Quick,   abs_conflict_failure  ;

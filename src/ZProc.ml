@@ -2,6 +2,7 @@ open Core
 open Core.Unix
 open Exceptions
 open Sexplib
+open Utils
 
 type t = {
   pid    : Pid.t ;
@@ -32,6 +33,9 @@ let create () : t =
 let close z3 =
   Out_channel.close z3.stdin ; ignore (waitpid z3.pid) ;
   Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.pid)))
+
+let process (f : t -> 'a) : 'a =
+  let z3 = create () in let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =
   let last_line = "ABRACADABRA.ABRACADABRA^ABRACADABRA"
@@ -115,6 +119,13 @@ let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
     run_queries z3 ~db:(db @ [ "(assert (not (=> " ^ a ^ " " ^ b ^")))" ])
                 (query_for_model ~eval_term ()))
 
+let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
+                                (a : string) (b : string) : model option =
+  z3_result_to_values (
+    run_queries z3 ~db:(db @ [ "(assert (not (=> " ^ a ^ " " ^ b ^")))"
+                             ; "(assert (not (=> " ^ b ^ " " ^ a ^")))" ])
+                (query_for_model ~eval_term ()))
+
 let simplify (z3 : t) (q : string) : string =
   let open Sexp in
   let goal =
@@ -136,6 +147,9 @@ let simplify (z3 : t) (q : string) : string =
           in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"
      | _ -> raise unexpected_exn
 
-let model_to_string ?(rowsep = "\n") ?(colsep = ": ") (model : model) : string =
-  String.concat ~sep:rowsep (
-    List.map model ~f:(fun (n, v) -> n ^ colsep ^ (Types.serialize_value v)))
+let model_to_string ?(rowsep = "\n") ?(colsep = ": ") (model : model option)
+                    : string =
+  match model with
+  | None   -> ""
+  | Some m -> List.to_string_map m ~sep:rowsep
+                ~f:(fun (n, v) -> n ^ colsep ^ (Types.serialize_value v))

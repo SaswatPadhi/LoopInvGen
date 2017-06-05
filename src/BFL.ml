@@ -8,6 +8,18 @@ type conjunct = int list
 type costAssignment = (int, float) Hashtbl.t
 type truthAssignment = (int, bool) Hashtbl.t
 
+type config = {
+  auto_incr_k : bool ;
+  k : int ;
+  strengthen : bool ;
+}
+
+let default_config = {
+  auto_incr_k = true ;
+  k = 1 ;
+  strengthen = false ;
+}
+
 let truthAssignment_to_string (ta : truthAssignment) : string =
   "[" ^
   (Hashtbl.fold ta ~init:""
@@ -191,38 +203,43 @@ let cnfVarsToClauseVars k n : (int * conjunct) list =
    all negative examples and satisfies at least one positive example but might
    falsify others.  this is useful if we are trying to find a simple
    strengthening of the "true" precondition. *)
-let learnKCNF ?(k = 3) ?(strengthen = false) ~(n : int)
-              (pos : bool list list) (neg : bool list list) : int CNF.t =
-  (* create one variable per possible k-clause over the given variables *)
-  let varEncoding = cnfVarsToClauseVars k n in
-  let costs = Hashtbl.Poly.of_alist_exn
-                (List.map varEncoding ~f:(fun (i, tuple) -> (i, 1.0))) in
-  let augmentExamples =
-    List.(map ~f:(fun ex -> foldi ex ~init:[]
-                                  ~f:(fun i curr b -> (i+1, b) ::
-                                                      (i+n+1, not b) :: curr)))
-  (* translate an example on the original variables
-     to one on the new variables *)
-  in let encodeExamples ex =
-       let ex = Hashtbl.Poly.of_alist_exn ex in Hashtbl.Poly.of_alist_exn (
-         List.map varEncoding
-                  ~f:(fun (i, c) ->
-                        (i, List.exists c ~f:(Hashtbl.find_exn ex))))
-  in let pos = List.map ~f:encodeExamples (augmentExamples pos)
-  in let neg = List.map ~f:encodeExamples (augmentExamples neg)
-  (* learn a conjunction on the new variables *)
-  in let vars = List.map ~f:fst varEncoding
-  in let learnedConjunct = learnConjunction ~strengthen vars costs pos neg in
-
-  (* translate the result back to the old variables *)
-  let decodeClause i =
-    let rec aux n =
-      match (i lsr n) land 0x3ff with
-      | 0 -> []
-      | lit -> lit :: (aux (n + 10))
-    in aux 0
-  in let learnedkCNF = List.map ~f:decodeClause learnedConjunct in
-
-  (* convert the result into cnf type *)
-  let indexToLit i = if i <= n then Pos i else Neg (i - n)
-  in List.map ~f:(List.map ~f:indexToLit) learnedkCNF
+let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
+             (neg : bool list list) : int CNF.t =
+  let rec helper k =
+  begin
+    Log.debug (lazy ("Attempting with K = " ^ (string_of_int k))) ;
+    (* create one variable per possible k-clause over the given variables *)
+    let varEncoding = cnfVarsToClauseVars k n in
+    let costs = Hashtbl.Poly.of_alist_exn
+                  (List.map varEncoding ~f:(fun (i, tuple) -> (i, 1.0))) in
+    let augmentExamples =
+          List.(map ~f:(foldi ~init:[]
+                              ~f:(fun i curr b -> (i+1, b) :: (i + n + 1, not b)
+                                                           :: curr)))
+    (* translate an example on the original variables
+      to one on the new variables *)
+    in let encodeExamples ex =
+         let ex = Hashtbl.Poly.of_alist_exn ex in Hashtbl.Poly.of_alist_exn (
+                    List.map varEncoding
+                             ~f:(fun (i, c) ->
+                                   (i, List.exists c ~f:(Hashtbl.find_exn ex))))
+    in let pos = List.map ~f:encodeExamples (augmentExamples pos)
+    in let neg = List.map ~f:encodeExamples (augmentExamples neg)
+    (* learn a conjunction on the new variables *)
+    in let vars = List.map ~f:fst varEncoding
+    in try
+         let learnedConjunct = learnConjunction vars costs pos neg
+                                                ~strengthen:conf.strengthen
+         in let decodeClause i =
+              let rec aux n = match (i lsr n) land 0x3ff with
+                              | 0 -> []
+                              | lit -> lit :: (aux (n + 10))
+              in aux 0
+         in let learnedkCNF = List.map ~f:decodeClause learnedConjunct in
+         (* convert the result into cnf type *)
+         let indexToLit i = if i <= n then Pos i else Neg (i - n)
+         in List.map ~f:(List.map ~f:indexToLit) learnedkCNF
+       with NoSuchFunction
+            -> if not conf.auto_incr_k then raise NoSuchFunction
+                                       else helper (k + 1)
+  end in helper conf.k

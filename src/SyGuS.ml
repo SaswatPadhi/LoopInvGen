@@ -23,8 +23,20 @@ type t = {
   consts : value list ;
 }
 
+let shrink_vars (s : t) : t =
+  let (t_names , s_names) =
+    List.(partition_tf (dedup (s.pre.args @ s.trans.args @ s.post.args))
+                       ~f:(String.is_suffix ~suffix:"!"))
+  in let filter_on_s = List.(filter ~f:(fun (v, _) -> mem ~equal:(=) s_names v))
+  in let filter_on_t = List.(filter ~f:(fun (v, _) -> mem ~equal:(=) t_names v))
+  in { s with
+         inv_vars = filter_on_s s.inv_vars ;
+         state_vars = filter_on_s s.state_vars ;
+         trans_vars = filter_on_t s.trans_vars ;
+     }
+
 let rec extract_args_and_consts (vars : string list) (exp : Sexp.t)
-                               : (string list) * (value list) =
+                                : (string list) * (value list) =
   let open List in
   match exp with
   | List([]) | List((List _) :: _)
@@ -90,21 +102,21 @@ let load chan : t =
          )
       (input_rev_sexps chan)
   ; let state_var_names = List.map ~f:fst (!state_vars)
-    in consts := List.dedup (!consts) ;
-       Log.debug (lazy ("Variables in state: "
-                       ^ (String.concat ~sep:", " state_var_names))) ;
-       Log.debug (lazy ("Variables in invariant: "
-                       ^ (List.to_string_map ~sep:", " ~f:fst (!inv_vars)))) ;
-       Log.debug (lazy ("Detected Constants: "
-                       ^ (serialize_values ~sep:", " (!consts)))) ;
-      {
-        logic = !logic ;
-        inv_vars = !inv_vars ;
-        state_vars = !state_vars ;
-        trans_vars = !trans_vars ;
-        inv_name = !inv_name ;
-        pre = List.find_exn ~f:(fun f -> f.name = !pre_name) (!funcs) ;
-        trans = List.find_exn ~f:(fun f -> f.name = !trans_name) (!funcs) ;
-        post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;
-        consts = !consts ;
-      }
+    in consts := List.dedup (!consts)
+     ; Log.debug (lazy ("Variables in state: "
+                       ^ (String.concat ~sep:", " state_var_names)))
+     ; Log.debug (lazy ("Variables in invariant: "
+                       ^ (List.to_string_map ~sep:", " ~f:fst (!inv_vars))))
+     ; Log.debug (lazy ("Detected Constants: "
+                       ^ (serialize_values ~sep:", " (!consts))))
+     ; shrink_vars {
+         logic = !logic ;
+         inv_vars = !inv_vars ;
+         state_vars = !state_vars ;
+         trans_vars = !trans_vars ;
+         inv_name = !inv_name ;
+         pre = List.find_exn ~f:(fun f -> f.name = !pre_name) (!funcs) ;
+         trans = List.find_exn ~f:(fun f -> f.name = !trans_name) (!funcs) ;
+         post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;
+         consts = !consts ;
+       }

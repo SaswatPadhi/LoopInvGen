@@ -15,12 +15,10 @@ let main size forks seeds outfile do_log filename () =
            ~f:(fun seed ->
                  newline out_chan ;
                  let states = Simulator.run s ~size ~seed
-                 in List.iter states
-                       ~f:(fun state ->
-                             output_string out_chan (
-                               Types.serialize_values state) ;
-                             newline out_chan)
-               )
+                 in List.iter states ~f:(fun state ->
+                                           output_string out_chan (
+                                             Types.serialize_values state) ;
+                                           newline out_chan))
        ; Out_channel.close out_chan
      end
 

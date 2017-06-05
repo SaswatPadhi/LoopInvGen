@@ -3,22 +3,37 @@ open PIE
 open Types
 open Utils
 
-let rec learnVPreCond ?(strengthen = false) ?(describe = PIE.cnf_opt_to_desc)
-                      ?(k = 1) ?(auto_incr_k = true) ?(disable_synth = false)
-                      ?(max_c_group_size = 24) ?(max_tries = 512) ?(consts = [])
-                      ?(simplify = true) ?(base_random_seed = "PIE")
-                      ?(eval_term = "true") ~(z3 : ZProc.t)
+type 'a config = {
+  for_PIE : PIE.config ;
+
+  base_random_seed : string ;
+  describe : (('a feature with_desc) CNF.t option) -> desc ;
+  max_tries : int ;
+  simplify : bool ;
+}
+
+let default_config = {
+  for_PIE = PIE.default_config ;
+
+  base_random_seed = "VPIE" ;
+  describe = PIE.cnf_opt_to_desc ;
+  max_tries = 512 ;
+  simplify = true ;
+}
+
+let rec learnVPreCond ?(conf = default_config) ?(eval_term = "true")
+                      ?(consts = []) ~(z3 : ZProc.t)
                       ((job, post_desc) : ('a, 'b) job with_desc) : desc =
-  if max_tries < 1 then cnf_opt_to_desc None
+  if conf.max_tries < 1 then conf.describe None
   else begin
-    let precond = learnPreCond ~strengthen ~k ~auto_incr_k ~consts
-                               ~max_c_group_size ~disable_synth job
-    in let pre_desc = describe precond
+    let precond = learnPreCond ~conf:conf.for_PIE ~consts job
+    in let pre_desc = conf.describe precond
     in Log.debug (lazy ("Candidate Precondition: " ^ pre_desc))
      ; match ZProc.implication_counter_example ~eval_term z3
                                                pre_desc post_desc with
        | None -> let pre_desc =
-                   if simplify then ZProc.simplify z3 pre_desc else pre_desc
+                   if conf.simplify then ZProc.simplify z3 pre_desc
+                                    else pre_desc
                  in Log.debug (lazy ("Verified Precondition: " ^ pre_desc))
                   ; pre_desc
        | Some model
@@ -31,8 +46,8 @@ let rec learnVPreCond ?(strengthen = false) ?(describe = PIE.cnf_opt_to_desc)
                                  -> let open Quickcheck
                                     in random_value (GenTests.typ_gen t) ~size:1
                                          ~seed:(`Deterministic (
-                                           base_random_seed ^
-                                           (string_of_int max_tries))))
+                                           conf.base_random_seed ^
+                                           (string_of_int conf.max_tries))))
             in Log.debug (lazy ("Counter example: {"
                                ^ (List.to_string_map2
                                     test job.farg_names ~sep:", "
@@ -41,9 +56,6 @@ let rec learnVPreCond ?(strengthen = false) ?(describe = PIE.cnf_opt_to_desc)
                                ^ "}"))
              ; let (job, tests_added) = add_tests ~job [test]
                 in if tests_added < 1 then "false"
-                   else learnVPreCond ~strengthen ~describe ~k ~auto_incr_k
-                                      ~disable_synth ~max_c_group_size
-                                      ~max_tries:(max_tries - 1) ~consts
-                                      ~simplify ~base_random_seed ~eval_term
-                                      ~z3 (job, post_desc)
+                   else learnVPreCond (job, post_desc) ~eval_term ~z3 ~consts
+                          ~conf: { conf with max_tries = (conf.max_tries - 1) }
   end

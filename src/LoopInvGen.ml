@@ -2,11 +2,33 @@ open Core
 open SyGuS
 open Types
 open Utils
+open VPIE
 
-let learnStrongerThanPost (sygus : SyGuS.t) ~(states : value list list)
-                          ~(z3 : ZProc.t) : PIE.desc =
+type 'a config = {
+  for_VPIE : 'a VPIE.config ;
+
+  base_random_seed : string ;
+  max_restarts : int ;
+  max_steps_on_restart : int ;
+  model_completion_mode : [ `RandomGeneration | `UsingZ3 ] ;
+}
+
+let default_config = {
+  for_VPIE = {
+    VPIE.default_config with
+      simplify = false ;
+  } ;
+
+  base_random_seed = "LoopInvGen" ;
+  max_restarts = 8 ;
+  max_steps_on_restart = 32 ;
+  model_completion_mode = `UsingZ3 ;
+}
+
+let learnStrongerThanPost ?(conf = default_config) ~(states : value list list)
+                          ~(z3 : ZProc.t) (sygus : SyGuS.t) : PIE.desc =
   Log.debug (lazy ("STAGE 1> Learning initial candidate invariant")) ;
-  VPIE.learnVPreCond ~consts:sygus.consts ~z3 (
+  VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 (
     (PIE.create_pos_job ()
       ~f: (Simulator.build_function
              sygus.post.expr ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
@@ -19,8 +41,9 @@ let learnStrongerThanPost (sygus : SyGuS.t) ~(states : value list list)
     sygus.post.expr
   )
 
-let strengthenForInductiveness ~(sygus : SyGuS.t) ~(states : value list list)
-                               ~(z3 : ZProc.t) (inv : PIE.desc) : PIE.desc =
+let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
+                               ~(states : value list list) ~(z3 : ZProc.t)
+                               (inv : PIE.desc) : PIE.desc =
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
@@ -42,7 +65,7 @@ let strengthenForInductiveness ~(sygus : SyGuS.t) ~(states : value list list)
                                  ; "(assert " ^ trans_desc ^ ")"
                                  ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
-         VPIE.learnVPreCond ~consts:sygus.consts ~z3 ~simplify:false
+         VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3
                             ~eval_term:("(and " ^ invf_call ^ " " ^
                                         trans_desc ^ ")") (
            (PIE.create_pos_job ()
@@ -66,23 +89,21 @@ let checkIfWeakerThanPre (inv : PIE.desc) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                    Log.indented_sep ^ inv)) ;
   ZProc.implication_counter_example z3 sygus.pre.expr inv
 
-let learnInvariant ~(states : value list list) ?(max_restarts = 8)
-                   ?(max_steps_on_restart = 32) ?(base_random_seed = "PIE")
+let learnInvariant ?(conf = default_config) ~(states : value list list)
                    (sygus : SyGuS.t) : PIE.desc option =
-  let rec helper z3 states tries seed =
-    let inv = learnStrongerThanPost sygus ~states ~z3
-    in let inv = strengthenForInductiveness inv ~sygus ~states ~z3
-    in match checkIfWeakerThanPre inv ~sygus ~z3 with
-       | None -> Some inv
-       | Some model -> if tries < 1 then None else
-           let open Quickcheck
-           in helper z3 (states @ (random_value
-                                     ~size:max_steps_on_restart
-                                     ~seed:(`Deterministic seed)
-                                     (Simulator.simulate_from sygus z3 model)))
-                        (tries - 1)
-                        (seed ^ "#")
-  in let z3 = ZProc.create ()
-      in Simulator.setup sygus z3
-       ; let inv = helper z3 states max_restarts base_random_seed
-          in ZProc.close z3 ; inv
+  ZProc.process (fun z3 ->
+    Simulator.setup sygus z3 ;
+    let rec helper states tries seed =
+      let inv = learnStrongerThanPost sygus ~states ~z3
+      in let inv = strengthenForInductiveness inv ~sygus ~states ~z3
+      in match checkIfWeakerThanPre inv ~sygus ~z3 with
+         | None -> Some inv
+         | Some model -> if tries < 1 then None else
+             let open Quickcheck
+             in helper (states @ (random_value
+                                    ~size:conf.max_steps_on_restart
+                                    ~seed:(`Deterministic seed)
+                                    (Simulator.simulate_from sygus z3 model)))
+                       (tries - 1)
+                       (seed ^ "#")
+    in helper states conf.max_restarts conf.base_random_seed)

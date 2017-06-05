@@ -26,6 +26,20 @@ type ('a, 'b) job = {
   post : ('a, 'b) postcond ;
 }
 
+type config = {
+  for_BFL : BFL.config ;
+
+  disable_synth : bool ;
+  max_c_group_size : int ;
+}
+
+let default_config : config = {
+  for_BFL = BFL.default_config ;
+
+  disable_synth = false ;
+  max_c_group_size = 16
+}
+
 let split_tests tests ~f ~post =
   List.fold ~init:([],[]) tests
     ~f:(fun (l1,l2) t -> try if post t (Result.try_with (fun () -> f t))
@@ -136,45 +150,46 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
   in let solutions = solve f_synth_task consts
   in List.map solutions ~f:(fun (desc, f) -> (fun v -> (f v) = vtrue), desc)
 
-let resolveSingleConflict ?(consts = []) ~(job : (value list, value) job)
-                          ?(max_c_group_size = 24)
-                          (c_group' : value list conflict)
-                          : value list feature with_desc list =
+let resolveAConflict ?(conf = default_config) ?(consts = [])
+                     ~(job : (value list, value) job)
+                     (c_group' : value list conflict)
+                     : value list feature with_desc list =
   let group_size = List.((length c_group'.pos) + (length c_group'.neg))
-  in let c_group = if group_size < max_c_group_size then c_group'
+  in let c_group = if group_size < conf.max_c_group_size then c_group'
                    else {
                      c_group' with
-                       pos = List.take c_group'.pos (max_c_group_size / 2) ;
-                       neg = List.take c_group'.neg (max_c_group_size / 2)
+                       pos = List.take c_group'.pos (conf.max_c_group_size / 2);
+                       neg = List.take c_group'.neg (conf.max_c_group_size / 2)
                    }
-  in let new_features = synthFeatures ~consts ~job c_group
+  in let new_features = synthFeatures c_group ~consts ~job
   in Log.debug (lazy ("Synthesized features:" ^ Log.indented_sep ^
                       (List.to_string_map new_features
                          ~sep:Log.indented_sep ~f:snd)))
    ; new_features
 
-let rec resolveConflicts ?(consts = []) ~(job : (value list, value) job)
-                         ?(max_c_group_size = 24)
-                         (c_groups : value list conflict list)
-                         : value list feature with_desc list =
+let rec resolveSomeConflicts ?(conf = default_config) ?(consts = [])
+                             ~(job : (value list, value) job)
+                             (c_groups : value list conflict list)
+                             : value list feature with_desc list =
   if c_groups = [] then []
-  else let new_features = resolveSingleConflict ~consts ~job ~max_c_group_size
-                                                (List.hd_exn c_groups)
+  else let new_features = resolveAConflict (List.hd_exn c_groups)
+                                           ~conf ~consts ~job
        in if not (new_features = []) then new_features
-          else resolveConflicts ~consts ~job ~max_c_group_size
-                                (List.tl_exn c_groups)
+          else resolveSomeConflicts (List.tl_exn c_groups) ~conf ~consts ~job
 
-let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 24)
-                        ?(disable_synth = false) (job : (value list, value) job)
-                        : (value list, value) job option =
+let rec augmentFeatures ?(conf = default_config) ?(consts = [])
+                        (job : (value list, value) job)
+                        : (value list, value) job =
   let c_groups = conflictingTests job
-  in if c_groups = [] then Some job
-     else if disable_synth then None
-     else let new_features = resolveConflicts c_groups ~consts ~job
-                                              ~max_c_group_size
+  in if c_groups = [] then job
+     else if conf.disable_synth
+          then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
+               ; raise NoSuchFunction)
+     else let new_features = resolveSomeConflicts c_groups ~job ~conf ~consts
           in if new_features = []
-             then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED")) ; None)
-             else augmentFeatures ~consts (add_features ~job new_features)
+             then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
+                  ; raise NoSuchFunction)
+             else augmentFeatures (add_features new_features ~job) ~conf ~consts
 
 (* k is the maximum clause length for the formula we will provide (i.e., it's
    a k-cnf formula) f is the function whose spec we are inferring tests is a
@@ -192,30 +207,22 @@ let rec augmentFeatures ?(consts = []) ?(max_c_group_size = 24)
    post is the postcondition whose corresponding precondition formula we are
    trying to learn we associate some kind of description (of polymorphic type
    'c) with each feature and postcondition. *)
-let learnPreCond ?(strengthen = false) ?(k = 1) ?(auto_incr_k = true)
-                 ?(consts = []) ?(max_c_group_size = 24)
-                 ?(disable_synth = false) (job : ('a, 'b) job)
+let learnPreCond ?(conf = default_config) ?(consts = []) (job : ('a, 'b) job)
                  : ('a feature with_desc) CNF.t option =
   Log.debug (lazy ("Learning with "
                   ^ (string_of_int (List.length job.pos_tests))
                   ^ " POS + "
                   ^ (string_of_int (List.length job.neg_tests))
                   ^ " NEG tests")) ;
-  match augmentFeatures ~consts ~max_c_group_size ~disable_synth job with
-  | None -> None
-  | Some job -> begin
-      let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec) in
-      let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
-                                      dedup (make_f_vecs job.neg_tests)) in
-      let rec learnWithK k =
-        Log.debug (lazy ("Attempting with K = " ^ (string_of_int k))) ;
-        try let cnf = learnKCNF ~k ~strengthen ~n:(List.length job.features)
-                                pos_vecs neg_vecs
-            in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i-1)))
-        with NoSuchFunction -> if auto_incr_k then learnWithK (k + 1) else None
-          | ClauseEncodingError -> None
-      in learnWithK k
-    end
+  try let job = augmentFeatures ~conf ~consts job
+      in let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec)
+      in let (pos_vecs, neg_vecs) = List.(dedup (make_f_vecs job.pos_tests),
+                                          dedup (make_f_vecs job.neg_tests))
+      in try let cnf = learnCNF pos_vecs neg_vecs ~n:(List.length job.features)
+                                ~conf:conf.for_BFL
+             in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i-1)))
+         with ClauseEncodingError -> None
+  with _ -> None
 
 let cnf_opt_to_desc (pred : ('a feature with_desc) CNF.t option) : desc =
   match pred with

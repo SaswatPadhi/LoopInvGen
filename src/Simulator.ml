@@ -92,7 +92,5 @@ let simulate (s : SyGuS.t) (z3 : ZProc.t)
     (pre_state_gen s z3) >>= (simulate_from s z3)
 
 let run ~size ~seed (s : SyGuS.t) : value list list =
-  let z3 = ZProc.create ()
-  in setup s z3
-   ; let tests = Quickcheck.random_value ~size ~seed (simulate s z3)
-     in ZProc.close z3 ; tests
+  ZProc.process (fun z3 -> setup s z3 ;
+                           Quickcheck.random_value ~size ~seed (simulate s z3))
