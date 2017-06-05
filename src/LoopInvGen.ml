@@ -47,8 +47,7 @@ let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
-    "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" "
-                                   ~f:(fun (s, _) -> s ^ "!")) ^ ")" in
+    "(invf " ^ (List.to_string_map sygus.inv'_vars ~sep:" " ~f:fst) ^ ")" in
   let trans_desc = ZProc.simplify z3 sygus.trans.expr in
   let rec helper inv =
   begin

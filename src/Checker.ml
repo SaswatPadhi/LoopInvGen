@@ -14,8 +14,7 @@ let checkInvariant (inv : string) ~(sygus : SyGuS.t) : bool =
             ; (implication_counter_example z3
                   ("(and " ^ sygus.trans.expr ^ " " ^ inv_call ^ ")")
                   ("(" ^ sygus.inv_name ^ " "
-                  ^ (List.to_string_map sygus.inv_vars ~sep:" "
-                                        ~f:(fun (s, _) -> s ^ "!"))
+                  ^ (List.to_string_map sygus.inv'_vars ~sep:" " ~f:fst)
                   ^ ")"))
             ; (implication_counter_example z3 inv_call sygus.post.expr) ]
       with [ None ; None ; None ] -> true | _ -> false)

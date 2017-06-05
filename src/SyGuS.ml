@@ -14,6 +14,7 @@ type func = {
 type t = {
   logic : string ;
   inv_vars : var list ;
+  inv'_vars : var list ;
   state_vars : var list ;
   trans_vars : var list ;
   inv_name : string ;
@@ -33,6 +34,11 @@ let shrink_vars (s : t) : t =
          inv_vars = filter_on_s s.inv_vars ;
          state_vars = filter_on_s s.state_vars ;
          trans_vars = filter_on_t s.trans_vars ;
+         inv'_vars = List.filter_map s.inv'_vars
+           ~f:(fun (n, t) -> if List.mem ~equal:(=) t_names n then Some (n, t)
+                             else let s = String.chop_suffix_exn n ~suffix:"!"
+                                   in if List.mem ~equal:(=) s_names s
+                                      then Some (s, t) else None);
      }
 
 let rec extract_args_and_consts (vars : string list) (exp : Sexp.t)
@@ -91,10 +97,10 @@ let load chan : t =
               -> state_vars := (v, (to_typ t)) :: (!state_vars)
             | List([Atom("declare-primed-var") ; Atom(v) ; Atom(t)])
               -> state_vars := (v, (to_typ t)) :: (!state_vars)
-              ; trans_vars := ((v ^ "!"), (to_typ t)) :: (!trans_vars)
+               ; trans_vars := ((v ^ "!"), (to_typ t)) :: (!trans_vars)
             | List(Atom("define-fun") :: lsexp)
               -> let (func, fconsts) = load_define_fun lsexp
-                in funcs := func :: (!funcs) ; consts := fconsts @ (!consts)
+                  in funcs := func :: (!funcs) ; consts := fconsts @ (!consts)
             | List([Atom("inv-constraint") ; Atom(invf) ; Atom(pref)
                                           ; Atom(transf) ; Atom(postf) ])
               -> pre_name := pref ; trans_name := transf ; post_name := postf
@@ -102,21 +108,30 @@ let load chan : t =
          )
       (input_rev_sexps chan)
   ; let state_var_names = List.map ~f:fst (!state_vars)
-    in consts := List.dedup (!consts)
-     ; Log.debug (lazy ("Variables in state: "
-                       ^ (String.concat ~sep:", " state_var_names)))
-     ; Log.debug (lazy ("Variables in invariant: "
-                       ^ (List.to_string_map ~sep:", " ~f:fst (!inv_vars))))
-     ; Log.debug (lazy ("Detected Constants: "
-                       ^ (serialize_values ~sep:", " (!consts))))
-     ; shrink_vars {
-         logic = !logic ;
-         inv_vars = !inv_vars ;
-         state_vars = !state_vars ;
-         trans_vars = !trans_vars ;
-         inv_name = !inv_name ;
-         pre = List.find_exn ~f:(fun f -> f.name = !pre_name) (!funcs) ;
-         trans = List.find_exn ~f:(fun f -> f.name = !trans_name) (!funcs) ;
-         post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;
-         consts = !consts ;
-       }
+     in consts := List.dedup (!consts)
+      ; Log.debug (lazy ("Variables in state: "
+                        ^ (String.concat ~sep:", " state_var_names)))
+      ; Log.debug (lazy ("Variables in invariant: "
+                        ^ (List.to_string_map ~sep:", " ~f:fst (!inv_vars))))
+      ; Log.debug (lazy ("Detected Constants: "
+                        ^ (serialize_values ~sep:", " (!consts))))
+      ; let s =
+          shrink_vars {
+            logic = !logic ;
+            inv_vars = !inv_vars ;
+            inv'_vars = List.map (!inv_vars) ~f:(fun (n, t) -> (n ^ "!", t)) ;
+            state_vars = !state_vars ;
+            trans_vars = !trans_vars ;
+            inv_name = !inv_name ;
+            pre = List.find_exn ~f:(fun f -> f.name = !pre_name) (!funcs) ;
+            trans = List.find_exn ~f:(fun f -> f.name = !trans_name) (!funcs) ;
+            post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;
+            consts = !consts ;
+          }
+       in Log.debug (lazy ("Final variables in state: "
+                     ^ (List.to_string_map ~sep:", " ~f:fst (s.state_vars))))
+        ; Log.debug (lazy ("Final variables in invariant: "
+                          ^ (List.to_string_map ~sep:", " ~f:fst (s.inv_vars))))
+        ; Log.debug (lazy ("Final variables in trans: "
+                          ^ (List.to_string_map ~sep:", " ~f:fst (s.trans_vars))))
+        ; s

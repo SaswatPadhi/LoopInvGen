@@ -26,14 +26,14 @@ let build_function (expr : string) ~(z3 : ZProc.t) ~(arg_names : string list)
        | [ "unsat" ] -> vfalse
        | _ -> raise (Internal_Exn "Failed")
 
-let filter_state ?trans:(trans=true) (model : (string * Types.value) list)
+let filter_state ?(trans = true) (model : (string * Types.value) list)
                  : (string * Types.value) list =
   if trans
   then List.filter_map model
                        ~f:(fun (n, v) -> match String.chop_suffix n "!" with
                                          | None -> None
                                          | Some n -> Some (n, v))
-  else List.filter model ~f:(fun (n, _) -> String.suffix n 1 <> "!")
+  else List.filter model ~f:(fun (n, _) -> String.is_suffix n ~suffix:"!")
 
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
                : value list option =
