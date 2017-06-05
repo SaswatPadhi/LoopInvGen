@@ -20,8 +20,9 @@ let main statefile outfile do_log filename () =
           "(define-fun " ^ sygus.inv_name ^ " (" ^
           (List.to_string_map sygus.inv_vars ~sep:" "
              ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t) ^ ")")) ^
-          ") Bool " ^ (Option.value inv ~default:"false") ^ ")")
+          ") Bool " ^ (Option.value inv ~default:"false") ^ ")\n")
       ; Out_channel.close out_chan
+      ; exit (if inv = None then 1 else 0)
 
 let cmd =
   Command.basic

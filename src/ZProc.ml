@@ -1,11 +1,9 @@
 open Core
-open Core.Unix
 open Exceptions
 open Sexplib
-open Utils
 
 type t = {
-  pid    : Pid.t ;
+  procid : Pid.t ;
   stdin  : Out_channel.t ;
   stdout : In_channel.t ;
   stderr : In_channel.t ;
@@ -19,23 +17,26 @@ let query_for_model ?(eval_term = "true") () =
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
-let create () : t =
+let create ?(init_options = []) () : t =
+  let open Unix in
   let open Process_info in
   let pi = create_process "./_dep/z3.bin" ["-in"] in
-    Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid))) ;
-    {
-      pid    = pi.pid ;
-      stdin  = out_channel_of_descr pi.stdin ;
-      stdout = in_channel_of_descr pi.stdout ;
-      stderr = in_channel_of_descr pi.stdout ;
-    }
+  let z3 = {
+    procid = pi.pid ;
+    stdin  = out_channel_of_descr pi.stdin ;
+    stdout = in_channel_of_descr pi.stdout ;
+    stderr = in_channel_of_descr pi.stdout ;
+  } in Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
+     ; Out_channel.output_lines z3.stdin init_options
+     ; z3
+    
 
 let close z3 =
-  Out_channel.close z3.stdin ; ignore (waitpid z3.pid) ;
-  Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.pid)))
+  Out_channel.close z3.stdin ; ignore (Unix.waitpid z3.procid) ;
+  Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
-let process (f : t -> 'a) : 'a =
-  let z3 = create () in let result = (f z3) in (close z3) ; result
+let process ?(init_options = []) (f : t -> 'a) : 'a =
+  let z3 = create ~init_options () in let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =
   let last_line = "ABRACADABRA.ABRACADABRA^ABRACADABRA"
@@ -59,7 +60,7 @@ let create_local ?(db = []) (z3 : t) : unit =
 
 let close_local (z3 : t) : unit =
   Log.debug (lazy ("Closed Z3 local.")) ;
-  Out_channel.output_lines z3.stdin ["(pop)"] ;
+  Out_channel.output_string z3.stdin "(pop)\n" ;
   Out_channel.flush z3.stdin
 
 let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
@@ -113,18 +114,20 @@ let z3_result_to_values (result : string list) : model option =
         end
     | _ -> raise unexpected_exn
 
+let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
+                          : model option =
+  z3_result_to_values (run_queries z3 (query_for_model ~eval_term ()) ~db)
+
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  z3_result_to_values (
-    run_queries z3 ~db:(db @ [ "(assert (not (=> " ^ a ^ " " ^ b ^")))" ])
-                (query_for_model ~eval_term ()))
+  sat_model_for_asserts z3 ~eval_term
+                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)
 
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  z3_result_to_values (
-    run_queries z3 ~db:(db @ [ "(assert (not (=> " ^ a ^ " " ^ b ^")))"
-                             ; "(assert (not (=> " ^ b ^ " " ^ a ^")))" ])
-                (query_for_model ~eval_term ()))
+  sat_model_for_asserts z3 ~eval_term
+                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") ::
+                             ("(assert (not (=> " ^ b ^ " " ^ a ^")))") :: db)
 
 let simplify (z3 : t) (q : string) : string =
   let open Sexp in
@@ -151,5 +154,19 @@ let model_to_string ?(rowsep = "\n") ?(colsep = ": ") (model : model option)
                     : string =
   match model with
   | None   -> ""
-  | Some m -> List.to_string_map m ~sep:rowsep
+  | Some m -> Utils.List.to_string_map m ~sep:rowsep
                 ~f:(fun (n, v) -> n ^ colsep ^ (Types.serialize_value v))
+
+let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
+                            : (Types.value list -> Types.value) =
+  let open Types in
+  fun (values : value list) ->
+    match run_queries z3
+            ~db:(("(assert " ^ expr ^ ")") ::
+                (List.map2_exn arg_names values
+                               ~f:(fun n v -> ("(assert (= " ^ n ^ " " ^
+                                               (serialize_value v) ^ "))"))))
+            [ "(check-sat)" ]
+    with [ "sat" ]   -> vtrue
+       | [ "unsat" ] -> vfalse
+       | _ -> raise (Internal_Exn "Z3 could not verify the query.")

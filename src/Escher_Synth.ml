@@ -182,7 +182,7 @@ let solve_impl ?ast:(ast=false) task consts =
     <- List.fold_left (fun p i -> VSet.add ((((string_of_int i), (fun ars -> VInt i)), Leaf ("const_" ^ (string_of_int i))),
                                             Array.make vector_size (VInt i)) p)
                       (VSet.singleton zero)
-                      (BatList.sort_unique compare (1 :: (-1) :: 2 :: 3 :: 5 ::
+                      (BatList.sort_unique compare (1 :: (-1) :: 2 ::
                                                     (BatList.filter_map (fun v -> match v with
                                                                                   | VInt x -> Some x
                                                                                   | _ -> None) consts)));

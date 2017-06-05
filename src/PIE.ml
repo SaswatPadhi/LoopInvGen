@@ -37,7 +37,7 @@ let default_config : config = {
   for_BFL = BFL.default_config ;
 
   disable_synth = false ;
-  max_c_group_size = 16
+  max_c_group_size = 32 ;
 }
 
 let split_tests tests ~f ~post =

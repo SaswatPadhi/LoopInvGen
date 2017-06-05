@@ -1,9 +1,6 @@
 open Core
-open Core.Unix
 open Exceptions
-open Sexplib.Sexp
 open SyGuS
-open GenTests
 open Types
 
 let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
@@ -12,19 +9,6 @@ let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
     (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^
                                  (string_of_typ t) ^ ")"))
               (s.state_vars @ s.trans_vars))) [])
-
-let build_function (expr : string) ~(z3 : ZProc.t) ~(arg_names : string list)
-                   : (value list -> value) =
-  fun (values : value list) ->
-    match ZProc.run_queries z3
-            ~db:(("(assert " ^ expr ^ ")") ::
-                (List.map2_exn arg_names values
-                               ~f:(fun n v -> ("(assert (= " ^ n ^ " " ^
-                                               (serialize_value v) ^ "))"))))
-            [ "(check-sat)" ]
-    with [ "sat" ]   -> vtrue
-       | [ "unsat" ] -> vfalse
-       | _ -> raise (Internal_Exn "Failed")
 
 let filter_state ?(trans = true) (model : (string * Types.value) list)
                  : (string * Types.value) list =
@@ -37,34 +21,30 @@ let filter_state ?(trans = true) (model : (string * Types.value) list)
 
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
                : value list option =
-  let results = ZProc.run_queries z3 ~db:(
-    (* assert the transition *)
-    ("(assert " ^ s.trans.expr ^ ")") ::
-    (* assert all known values *)
-    (List.map2_exn ~f:(fun d (v,_) -> ("(assert (= " ^ v ^ " " ^
-                                       (serialize_value d) ^ "))"))
-                   vals s.state_vars)
-  ) (ZProc.query_for_model ())
-  in let open List in
-     match ZProc.z3_result_to_values results with
-     | None -> None
+  match ZProc.sat_model_for_asserts z3
+          ~db:[ ("(assert " ^ s.trans.expr ^ ")")
+              ; ( "(assert (and "
+                ^ (Utils.List.to_string_map2 ~sep:" " vals s.state_vars
+                    ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
+                                         (serialize_value d) ^ ")")))
+                ^ "))")]
+  with None -> None
      | Some model
-       -> let model = filter_state ~trans:true model
+       -> let open List in
+          let model = filter_state ~trans:true model
           in Some (map2_exn s.state_vars vals
-                            ~f:(fun (var,_) v ->
+                            ~f:(fun (var, _) v ->
                                   Option.value (Assoc.find model var ~equal:(=))
                                                ~default: v))
 
 let pre_state_gen (s : SyGuS.t) (z3 : ZProc.t)
                   : ZProc.model Quickcheck.Generator.t =
-  let results = ZProc.run_queries z3 ~db:["(assert " ^ s.pre.expr ^ ")"]
-                                  (ZProc.query_for_model ())
-  in let open List in
-     match ZProc.z3_result_to_values results with
-     | None -> raise (False_Pre_Exn s.pre.expr)
+  match ZProc.sat_model_for_asserts z3 ~db:["(assert " ^ s.pre.expr ^ ")"]
+  with None -> raise (False_Pre_Exn s.pre.expr)
      | Some model
        -> Quickcheck.Generator.singleton (
-            filter model ~f:(fun (v,_) -> mem ~equal:(=) s.pre.args v))
+            List.filter model ~f:(fun (x, _) -> List.exists s.pre.args
+                                                  ~f:(fun (v, _) -> v = x)))
 
 let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (root : ZProc.model)
                   : value list list Quickcheck.Generator.t =
@@ -73,8 +53,8 @@ let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (root : ZProc.model)
     let root = List.map s.state_vars
                         ~f:(fun (v, t) ->
                               match List.findi ~f:(fun _ (x,_) -> x = v) root
-                              with None -> generate (typ_gen t) ~size random
-                                 | Some (_,(_,d)) -> d)
+                              with None -> generate (GenTests.typ_gen t) ~size random
+                                 | Some (_, (_, d)) -> d)
     in Log.debug (lazy (" > " ^ (Types.serialize_values root))) ;
     let rec step_internal root size =
       root :: (match size with
@@ -92,5 +72,7 @@ let simulate (s : SyGuS.t) (z3 : ZProc.t)
     (pre_state_gen s z3) >>= (simulate_from s z3)
 
 let run ~size ~seed (s : SyGuS.t) : value list list =
-  ZProc.process (fun z3 -> setup s z3 ;
-                           Quickcheck.random_value ~size ~seed (simulate s z3))
+  ZProc.process ~init_options: [
+    (* "(set-option :smt.arith.random_initial_value true)" *)
+  ] (fun z3 -> setup s z3
+             ; Quickcheck.random_value ~size ~seed (simulate s z3))

@@ -20,9 +20,9 @@ let default_config = {
   } ;
 
   base_random_seed = "LoopInvGen" ;
-  max_restarts = 8 ;
-  max_steps_on_restart = 32 ;
-  model_completion_mode = `UsingZ3 ;
+  max_restarts = 12 ;
+  max_steps_on_restart = 48 ;
+  model_completion_mode = `RandomGeneration ;
 }
 
 let learnStrongerThanPost ?(conf = default_config) ~(states : value list list)
@@ -30,7 +30,7 @@ let learnStrongerThanPost ?(conf = default_config) ~(states : value list list)
   Log.debug (lazy ("STAGE 1> Learning initial candidate invariant")) ;
   VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 (
     (PIE.create_pos_job ()
-      ~f: (Simulator.build_function
+      ~f: (ZProc.constraint_sat_function
              sygus.post.expr ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
       ~args: sygus.state_vars
       ~post: (fun _ res -> match res with
@@ -49,6 +49,8 @@ let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
   let invf'_call =
     "(invf " ^ (List.to_string_map sygus.inv'_vars ~sep:" " ~f:fst) ^ ")" in
   let trans_desc = ZProc.simplify z3 sygus.trans.expr in
+  let eval_term = (if not (conf.model_completion_mode = `UsingZ3) then "true"
+                   else "(and " ^ invf_call ^ " " ^ trans_desc ^ ")") in
   let rec helper inv =
   begin
     Log.debug (lazy ("STAGE 2> Strengthening for inductiveness:" ^
@@ -64,18 +66,17 @@ let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
                                  ; "(assert " ^ trans_desc ^ ")"
                                  ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
-         VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3
-                            ~eval_term:("(and " ^ invf_call ^ " " ^
-                                        trans_desc ^ ")") (
-           (PIE.create_pos_job ()
-              ~f:(Simulator.build_function invf'_call
-                    ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
-              ~args: sygus.state_vars
-              ~post: (fun _ res -> match res with
-                                   | Ok v when v = vtrue -> true
-                                   | _ -> false)
-              ~pos_tests: states),
-           invf'_call)
+         VPIE.learnVPreCond
+           ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 ~eval_term
+           ((PIE.create_pos_job ()
+               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
+                     ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
+               ~args: sygus.state_vars
+               ~post: (fun _ res -> match res with
+                                    | Ok v when v = vfalse -> true
+                                    | _ -> false)
+               ~pos_tests: states),
+            invf'_call)
       in ZProc.close_local z3
        ; Log.debug (lazy ("Inductive Delta: " ^ pre_inv))
        ; if pre_inv = "true" then inv

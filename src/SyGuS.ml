@@ -8,7 +8,7 @@ open Utils
 type func = {
   name : string ;
   expr : string ;
-  args : string list ;
+  args : var list ;
 }
 
 type t = {
@@ -24,32 +24,42 @@ type t = {
   consts : value list ;
 }
 
+let value_assignment_constraints ?(negate = false)
+                                 : var list -> value list -> string list =
+  List.map2_exn ~f:(fun (name, _) value -> (
+                      (if negate then "(not " else "") ^
+                      "(= " ^ name ^ " " ^
+                      (serialize_value value) ^ ")" ^
+                      (if negate then ")" else "")))
+
 let shrink_vars (s : t) : t =
-  let (t_names , s_names) =
+  let (t_vars , s_vars) =
     List.(partition_tf (dedup (s.pre.args @ s.trans.args @ s.post.args))
-                       ~f:(String.is_suffix ~suffix:"!"))
-  in let filter_on_s = List.(filter ~f:(fun (v, _) -> mem ~equal:(=) s_names v))
-  in let filter_on_t = List.(filter ~f:(fun (v, _) -> mem ~equal:(=) t_names v))
+                       ~f:(fun (v, _) -> String.is_suffix v ~suffix:"!"))
+  in let filter_on vars = List.(filter ~f:(mem ~equal:(=) vars))
   in { s with
-         inv_vars = filter_on_s s.inv_vars ;
-         state_vars = filter_on_s s.state_vars ;
-         trans_vars = filter_on_t s.trans_vars ;
+         inv_vars = filter_on s_vars s.inv_vars ;
+         state_vars = filter_on s_vars s.state_vars ;
+         trans_vars = filter_on t_vars s.trans_vars ;
          inv'_vars = List.filter_map s.inv'_vars
-           ~f:(fun (n, t) -> if List.mem ~equal:(=) t_names n then Some (n, t)
-                             else let s = String.chop_suffix_exn n ~suffix:"!"
-                                   in if List.mem ~equal:(=) s_names s
-                                      then Some (s, t) else None);
+           ~f:(fun ((v, t) as iv) ->
+                 if List.mem ~equal:(=) t_vars iv then Some iv
+                 else let s = String.chop_suffix_exn v ~suffix:"!"
+                       in if List.mem ~equal:(=) s_vars (s, t)
+                          then Some (s, t) else None)
      }
 
-let rec extract_args_and_consts (vars : string list) (exp : Sexp.t)
-                                : (string list) * (value list) =
+let rec extract_args_and_consts (vars : var list) (exp : Sexp.t)
+                                : (var list) * (value list) =
   let open List in
   match exp with
   | List([]) | List((List _) :: _)
     -> raise (Internal_Exn ("Invalid function sexp: " ^ (Sexp.to_string_hum exp)))
   | (Atom a) | List([Atom a])
-    -> if mem ~equal:(=) vars a then ([a], [])
-       else ([], [Option.value_exn (Types.deserialize_value a)])
+    -> begin match findi vars (fun _ (v, _) -> v = a) with
+        | None -> ([], [Option.value_exn (Types.deserialize_value a)])
+        | Some (_, v) -> ([v], [])
+       end
   | List((Atom op) :: fargs)
     -> let (args , consts) =
          List.fold fargs ~init:([],[])
@@ -67,7 +77,7 @@ let load_define_fun lsexp : func * value list =
   match lsexp with
   | [Atom(name) ; List(args) ; _ ; expr]
     -> let args = List.map ~f:load_var_usage args in
-       let (args, consts) = extract_args_and_consts (List.map ~f:fst args) expr
+       let (args, consts) = extract_args_and_consts args expr
        in ({ name = name ; expr = (Sexp.to_string_hum expr) ; args = args },
            consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "

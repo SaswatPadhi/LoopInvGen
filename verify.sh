@@ -20,11 +20,11 @@ CHECK="no"
 REMOVE_LOGS="no"
 
 usage() {
-  echo "Usage: $0 -c -l -r [-s {$STEPS} <count>] [-t {360} <seconds>] testcase" 1>&2 ;
+  echo "Usage: $0 [-c] [-l] [-m {$MAX_STATES} <count>] [-r] [-s {$STEPS} <count>] [-t {360} <seconds>] testcase" 1>&2 ;
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :clrs:t: --long check,logging,remove-logs,simulation-steps:,timeout: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :clm:rs:t: --long check,logging,max-states:,remove-logs,simulation-steps:,timeout: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -34,8 +34,11 @@ while true ; do
     -c | --check )
          CHECK="yes" ; shift ;;
     -l | --logging )
-         VERIFIER_LOG="-l"
-         shift ;;
+         VERIFIER_LOG="-l" ; shift ;;
+    -m | --max-states )
+         MAX_STATES=$2
+         (( MAX_STATES > 0 )) || usage
+         shift ; shift ;;
     -r | --remove-logs )
          REMOVE_LOGS="yes" ; shift ;;
     -s | --simulation-steps )
@@ -83,20 +86,27 @@ timeout --kill-after=$TIMEOUT $TIMEOUT \
         $VERIFIER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
                   $VERIFIER_LOG >&2
 RESULT_CODE=$?
+
 if [ $RESULT_CODE == 0 ] && [ $REMOVE_LOGS = "yes" ] ; then
   rm -rf $TESTCASE_ALL_STATES
 fi
 
 if [ $CHECK = "yes" ]; then
+  if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ] ; then
+    echo "TIMEOUT" ; exit $RESULT_CODE
+  fi
+
+  $CHECKER -i $TESTCASE_INVARIANT $CHECKER_LOG $TESTCASE >&2
+  RESULT_CODE=$?
+
   if [ $RESULT_CODE == 0 ] ; then
-    $CHECKER -i $TESTCASE_INVARIANT $CHECKER_LOG $TESTCASE
-  elif [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ] ; then
-    echo "TIMEOUT"
+    echo "PASS"
   else
     echo "FAIL"
   fi
+  exit $RESULT_CODE
 else
   if [ $RESULT_CODE == 0 ] ; then
-    cat $TESTCASE_INVARIANT ; echo
+    cat $TESTCASE_INVARIANT ; echo ; exit 0
   fi
 fi

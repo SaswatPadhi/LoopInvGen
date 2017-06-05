@@ -25,8 +25,8 @@ let main invfile do_log filename () =
   let inv = String.concat (In_channel.input_lines in_chan) ~sep:" "
   in In_channel.close in_chan
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
-     in Out_channel.output_string stdout (
-          if checkInvariant inv ~sygus then "PASS\n" else "FAIL\n")
+     in let result = checkInvariant inv ~sygus
+        in exit (if result then 0 else 1)
 
 let cmd =
   Command.basic

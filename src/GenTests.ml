@@ -6,8 +6,8 @@ open Types
 let typ_gen (t : typ) : value Generator.t =
   let open Generator in
   match t with
-  (* Use Small Ints: *)
-  | TInt -> (For_int.gen_incl (-1024) 1024) >>= fun i -> singleton (VInt i)
+  (* Use Small Ints, within 2^12: *)
+  | TInt -> (For_int.gen_incl (-4096) 4095) >>= fun i -> singleton (VInt i)
   (* Full range of Int:
   | TInt -> Int.gen >>= fun i -> singleton (VInt i) *)
   | TBool -> Bool.gen >>= fun b -> singleton (VBool b)

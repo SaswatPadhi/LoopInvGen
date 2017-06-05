@@ -6,7 +6,11 @@ _build
 
 setup.data
 setup.log
+Makefile
+configure
 
 # Temporaries
 _dep
 _logs
+ocamlprof.dump
+gmon.out
