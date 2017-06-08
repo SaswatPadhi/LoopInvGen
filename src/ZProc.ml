@@ -29,7 +29,6 @@ let create ?(init_options = []) () : t =
   } in Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
      ; Out_channel.output_lines z3.stdin init_options
      ; z3
-    
 
 let close z3 =
   Out_channel.close z3.stdin ; ignore (Unix.waitpid z3.procid) ;
@@ -86,33 +85,29 @@ let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
 
 let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
   let open Sexp in
-  let unexpected_exn = Internal_Exn ("Unexpected z3 value: "
-                                    ^ (to_string_hum sexp)) in
   let vstr = match sexp with
              | Atom v -> v
              | List([(Atom "-") ; (Atom v)]) -> "-" ^ v
-             | _ -> raise unexpected_exn
   in Option.value_exn (Types.deserialize_value vstr)
 
 let z3_result_to_values (result : string list) : model option =
   let open Sexp in
-  let unexpected_exn = Internal_Exn ("Unexpected z3 model: " ^ (String.concat ~sep:"\n" result)) in
-    match result with
-    | "unsat" :: _ -> None
-    | [ "sat" ; _ ; result ]
-      -> begin match Sexp.parse result with
-          | Done (List((Atom model) :: varexps), _)
-            -> let open List in
-              Some (map varexps ~f:(
-                function
-                | List(l) -> begin match (nth_exn l 1) , (nth_exn l 4) with
-                              | (Atom n, v) -> (n, (z3_sexp_to_value v))
-                              | _ -> raise unexpected_exn
-                              end
-                | _ -> raise unexpected_exn))
-          | _ -> raise unexpected_exn
-        end
-    | _ -> raise unexpected_exn
+  let err_and_ignore () =
+    Log.error (lazy ("Error parsing z3 model: "
+                    ^ (String.concat ~sep:"\n" result))) ;
+    None
+  in try match result with
+     | "unsat" :: _ -> None
+     | [ "sat" ; _ ; result ]
+       -> begin match Sexp.parse result with
+           | Done (List((Atom model) :: varexps), _)
+             -> let open List in
+                Some (map varexps ~f:(
+                  function
+                  | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
+                               in (n, (z3_sexp_to_value v))))
+          end
+     with _ -> err_and_ignore ()
 
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =
@@ -150,12 +145,14 @@ let simplify (z3 : t) (q : string) : string =
           in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"
      | _ -> raise unexpected_exn
 
-let model_to_string ?(rowsep = "\n") ?(colsep = ": ") (model : model option)
-                    : string =
+let model_to_string ?(rowsep = " ") ?(colsep = " ") ?(prefix = "(= ")
+                    ?(postfix = ")") (model : model option) : string =
   match model with
-  | None   -> ""
+  | None -> "false"
+  | Some [] -> "true"
   | Some m -> Utils.List.to_string_map m ~sep:rowsep
-                ~f:(fun (n, v) -> n ^ colsep ^ (Types.serialize_value v))
+                ~f:(fun (n, v) -> prefix ^ n ^ colsep
+                                ^ (Types.serialize_value v) ^ postfix)
 
 let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
                             : (Types.value list -> Types.value) =

@@ -37,42 +37,72 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
                                   Option.value (Assoc.find model var ~equal:(=))
                                                ~default: v))
 
-let pre_state_gen (s : SyGuS.t) (z3 : ZProc.t)
-                  : ZProc.model Quickcheck.Generator.t =
-  match ZProc.sat_model_for_asserts z3 ~db:["(assert " ^ s.pre.expr ^ ")"]
-  with None -> raise (False_Pre_Exn s.pre.expr)
-     | Some model
-       -> Quickcheck.Generator.singleton (
-            List.filter model ~f:(fun (x, _) -> List.exists s.pre.args
-                                                  ~f:(fun (v, _) -> v = x)))
+let gen_state_from_model (m : ZProc.model option) (s : SyGuS.t) (z3 : ZProc.t)
+                         : value list option Quickcheck.Generator.t =
+  let open Quickcheck.Generator in
+  match m with None -> singleton None
+  | Some m
+    -> create (fun ~size rnd -> Some (
+            List.map s.state_vars
+                    ~f:(fun (v, t) ->
+                          match List.findi ~f:(fun _ (x, _) -> x = v) m
+                          with None -> generate (GenTests.typ_gen t) ~size rnd
+                              | Some (_, (_, d)) -> d)))
 
-let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (root : ZProc.model)
+let gen_pre_state ?(avoid = []) ?(use_trans = false) (s : SyGuS.t)
+                  (z3 : ZProc.t) : value list option Quickcheck.Generator.t =
+  let open Quickcheck.Generator in
+  match ZProc.sat_model_for_asserts z3
+          ~db:[ "(assert (and " ^ s.pre.expr ^ " "
+              ^ (if use_trans then s.trans.expr else "true") ^ " "
+              ^ (String.concat avoid ~sep:" ") ^ "))" ]
+  with None -> singleton None
+     | model -> gen_state_from_model model s z3
+
+let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (root : value list option)
                   : value list list Quickcheck.Generator.t =
   let open Quickcheck.Generator in
-  let step root ~size random =
-    let root = List.map s.state_vars
-                        ~f:(fun (v, t) ->
-                              match List.findi ~f:(fun _ (x,_) -> x = v) root
-                              with None -> generate (GenTests.typ_gen t) ~size random
-                                 | Some (_, (_, d)) -> d)
-    in Log.debug (lazy (" > " ^ (Types.serialize_values root))) ;
-    let rec step_internal root size =
-      root :: (match size with
-              | 0 -> []
-              | n -> begin match transition s z3 root with
-                      | None -> []
-                      | Some next -> step_internal next (n-1)
-                     end)
-    in step_internal root size
-  in Log.debug (lazy ("New execution: ")) ; create (step root)
+  match root with None -> singleton []
+  | Some root ->
+      let step root ~size random =
+        Log.debug (lazy (" > " ^ (Types.serialize_values root))) ;
+        let rec step_internal root size =
+          root :: (match size with
+                  | 0 -> []
+                  | n -> begin match transition s z3 root with
+                          | None -> []
+                          | Some next -> step_internal next (n-1)
+                        end)
+        in step_internal root size
+      in Log.debug (lazy ("New execution: ")) ; create (step root)
 
-let simulate (s : SyGuS.t) (z3 : ZProc.t)
-             : value list list Quickcheck.Generator.t =
-  let open Quickcheck.Generator in
-    (pre_state_gen s z3) >>= (simulate_from s z3)
+let update_avoid_root_constraints new_root avoid s =
+  match new_root with
+  | None -> avoid
+  | Some vals -> (SyGuS.value_assignment_constraint s.state_vars vals
+                    ~negate:true) :: avoid
 
-let run ~size ~seed (s : SyGuS.t) : value list list =
+let run ?(avoid = []) ~size ~seed (s : SyGuS.t)
+        : string list * value list list =
   ZProc.process ~init_options: [
     (* "(set-option :smt.arith.random_initial_value true)" *)
-  ] (fun z3 -> setup s z3
-             ; Quickcheck.random_value ~size ~seed (simulate s z3))
+  ] (fun z3 ->
+       setup s z3 ;
+       let iter_size = size / 2 in
+       let rec helper avoid accum =
+         let open Quickcheck in
+         let head_1 = random_value (gen_pre_state ~avoid s z3) ~seed ~size:1 in
+         let states_1 = random_value ~size:iter_size ~seed
+                          (simulate_from s z3 head_1) in
+         let avoid = update_avoid_root_constraints head_1 avoid s in
+         let head_2 = random_value (gen_pre_state ~avoid ~use_trans:true s z3)
+                                   ~seed ~size:1 in
+         let states_2 = random_value ~size:iter_size ~seed
+                          (simulate_from s z3 head_2) in
+         let avoid = update_avoid_root_constraints head_2 avoid s in
+         let states = states_1 @ states_2
+         in (if states = [] then (avoid, accum)
+             else let accum = states @ accum
+                  in (if List.length accum >= size then (avoid, accum)
+                      else helper avoid accum))
+       in helper avoid [])

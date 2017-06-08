@@ -24,13 +24,14 @@ type t = {
   consts : value list ;
 }
 
-let value_assignment_constraints ?(negate = false)
-                                 : var list -> value list -> string list =
-  List.map2_exn ~f:(fun (name, _) value -> (
-                      (if negate then "(not " else "") ^
-                      "(= " ^ name ^ " " ^
-                      (serialize_value value) ^ ")" ^
-                      (if negate then ")" else "")))
+let value_assignment_constraint ?(negate = false) (vars : var list)
+                                (vals : value list) : string =
+  (if negate then "(not (and " else "(and ") ^
+  (List.to_string_map2 vars vals ~sep:" "
+                       ~f:(fun (name, _) value ->
+                             ("(= " ^ name ^ " "
+                             ^ (serialize_value value) ^ ")"))) ^
+  (if negate then "))" else ")")
 
 let shrink_vars (s : t) : t =
   let (t_vars , s_vars) =

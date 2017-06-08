@@ -19,7 +19,7 @@ let abs_equal_precondition () =
     ignore (run_queries ~local:false z3 ~db:[ "(declare-var x Int)" ] []);
     let res = learnVPreCond ~z3 (abs_job , abs_post_desc) in
     let counter = equivalence_counter_example z3 res "(>= x 0)"
-    in Alcotest.(check string) "identical" "" (model_to_string counter)))
+    in Alcotest.(check string) "identical" "false" (model_to_string counter)))
 
 let all = [
   "Abs Equal Precondition",   `Quick,   abs_equal_precondition  ;

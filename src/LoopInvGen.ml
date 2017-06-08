@@ -20,7 +20,7 @@ let default_config = {
   } ;
 
   base_random_seed = "LoopInvGen" ;
-  max_restarts = 12 ;
+  max_restarts = 32 ;
   max_steps_on_restart = 48 ;
   model_completion_mode = `RandomGeneration ;
 }
@@ -83,27 +83,40 @@ let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
          else helper (ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")"))
   end in helper inv
 
-let checkIfWeakerThanPre (inv : PIE.desc) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
-                         : ZProc.model option =
+let checkIfWeakerThanPre ?(seed = default_config.base_random_seed)
+                         ?(avoid_roots = []) (inv : PIE.desc) ~(sygus : SyGuS.t)
+                         ~(z3 : ZProc.t) : value list option =
   Log.debug (lazy ("STAGE 3> Checking if weaker than precond:" ^
                    Log.indented_sep ^ inv)) ;
-  ZProc.implication_counter_example z3 sygus.pre.expr inv
+  let open Quickcheck in
+  random_value ~size:1 ~seed:(`Deterministic seed)
+    (Simulator.gen_state_from_model
+       (ZProc.implication_counter_example z3 sygus.pre.expr inv
+         ~db:(if avoid_roots = [] then []
+               else [ "(assert (and " ^ (String.concat avoid_roots ~sep:" ")
+                   ^ "))" ]))
+       sygus z3)
 
-let learnInvariant ?(conf = default_config) ~(states : value list list)
-                   (sygus : SyGuS.t) : PIE.desc option =
+let learnInvariant ?(avoid_roots = []) ?(conf = default_config)
+                   ~(states : value list list) (sygus : SyGuS.t)
+                   : PIE.desc option =
   ZProc.process (fun z3 ->
     Simulator.setup sygus z3 ;
-    let rec helper states tries seed =
+    let rec helper states avoid_roots tries seed =
       let inv = learnStrongerThanPost sygus ~states ~z3
       in let inv = strengthenForInductiveness inv ~sygus ~states ~z3
-      in match checkIfWeakerThanPre inv ~sygus ~z3 with
+      in match checkIfWeakerThanPre ~seed ~avoid_roots inv ~sygus ~z3 with
          | None -> Some inv
-         | Some model -> if tries < 1 then None else
-             let open Quickcheck
-             in helper (states @ (random_value
-                                    ~size:conf.max_steps_on_restart
-                                    ~seed:(`Deterministic seed)
-                                    (Simulator.simulate_from sygus z3 model)))
-                       (tries - 1)
-                       (seed ^ "#")
-    in helper states conf.max_restarts conf.base_random_seed)
+         | model -> if tries < 1 then None else
+             let open Quickcheck in
+             helper (List.dedup (
+                       states @
+                       (random_value
+                           ~size:conf.max_steps_on_restart
+                           ~seed:(`Deterministic seed)
+                           (Simulator.simulate_from sygus z3 model))))
+                    (Simulator.update_avoid_root_constraints
+                       model avoid_roots sygus)
+                    (tries - 1)
+                    (seed ^ "#")
+    in helper states avoid_roots conf.max_restarts conf.base_random_seed)

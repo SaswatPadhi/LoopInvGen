@@ -6,14 +6,14 @@ let implication_true () =
     ignore (ZProc.run_queries ~local:false z3 ~db:[ "(declare-var x Int)" ] []);
     let res = ZProc.(model_to_string (implication_counter_example
                                         z3 "(> x 1)" "(> x 0)"))
-    in Alcotest.(check string) "same" res "")
+    in Alcotest.(check string) "same" res "false")
 
 let implication_counter () =
   ZProc.process (fun z3 ->
     ignore (ZProc.run_queries ~local:false z3 ~db:[ "(declare-var x Int)" ] []);
     let res = ZProc.(model_to_string (implication_counter_example
                                         z3 "(> x 1)" "(> x 2)"))
-    in Alcotest.(check string) "same" res "x: 2")
+    in Alcotest.(check string) "same" res "(= x 2)")
 
 let simplification () =
   ZProc.process (fun z3 ->
