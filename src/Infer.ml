@@ -3,7 +3,7 @@ open Core.Out_channel
 open SyGuS
 open Utils
 
-let main statefile headfile outfile do_log filename () =
+let main statefile headfile outfile do_false do_log filename () =
   (if do_log then Log.enable ~msg:"VERIFIER" () else ()) ;
   let head_chan = Utils.get_in_channel headfile in
   let state_chan = Utils.get_in_channel statefile in
@@ -18,11 +18,13 @@ let main statefile headfile outfile do_log filename () =
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let inv = LoopInvGen.learnInvariant ~avoid_roots sygus ~states
      in let out_chan = Utils.get_out_channel outfile
-     in output_string out_chan (
-          "(define-fun " ^ sygus.inv_name ^ " (" ^
-          (List.to_string_map sygus.inv_vars ~sep:" "
-             ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t) ^ ")")) ^
-          ") Bool " ^ (Option.value inv ~default:"false") ^ ")\n")
+     in if (not do_false) && inv = None then ()
+        else output_string out_chan (
+               "(define-fun " ^ sygus.inv_name ^ " (" ^
+               (List.to_string_map sygus.inv_vars ~sep:" "
+                  ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t)
+                                  ^ ")")) ^
+               ") Bool " ^ (Option.value inv ~default:"false") ^ ")\n")
       ; Out_channel.close out_chan
       ; exit (if inv = None then 1 else 0)
 
@@ -34,6 +36,7 @@ let cmd =
       +> flag "-s" (required string)  ~doc:"FILENAME states file, containing program states"
       +> flag "-h" (required string)  ~doc:"FILENAME heads file, containing explored root states"
       +> flag "-o" (optional string)  ~doc:"FILENAME output file for invariant, defaults to stdout"
+      +> flag "-f" (no_arg)           ~doc:"force generate `false` as the invariant, in case of failure"
       +> flag "-l" (no_arg)           ~doc:"enable logging"
       +> anon (maybe_with_default "-" ("filename" %: file))
     )

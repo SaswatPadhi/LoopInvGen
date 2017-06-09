@@ -15,24 +15,24 @@ Plugins: META (0.4), DevFiles (0.4)
 
 
 
-Executable "recorder"
+Executable "record"
   Path:             src
   Install:          false
-  MainIs:           Recorder.ml
+  MainIs:           Record.ml
   CompiledObject:   best
   BuildDepends:     core, core_extended, threads
 
-Executable "verifier"
+Executable "infer"
   Path:             src
   Install:          false
-  MainIs:           Verifier.ml
+  MainIs:           Infer.ml
   CompiledObject:   best
   BuildDepends:     batteries, core, core_extended, threads
 
-Executable "checker"
+Executable "check"
   Path:             src
   Install:          false
-  MainIs:           Checker.ml
+  MainIs:           Check.ml
   CompiledObject:   best
   BuildDepends:     core, core_extended, threads
 
