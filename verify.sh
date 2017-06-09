@@ -97,15 +97,8 @@ if [ $DO_CHECK = "yes" ]; then
     echo "TIMEOUT" ; exit $RESULT_CODE
   fi
 
-  $CHECK -i $TESTCASE_INVARIANT $CHECK_LOG $TESTCASE >&2
-  RESULT_CODE=$?
-
-  if [ $RESULT_CODE == 0 ] ; then
-    echo "PASS"
-  else
-    echo "FAIL"
-  fi
-  exit $RESULT_CODE
+  $CHECK -i $TESTCASE_INVARIANT $CHECK_LOG $TESTCASE
+  exit $?
 else
   if [ $RESULT_CODE == 0 ] ; then
     cat $TESTCASE_INVARIANT ; echo ; exit 0
