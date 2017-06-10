@@ -115,8 +115,9 @@ let learnInvariant ?(avoid_roots = []) ?(conf = default_config)
                            ~size:conf.max_steps_on_restart
                            ~seed:(`Deterministic seed)
                            (Simulator.simulate_from sygus z3 model))))
-                    (Simulator.update_avoid_root_constraints
-                       model avoid_roots sygus)
+                    (List.cons_opt_value
+                      (Simulator.build_avoid_constraints sygus model)
+                      avoid_roots)
                     (tries - 1)
                     (seed ^ "#")
     in helper states avoid_roots conf.max_restarts conf.base_random_seed)

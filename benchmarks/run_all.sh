@@ -27,6 +27,7 @@ done
 
 print_counts () {
   while (( "$#" )) ; do
+    echo -n "* $1 = "
     cat $LOG_PATH/*.result | grep "$1" | wc -l
     shift
   done

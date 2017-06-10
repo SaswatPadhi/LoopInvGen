@@ -2,13 +2,16 @@
 
 LOG_PATH="_logs"
 SYGUS_EXT=".sl"
+MIN_STEPS=128
+MIN_TIMEOUT=6s
+REC_TIMEOUT=3s
 
 CHECK="./Check.native"
 RECORD="./Record.native"
 INFER="./Infer.native"
 
 FORKS=2
-STEPS=512
+STEPS=2048
 
 TIMEOUT=360s
 
@@ -21,7 +24,7 @@ DO_CHECK="no"
 DO_CLEAN="no"
 
 usage() {
-  echo "Usage: $0 [-c] [-l <rec|inf|all>] [-r] [-s {$STEPS} <count>] [-t {360} <seconds>] testcase" 1>&2 ;
+  echo "Usage: $0 [-c] [-l <rec|inf|all>] [-r] [-s <count> {> $MIN_STEPS} (default=$STEPS)] [-t <seconds> {> $MIN_TIMEOUT} (default=$TIMEOUT)] <.sl file>" 1>&2 ;
   exit 1 ;
 }
 
@@ -42,11 +45,11 @@ while true ; do
          DO_CLEAN="yes" ; shift ;;
     -s | --simulation-steps )
          STEPS=$2
-         (( STEPS > 0 )) || usage
+         (( STEPS > 128 )) || usage
          shift ; shift ;;
     -t | --timeout )
          TIMEOUT=$2
-         (( TIMEOUT > 0 )) || usage
+         (( TIMEOUT > 6 )) || usage
          TIMEOUT="$2s"
          shift ; shift ;;
     -- ) shift; break ;;
@@ -83,13 +86,15 @@ fi
 
 for i in `seq 1 $FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
-  $RECORD -s $STEPS -r "seed$i" -o $TESTCASE_STATE$i $TESTCASE \
-          -h $TESTCASE_ROOT$i $LOG_PARAM >&2 &
+  (timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
+           $RECORD -s $STEPS -r "seed$i" -o $TESTCASE_STATE$i $TESTCASE \
+                   -h $TESTCASE_ROOT$i $LOG_PARAM) >&2 &
 done
 
 if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG"0 ; else LOG_PARAM="" ; fi
-$RECORD -s $STEPS -r "seed0" -o $TESTCASE_STATE"0" $TESTCASE \
-        -h $TESTCASE_ROOT"0" $LOG_PARAM >&2
+(timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
+         $RECORD -s $STEPS -r "seed0" -o $TESTCASE_STATE"0" $TESTCASE \
+                 -h $TESTCASE_ROOT"0" $LOG_PARAM) >&2
 
 wait
 

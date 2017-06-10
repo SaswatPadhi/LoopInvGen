@@ -10,6 +10,9 @@ end
 module List = struct
   include Core.List
 
+  let cons_opt_value (o : 'a option) (l : 'a list) : 'a list =
+    match o with None -> l | Some v -> v :: l
+
   let to_string_map ~(sep : string) (l : 'a list) ~(f : 'a -> string) : string =
     String.concat ~sep (List.map l ~f)
 

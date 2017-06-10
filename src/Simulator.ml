@@ -59,50 +59,59 @@ let gen_pre_state ?(avoid = []) ?(use_trans = false) (s : SyGuS.t)
   with None -> singleton None
      | model -> gen_state_from_model model s z3
 
-let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (root : value list option)
+let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : value list option)
                   : value list list Quickcheck.Generator.t =
   let open Quickcheck.Generator in
-  match root with None -> singleton []
-  | Some root ->
-      let step root ~size random =
-        Log.debug (lazy (" > " ^ (Types.serialize_values root))) ;
-        let rec step_internal root size =
-          root :: (match size with
+  match head with None -> singleton []
+  | Some head ->
+      let step head ~size random =
+        Log.debug (lazy (" > " ^ (Types.serialize_values head))) ;
+        let rec step_internal head size =
+          head :: (match size with
                   | 0 -> []
-                  | n -> begin match transition s z3 root with
+                  | n -> begin match transition s z3 head with
                           | None -> []
                           | Some next -> step_internal next (n-1)
                         end)
-        in step_internal root size
-      in Log.debug (lazy ("New execution: ")) ; create (step root)
+        in step_internal head size
+      in Log.debug (lazy ("New execution: ")) ; create (step head)
 
-let update_avoid_root_constraints new_root avoid s =
-  match new_root with
-  | None -> avoid
-  | Some vals -> (SyGuS.value_assignment_constraint s.state_vars vals
-                    ~negate:true) :: avoid
+let build_avoid_constraints sygus head =
+  Option.value_map head ~default:None
+                   ~f:(fun head -> Some (SyGuS.value_assignment_constraint
+                                           sygus.state_vars head ~negate:true))
 
-let run ?(avoid = []) ~size ~seed (s : SyGuS.t)
-        : string list * value list list =
-  ZProc.process ~init_options: [
-    (* "(set-option :smt.arith.random_initial_value true)" *)
-  ] (fun z3 ->
+let record_states ?(avoid = []) ~size ~seeds ~state_chan ~head_chan
+                  (s : SyGuS.t) : unit =
+  let record_and_update avoid head size seed z3 : (string list * int) =
+    match head with
+    | None -> (avoid, 0)
+    | _ -> let states = Quickcheck.random_value ~size ~seed
+                                              (simulate_from s z3 head) in
+           let Some head = build_avoid_constraints s head in
+           let open Core.Out_channel
+           in List.iter states
+                        ~f:(fun s -> output_string state_chan
+                                       (Types.serialize_values s)
+                                   ; newline state_chan)
+            ; output_string head_chan head ; newline head_chan
+            ; flush head_chan ; flush state_chan
+            ; ((head :: avoid), (List.length states))
+  in ZProc.process ~init_options: [
+        (* "(set-option :smt.arith.random_initial_value true)" *)
+     ] (fun z3 ->
        setup s z3 ;
-       let iter_size = size / 2 in
-       let rec helper avoid accum =
-         let open Quickcheck in
-         let head_1 = random_value (gen_pre_state ~avoid s z3) ~seed ~size:1 in
-         let states_1 = random_value ~size:iter_size ~seed
-                          (simulate_from s z3 head_1) in
-         let avoid = update_avoid_root_constraints head_1 avoid s in
-         let head_2 = random_value (gen_pre_state ~avoid ~use_trans:true s z3)
-                                   ~seed ~size:1 in
-         let states_2 = random_value ~size:iter_size ~seed
-                          (simulate_from s z3 head_2) in
-         let avoid = update_avoid_root_constraints head_2 avoid s in
-         let states = states_1 @ states_2
-         in (if states = [] then (avoid, accum)
-             else let accum = states @ accum
-                  in (if List.length accum >= size then (avoid, accum)
-                      else helper avoid accum))
-       in helper avoid [])
+       List.iter seeds ~f:(fun seed ->
+         let rec helper avoid size =
+           let open Quickcheck in
+           let sz = size / 2 in
+           let head_1 = random_value (gen_pre_state ~avoid s z3) ~seed ~size in
+           let (avoid, added_1) = record_and_update avoid head_1 sz seed z3 in
+           let head_2 = random_value (gen_pre_state ~avoid ~use_trans:true s z3)
+                                     ~seed ~size in
+           let (avoid, added_2) = record_and_update avoid head_2 sz seed z3
+            in (if added_1 = 0 && added_2 = 0 then ()
+                else let remaining_size = size - (added_1 + added_2)
+                      in if remaining_size > 0 then helper avoid remaining_size
+                                               else ())
+          in helper avoid size))
