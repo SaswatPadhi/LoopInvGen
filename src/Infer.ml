@@ -3,8 +3,8 @@ open Core.Out_channel
 open SyGuS
 open Utils
 
-let main statefile headfile outfile do_false do_log filename () =
-  (if do_log then Log.enable ~msg:"VERIFIER" () else ()) ;
+let main statefile headfile outfile logfile do_false filename () =
+  Utils.start_logging_to ~msg:"INFER" logfile ;
   let head_chan = Utils.get_in_channel headfile in
   let state_chan = Utils.get_in_channel statefile in
   let states = List.(map (In_channel.input_lines state_chan)
@@ -33,11 +33,11 @@ let cmd =
     ~summary: "Attempts to infer a loop invariant sufficient for proving correctness."
     Command.Spec.(
       empty
-      +> flag "-s" (required string)  ~doc:"FILENAME states file, containing program states"
-      +> flag "-h" (required string)  ~doc:"FILENAME heads file, containing explored root states"
-      +> flag "-o" (optional string)  ~doc:"FILENAME output file for invariant, defaults to stdout"
+      +> flag "-s" (required string)  ~doc:"FILENAME: states file, containing program states"
+      +> flag "-h" (required string)  ~doc:"FILENAME: heads file, containing explored root states"
+      +> flag "-o" (optional string)  ~doc:"FILENAME: output file for invariant, defaults to stdout"
+      +> flag "-l" (optional string)  ~doc:"FILENAME: enable logging"
       +> flag "-f" (no_arg)           ~doc:"force generate `false` as the invariant, in case of failure"
-      +> flag "-l" (no_arg)           ~doc:"enable logging"
       +> anon (maybe_with_default "-" ("filename" %: file))
     )
     main

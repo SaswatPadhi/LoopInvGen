@@ -29,3 +29,8 @@ let get_in_channel = function
 let get_out_channel = function
   | None -> Out_channel.stdout
   | Some filename -> Out_channel.create filename
+
+let start_logging_to ~msg logfile =
+  match logfile with
+   | Some logfile -> Log.enable ~msg logfile
+   | _ -> ()

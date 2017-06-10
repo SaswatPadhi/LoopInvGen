@@ -53,8 +53,8 @@ let exit_code_of_result res =
   | IMPOSSIBLE_PASS -> 2
   | IMPOSSIBLE_FAIL -> 3
 
-let main invfile do_log filename () =
-  (if do_log then Log.enable ~msg:"VERIFIER" () else ()) ;
+let main invfile logfile filename () =
+  Utils.start_logging_to ~msg:"CHECK" logfile ;
   let sygus = SyGuS.load (Utils.get_in_channel filename) in
   let inv = read_inv_from_chan (Utils.get_in_channel invfile) ~sygus in
   let res = checkInvariant inv ~sygus
@@ -66,8 +66,8 @@ let cmd =
     ~summary: "Check sufficiency of a generated invariant for proving correctness."
     Command.Spec.(
       empty
-      +> flag "-i" (required string)  ~doc:"FILENAME invariant file"
-      +> flag "-l" (no_arg)           ~doc:"enable logging"
+      +> flag "-i" (required string)  ~doc:"FILENAME: input file containing the loop invariant"
+      +> flag "-l" (optional string)  ~doc:"FILENAME: output file for logs, defaults to null"
       +> anon (maybe_with_default "-" ("filename" %: file))
     )
     main
