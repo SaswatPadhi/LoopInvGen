@@ -18,15 +18,15 @@ let main statefile headfile outfile logfile do_false filename () =
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let inv = LoopInvGen.learnInvariant ~avoid_roots sygus ~states
      in let out_chan = Utils.get_out_channel outfile
-     in if (not do_false) && inv = None then ()
-        else output_string out_chan (
-               "(define-fun " ^ sygus.inv_name ^ " (" ^
-               (List.to_string_map sygus.inv_vars ~sep:" "
-                  ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t)
-                                  ^ ")")) ^
-               ") Bool " ^ (Option.value inv ~default:"false") ^ ")\n")
+     in if (not do_false) && inv = "false" then ()
+        else output_string out_chan
+               ("(define-fun " ^ sygus.inv_name ^ " ("
+               ^ (List.to_string_map sygus.inv_vars ~sep:" "
+                    ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t)
+                                    ^ ")"))
+               ^ ") Bool " ^ inv ^ ")\n")
       ; Out_channel.close out_chan
-      ; exit (if inv = None then 1 else 0)
+      ; exit (if inv = "false" then 1 else 0)
 
 let cmd =
   Command.basic

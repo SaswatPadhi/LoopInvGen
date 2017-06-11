@@ -21,29 +21,26 @@ let default_config = {
 
   base_random_seed = "LoopInvGen" ;
   max_restarts = 32 ;
-  max_steps_on_restart = 48 ;
+  max_steps_on_restart = 64 ;
   model_completion_mode = `RandomGeneration ;
 }
 
-let learnStrongerThanPost ?(conf = default_config) ~(states : value list list)
-                          ~(z3 : ZProc.t) (sygus : SyGuS.t) : PIE.desc =
-  Log.debug (lazy ("STAGE 1> Learning initial candidate invariant")) ;
-  VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 (
-    (PIE.create_pos_job ()
-      ~f: (ZProc.constraint_sat_function
-             sygus.post.expr ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
-      ~args: sygus.state_vars
-      ~post: (fun _ res -> match res with
-                           | Ok v when v = vtrue -> true
-                           | _ -> false)
-      ~pos_tests: states
-    ),
-    sygus.post.expr
-  )
+let satisfyPost ?(conf = default_config) ~(states : value list list)
+                ~(z3 : ZProc.t) (sygus : SyGuS.t) : PIE.desc =
+  Log.debug (lazy ("STAGE 1> Learning initial candidate invariant.")) ;
+  VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3
+    ((PIE.create_pos_job ()
+        ~f: (ZProc.constraint_sat_function
+              sygus.post.expr ~z3 ~arg_names:(List.map sygus.state_vars ~f:fst))
+        ~args: sygus.state_vars
+        ~post: (fun _ res -> match res with
+                            | Ok v when v = vtrue -> true
+                            | _ -> false)
+        ~pos_tests: states
+     ), sygus.post.expr)
 
-let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
-                               ~(states : value list list) ~(z3 : ZProc.t)
-                               (inv : PIE.desc) : PIE.desc =
+let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
+                 ~(states : value list list) (inv : PIE.desc) : PIE.desc =
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
@@ -75,19 +72,19 @@ let strengthenForInductiveness ?(conf = default_config) ~(sygus : SyGuS.t)
                ~post: (fun _ res -> match res with
                                     | Ok v when v = vfalse -> true
                                     | _ -> false)
-               ~pos_tests: states),
-            invf'_call)
+               ~pos_tests: states
+            ), invf'_call)
       in ZProc.close_local z3
        ; Log.debug (lazy ("Inductive Delta: " ^ pre_inv))
        ; if pre_inv = "true" then inv
          else helper (ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")"))
   end in helper inv
 
-let checkIfWeakerThanPre ?(seed = default_config.base_random_seed)
-                         ?(avoid_roots = []) (inv : PIE.desc) ~(sygus : SyGuS.t)
-                         ~(z3 : ZProc.t) : value list option =
-  Log.debug (lazy ("STAGE 3> Checking if weaker than precond:" ^
-                   Log.indented_sep ^ inv)) ;
+let counterPre ?(seed = default_config.base_random_seed)
+               ?(avoid_roots = []) (inv : PIE.desc) ~(sygus : SyGuS.t)
+               ~(z3 : ZProc.t) : value list option =
+  Log.debug (lazy ("STAGE 3> Checking if weaker than precond:"
+                  ^ Log.indented_sep ^ inv)) ;
   let open Quickcheck in
   random_value ~size:1 ~seed:(`Deterministic seed)
     (Simulator.gen_state_from_model
@@ -97,27 +94,33 @@ let checkIfWeakerThanPre ?(seed = default_config.base_random_seed)
                    ^ "))" ]))
        sygus z3)
 
+let rec learnInvariant_internal ?(avoid_roots = []) ?(conf = default_config)
+                                ~(states : value list list) (sygus : SyGuS.t)
+                                (restarts_left : int) (seed : string)
+                                (z3 : ZProc.t) : PIE.desc =
+  let restart_with_counter model =
+    if restarts_left < 1 then "false" else
+      let open Quickcheck
+      in learnInvariant_internal
+          ~avoid_roots:(List.cons_opt_value
+            (Simulator.build_avoid_constraints sygus model) avoid_roots)
+          ~states:(List.dedup (
+              states @ (random_value ~size:conf.max_steps_on_restart
+                                     ~seed:(`Deterministic seed)
+                                     (Simulator.simulate_from sygus z3 model))))
+          ~conf sygus (restarts_left - 1) (seed ^ "#") z3
+  in let inv = satisfyPost ~conf ~states ~z3 sygus
+  in match counterPre ~seed ~avoid_roots inv ~sygus ~z3 with
+     | (Some _) as model -> restart_with_counter model
+     | None -> let inv = satisfyTrans ~conf ~sygus ~states ~z3 inv
+               in match counterPre ~seed ~avoid_roots inv ~sygus ~z3 with
+                  | None -> inv
+                  | model -> restart_with_counter model
+
 let learnInvariant ?(avoid_roots = []) ?(conf = default_config)
                    ~(states : value list list) (sygus : SyGuS.t)
-                   : PIE.desc option =
+                   : PIE.desc =
   ZProc.process (fun z3 ->
     Simulator.setup sygus z3 ;
-    let rec helper states avoid_roots tries seed =
-      let inv = learnStrongerThanPost sygus ~states ~z3
-      in let inv = strengthenForInductiveness inv ~sygus ~states ~z3
-      in match checkIfWeakerThanPre ~seed ~avoid_roots inv ~sygus ~z3 with
-         | None -> Some inv
-         | model -> if tries < 1 then None else
-             let open Quickcheck in
-             helper (List.dedup (
-                       states @
-                       (random_value
-                           ~size:conf.max_steps_on_restart
-                           ~seed:(`Deterministic seed)
-                           (Simulator.simulate_from sygus z3 model))))
-                    (List.cons_opt_value
-                      (Simulator.build_avoid_constraints sygus model)
-                      avoid_roots)
-                    (tries - 1)
-                    (seed ^ "#")
-    in helper states avoid_roots conf.max_restarts conf.base_random_seed)
+    learnInvariant_internal ~avoid_roots ~conf ~states sygus conf.max_restarts
+                            conf.base_random_seed z3)
