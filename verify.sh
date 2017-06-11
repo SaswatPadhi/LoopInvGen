@@ -116,13 +116,13 @@ timeout --kill-after=$TIMEOUT $TIMEOUT \
                -h $TESTCASE_ALL_ROOTS $INFER_LOG >&2
 RESULT_CODE=$?
 
-if [ $RESULT_CODE == 0 ] && [ "$DO_CLEAN" == "yes" ] ; then
+if ( [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ) && [ "$DO_CLEAN" == "yes" ] ; then
   rm -rf $TESTCASE_ALL_ROOTS $TESTCASE_ALL_STATES
 fi
 
 if [ "$DO_CHECK" = "yes" ]; then
   if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ] ; then
-    echo "TIMEOUT" ; exit $RESULT_CODE
+    echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
   fi
 
   $CHECK -i $TESTCASE_INVARIANT $CHECK_LOG $TESTCASE
