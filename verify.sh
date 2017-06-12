@@ -1,34 +1,47 @@
 #!/bin/bash
 
-LOG_PATH="_logs"
+INTERMEDIATES_DIR="_logs"
 SYGUS_EXT=".sl"
-MIN_STEPS=127
+Z3_PATH="_dep/z3.bin"
+
+MIN_STEPS=63
 MIN_TIMEOUT=5s
 REC_TIMEOUT=3s
 
-CHECK="./Check.native"
 RECORD="./Record.native"
 INFER="./Infer.native"
+CHECK="./Check.native"
 
 FORKS=2
-STEPS=2048
+STEPS=512
 
 TIMEOUT=360s
 
-CHECK_LOG=""
 RECORD_LOG=""
 INFER_LOG=""
+CHECK_LOG=""
 
 DO_LOG="no"
 DO_CHECK="no"
 DO_CLEAN="no"
 
 usage() {
-  echo "Usage: $0 [-c] [-l <rec|inf|all>] [-r] [-s <count> {> $MIN_STEPS} (default=$STEPS)] [-t <seconds> {> $MIN_TIMEOUT} (default=$TIMEOUT)] <.sl file>" 1>&2 ;
+  echo "
+Usage: $0 [flags] <benchmark.sl>
+
+Flags:
+    [--check, -c]
+    [--intermediates-path, -i <path>] (_logs)
+    [--logging, -l <mode>] (none) {none|rec|inf|all}
+    [--remove-intermediates, -r]
+    [--steps-to-simulate, -s <count>] ($STEPS) {> $MIN_STEPS}
+    [--timeout, -t <seconds>] ($TIMEOUT) {> $MIN_TIMEOUT}
+    [--z3-path, -z <path>] (_dep/z3.bin)
+" 1>&2 ;
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :cl:m:rs:t: --long check,logging:,max-states:,remove-logs,simulation-steps:,timeout: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :ci:l:rs:t:z: --long check,intermediate-path:,logging:,remove-intermediates,steps-to-simulate:,timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -37,13 +50,18 @@ while true ; do
   case "$1" in
     -c | --check )
          DO_CHECK="yes" ; shift ;;
+    -i | --intermediates-path )
+         [ -d "$2" ] || usage
+         INTERMEDIATES_DIR="$2"
+         shift ; shift ;;
     -l | --logging )
-         [ "$2" == "rec" ] || [ "$2" == "inf" ] || [ "$2" == "all" ] || usage
+         [ "$2" == "none" ] || [ "$2" == "rec" ] || \
+         [ "$2" == "inf" ] || [ "$2" == "all" ] || usage
          DO_LOG="$2"
          shift ; shift ;;
-    -r | --remove-logs )
+    -r | --remove-intermediates )
          DO_CLEAN="yes" ; shift ;;
-    -s | --simulation-steps )
+    -s | --steps-to-simulate )
          STEPS=$2
          (( STEPS > 128 )) || usage
          shift ; shift ;;
@@ -52,15 +70,23 @@ while true ; do
          (( TIMEOUT > 6 )) || usage
          TIMEOUT="$2s"
          shift ; shift ;;
+    -z | --z3-path )
+         [ -f "$2" ] || usage
+         Z3_PATH="$2"
+         shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
   esac
 done
 
+RECORD="$RECORD -z $Z3_PATH"
+INFER="$INFER -z $Z3_PATH"
+CHECK="$CHECK -z $Z3_PATH"
+
 TESTCASE="$1"
 
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
-TESTCASE_PREFIX="$LOG_PATH/$TESTCASE_NAME"
+TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
 TESTCASE_REC_LOG="$TESTCASE_PREFIX.rlog"
@@ -78,6 +104,7 @@ TESTCASE_ALL_ROOTS="$TESTCASE_PREFIX.roots"
 if [ "$DO_LOG" == "all" ] ; then
   RECORD_LOG="-l $TESTCASE_REC_LOG"
   INFER_LOG="-l $TESTCASE_LOG"
+  CHECK_LOG="-l $TESTCASE_LOG"
 elif [ "$DO_LOG" == "rec" ] ; then
   RECORD_LOG="-l $TESTCASE_REC_LOG"
 elif [ "$DO_LOG" == "inf" ] ; then

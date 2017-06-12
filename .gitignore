@@ -14,3 +14,4 @@ _dep
 _logs
 ocamlprof.dump
 gmon.out
+*.tgz

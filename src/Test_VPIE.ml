@@ -14,13 +14,13 @@ let abs_job = PIE.create_job ()
 let abs_post_desc = "(or (and (>= x 0) (= x x))
                          (and (< x 0) (= x (- x))))"
 
-let abs_equal_precondition () =
-  ZProc.(process (fun z3 ->
+let abs_equal_precondition ~(zpath : string) () =
+  ZProc.(process ~zpath (fun z3 ->
     ignore (run_queries ~local:false z3 ~db:[ "(declare-var x Int)" ] []);
     let res = learnVPreCond ~z3 (abs_job , abs_post_desc) in
     let counter = equivalence_counter_example z3 res "(>= x 0)"
     in Alcotest.(check string) "identical" "false" (model_to_string counter)))
 
-let all = [
-  "Abs Equal Precondition",   `Quick,   abs_equal_precondition  ;
+let all ~(zpath : string) = [
+  "Abs Equal Precondition",   `Quick,   (abs_equal_precondition ~zpath) ;
 ]

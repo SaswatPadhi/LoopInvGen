@@ -17,10 +17,10 @@ let query_for_model ?(eval_term = "true") () =
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
-let create ?(init_options = []) () : t =
+let create ?(init_options = []) (zpath : string) : t =
   let open Unix in
   let open Process_info in
-  let pi = create_process "./_dep/z3.bin" ["-in"] in
+  let pi = create_process zpath ["-in"] in
   let z3 = {
     procid = pi.pid ;
     stdin  = out_channel_of_descr pi.stdin ;
@@ -34,8 +34,9 @@ let close z3 =
   Out_channel.close z3.stdin ; ignore (Unix.waitpid z3.procid) ;
   Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
-let process ?(init_options = []) (f : t -> 'a) : 'a =
-  let z3 = create ~init_options () in let result = (f z3) in (close z3) ; result
+let process ?(init_options = []) ~(zpath : string) (f : t -> 'a) : 'a =
+  let z3 = create ~init_options zpath in
+  let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =
   let last_line = "ABRACADABRA.ABRACADABRA^ABRACADABRA"

@@ -3,7 +3,7 @@ open Core.Out_channel
 open SyGuS
 open Utils
 
-let main statefile headfile outfile logfile do_false filename () =
+let main zpath statefile headfile outfile logfile do_false filename () =
   Utils.start_logging_to ~msg:"INFER" logfile ;
   let head_chan = Utils.get_in_channel headfile in
   let state_chan = Utils.get_in_channel statefile in
@@ -16,7 +16,7 @@ let main statefile headfile outfile logfile do_false filename () =
    ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
-     in let inv = LoopInvGen.learnInvariant ~avoid_roots sygus ~states
+     in let inv = LoopInvGen.learnInvariant ~zpath ~avoid_roots ~states sygus
      in let out_chan = Utils.get_out_channel outfile
      in if (not do_false) && inv = "false" then ()
         else output_string out_chan
@@ -33,10 +33,11 @@ let cmd =
     ~summary: "Attempts to infer a loop invariant sufficient for proving correctness."
     Command.Spec.(
       empty
-      +> flag "-s" (required string)  ~doc:"FILENAME: states file, containing program states"
-      +> flag "-h" (required string)  ~doc:"FILENAME: heads file, containing explored root states"
-      +> flag "-o" (optional string)  ~doc:"FILENAME: output file for invariant, defaults to stdout"
-      +> flag "-l" (optional string)  ~doc:"FILENAME: enable logging"
+      +> flag "-z" (required string)  ~doc:"FILENAME path to the z3 executable"
+      +> flag "-s" (required string)  ~doc:"FILENAME states file, containing program states"
+      +> flag "-h" (required string)  ~doc:"FILENAME heads file, containing explored root states"
+      +> flag "-o" (optional string)  ~doc:"FILENAME output file for invariant, defaults to stdout"
+      +> flag "-l" (optional string)  ~doc:"FILENAME enable logging"
       +> flag "-f" (no_arg)           ~doc:"force generate `false` as the invariant, in case of failure"
       +> anon (maybe_with_default "-" ("filename" %: file))
     )

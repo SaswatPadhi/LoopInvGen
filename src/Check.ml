@@ -6,8 +6,8 @@ open Utils
 
 type result = PASS | FAIL | IMPOSSIBLE_PASS | IMPOSSIBLE_FAIL
 
-let checkInvariant (inv : string) ~(sygus : SyGuS.t) : result =
-  let open ZProc in process (fun z3 ->
+let checkInvariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result =
+  let open ZProc in process ~zpath (fun z3 ->
     Simulator.setup sygus z3 ;
     if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
             = None)
@@ -53,11 +53,11 @@ let exit_code_of_result res =
   | IMPOSSIBLE_PASS -> 2
   | IMPOSSIBLE_FAIL -> 3
 
-let main invfile logfile filename () =
+let main zpath invfile logfile filename () =
   Utils.start_logging_to ~msg:"CHECK" logfile ;
   let sygus = SyGuS.load (Utils.get_in_channel filename) in
   let inv = read_inv_from_chan (Utils.get_in_channel invfile) ~sygus in
-  let res = checkInvariant inv ~sygus
+  let res = checkInvariant ~zpath ~sygus inv
   in output_lines stdout [string_of_result res]
    ; exit (exit_code_of_result res)
 
@@ -66,8 +66,9 @@ let cmd =
     ~summary: "Check sufficiency of a generated invariant for proving correctness."
     Command.Spec.(
       empty
-      +> flag "-i" (required string)  ~doc:"FILENAME: input file containing the loop invariant"
-      +> flag "-l" (optional string)  ~doc:"FILENAME: output file for logs, defaults to null"
+      +> flag "-z" (required string)  ~doc:"FILENAME path to the z3 executable"
+      +> flag "-i" (required string)  ~doc:"FILENAME input file containing the loop invariant"
+      +> flag "-l" (optional string)  ~doc:"FILENAME output file for logs, defaults to null"
       +> anon (maybe_with_default "-" ("filename" %: file))
     )
     main

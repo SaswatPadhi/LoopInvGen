@@ -20,8 +20,8 @@ let default_config = {
   } ;
 
   base_random_seed = "LoopInvGen" ;
-  max_restarts = 32 ;
-  max_steps_on_restart = 64 ;
+  max_restarts = 64 ;
+  max_steps_on_restart = 32 ;
   model_completion_mode = `RandomGeneration ;
 }
 
@@ -122,10 +122,10 @@ let rec learnInvariant_internal ?(avoid_roots = []) ?(conf = default_config)
                   | model -> restart_with_counter model
 
 let learnInvariant ?(avoid_roots = []) ?(conf = default_config)
-                   ~(states : value list list) (sygus : SyGuS.t)
-                   : PIE.desc =
+                   ~(states : value list list) ~(zpath : string)
+                   (sygus : SyGuS.t) : PIE.desc =
   let open ZProc
-  in process (fun z3 ->
+  in process ~zpath (fun z3 ->
        Simulator.setup sygus z3 ;
        if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
                = None) then "false"
