@@ -6,12 +6,14 @@ _build
 
 setup.data
 setup.log
+setup.ml
+
 Makefile
 configure
 
 # Temporaries
 _dep
-_logs
+_log
 ocamlprof.dump
 gmon.out
 *.tgz

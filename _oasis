@@ -1,12 +1,12 @@
-Name: SyGuS.PIE
+Name: LoopInvGen
 Version: 0.6b
 Synopsis: A tool for synthesizing loop invariants.
 Authors: Saswat Padhi <padhi@cs.ucla.edu>
 License: LGPL with OCaml linking exception
 
-Description: SyGuS.PIE uses the PIE technique for learning sufficient loop
+Description: LoopInvGen uses the PIE technique for learning sufficient loop
              invariants for benchmarks in SyGuS-INV format.
-Homepage: https://github.com/SaswatPadhi/SyGuS.PIE
+Homepage: https://github.com/SaswatPadhi/LoopInvGen
 
 OASISFormat: 0.4
 BuildTools: ocamlbuild

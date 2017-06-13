@@ -1,10 +1,12 @@
 #!/bin/bash
 
-LOG_PATH="_logs"
+LOG_PATH="_log"
 SYGUS_EXT=".sl"
 
 TIMEOUT="$1"
-(( TIMEOUT > 0 )) || TIMEOUT="64"
+(( TIMEOUT > 0 )) || TIMEOUT="60"
+
+TIMEFORMAT=$'\nreal\t%3R\nuser\t%3U\n sys\t%3S\ncpu%%\t%P'
 
 for TESTCASE in benchmarks/*/*.sl ; do
   TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
@@ -14,7 +16,7 @@ for TESTCASE in benchmarks/*/*.sl ; do
   echo -n "$TESTCASE => "
 
   if [ -f "$TESTCASE_RESULT" ] ; then
-    OLD_VERDICT=`tail -n 5 $TESTCASE_RESULT | head -n 1`
+    OLD_VERDICT=`tail -n 6 $TESTCASE_RESULT | head -n 1`
     if [[ "$OLD_VERDICT" =~ ^PASS.* ]] ; then
       echo "SKIPPED (PASSING)"
       continue
@@ -34,6 +36,5 @@ print_counts () {
 }
 
 print_counts PASS FAIL TIMEOUT
-grep real `grep "^PASS\$" $LOG_PATH/*.result | cut -d':' -f1` \
-  | cut -f2 | cut -d'm' -f2 | cut -d's' -f1         \
-  | datamash --header-out min 1 max 1 mean 1 median 1 sum 1
+grep real `grep -l "^PASS\$" $LOG_PATH/*.result` \
+  | cut -f2 | datamash --header-out min 1 max 1 mean 1 median 1 sum 1

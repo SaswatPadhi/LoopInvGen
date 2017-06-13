@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INTERMEDIATES_DIR="_logs"
+INTERMEDIATES_DIR="_log"
 SYGUS_EXT=".sl"
 Z3_PATH="_dep/z3.bin"
 
