@@ -25,7 +25,7 @@ let default_config = {
   model_completion_mode = `RandomGeneration ;
 }
 
-let satisfyPost ?(conf = default_config) ~(states : value list list)
+(*let satisfyPost ?(conf = default_config) ~(states : value list list)
                 ~(z3 : ZProc.t) ~(sygus : SyGuS.t) (inv : PIE.desc) : PIE.desc =
   Log.debug (lazy ("POST >> Strengthening against postcondition:"
                   ^ Log.indented_sep ^ inv)) ;
@@ -42,7 +42,7 @@ let satisfyPost ?(conf = default_config) ~(states : value list list)
      ), sygus.post.expr)
   in ZProc.close_local z3
    ; Log.debug (lazy ("POST Delta: " ^ pre_inv))
-   ; ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")")
+   ; ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")")*)
 
 let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                  ~(states : value list list) (inv : PIE.desc) : PIE.desc =
@@ -116,10 +116,7 @@ let rec learnInvariant_internal ?(avoid_roots = []) ?(conf = default_config)
   in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
   in match counterPre ~seed ~avoid_roots ~sygus ~z3 inv with
      | (Some _) as model -> restart_with_counter model
-     | None -> let inv = satisfyPost ~conf ~sygus ~states ~z3 inv
-               in match counterPre ~seed ~avoid_roots inv ~sygus ~z3 with
-                  | None -> inv
-                  | model -> restart_with_counter model
+     | None -> inv
 
 let learnInvariant ?(avoid_roots = []) ?(conf = default_config)
                    ~(states : value list list) ~(zpath : string)
