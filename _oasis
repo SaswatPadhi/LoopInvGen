@@ -19,21 +19,24 @@ Executable "record"
   Path:             src
   Install:          false
   MainIs:           Record.ml
-  CompiledObject:   best
+  CompiledObject:   native
+  NativeOpt:        -O3 -rounds 10 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 Executable "infer"
   Path:             src
   Install:          false
   MainIs:           Infer.ml
-  CompiledObject:   best
+  CompiledObject:   native
+  NativeOpt:        -O3 -rounds 10 -nodynlink
   BuildDepends:     batteries, core, core_extended, threads
 
 Executable "check"
   Path:             src
   Install:          false
   MainIs:           Check.ml
-  CompiledObject:   best
+  CompiledObject:   native
+  NativeOpt:        -O3 -rounds 10 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 
@@ -44,7 +47,8 @@ Executable "test"
   Build$:           flag(tests)
   Install:          false
   MainIs:           Test.ml
-  CompiledObject:   best
+  CompiledObject:   native
+  NativeOpt:        -O3 -rounds 10 -nodynlink
   BuildDepends:     alcotest, batteries, core, core_extended, threads
 
 Test "test"
