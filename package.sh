@@ -15,12 +15,24 @@ cp _build/src/Record.native \
    verify.sh                \
    bin
 
-cat <<EOF > bin/starexec_run_LoopInvGen_default
+cat <<EOF > bin/starexec_run_default
 #!/bin/bash
 
 ./verify.sh -t 36000 -i "." -z "./z3" "\$1"
 EOF
-chmod +x bin/starexec_run_LoopInvGen_default
+chmod +x bin/starexec_run_default
+
+cat <<EOF > bin/starexec_run_debug
+#!/bin/bash
+
+pwd
+ls -lah
+file z3 Record.native Infer.native Check.native
+ldd z3 Record.native Infer.native Check.native
+./z3
+./Record.native
+EOF
+chmod +x bin/starexec_run_debug
 
 cat <<EOF > starexec_description.txt
 A loop invariant inference tool built using PIE: precondition inference engine.
@@ -28,6 +40,7 @@ A loop invariant inference tool built using PIE: precondition inference engine.
 https://github.com/SaswatPadhi/LoopInvGen
 EOF
 
+chmod -R 777 bin
 CONTENTS="bin starexec_description.txt"
 
 tar cvzf LoopInvGen_SyGuS_INV.tgz $CONTENTS

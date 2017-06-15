@@ -49,7 +49,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
-    "(invf " ^ (List.to_string_map sygus.inv'_vars ~sep:" " ~f:fst) ^ ")" in
+    "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" "
+                  ~f:(fun (s, _) -> s ^ "!")) ^ ")" in
   let trans_desc = ZProc.simplify z3 sygus.trans.expr in
   let eval_term = (if not (conf.model_completion_mode = `UsingZ3) then "true"
                    else "(and " ^ invf_call ^ " " ^ trans_desc ^ ")") in
@@ -91,12 +92,11 @@ let counterPre ?(seed = default_config.base_random_seed)
                   ^ Log.indented_sep ^ inv)) ;
   let open Quickcheck in
   random_value ~size:1 ~seed:(`Deterministic seed)
-    (Simulator.gen_state_from_model
+    (Simulator.gen_state_from_model sygus z3
        (ZProc.implication_counter_example z3 sygus.pre.expr inv
          ~db:(if avoid_roots = [] then []
                else [ "(assert (and " ^ (String.concat avoid_roots ~sep:" ")
-                   ^ "))" ]))
-       sygus z3)
+                   ^ "))" ])))
 
 let rec learnInvariant_internal ?(avoid_roots = []) ?(conf = default_config)
                                 ~(states : value list list) (sygus : SyGuS.t)

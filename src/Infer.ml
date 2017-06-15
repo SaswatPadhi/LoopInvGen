@@ -21,10 +21,10 @@ let main zpath statefile headfile outfile logfile do_false filename () =
      in if (not do_false) && inv = "false" then ()
         else output_string out_chan
                ("(define-fun " ^ sygus.inv_name ^ " ("
-               ^ (List.to_string_map sygus.inv_vars ~sep:" "
+               ^ (List.to_string_map sygus.all_inv_vars ~sep:" "
                     ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t)
                                     ^ ")"))
-               ^ ") Bool " ^ inv ^ ")\n")
+               ^ ") Bool " ^ (ZProc.normalize inv) ^ ")\n")
       ; Out_channel.close out_chan
       ; exit (if inv = "false" then 1 else 0)
 

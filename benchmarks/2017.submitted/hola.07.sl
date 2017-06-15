@@ -12,7 +12,8 @@
 (define-fun pre-f ((x Int) (y Int) (i Int) (n Int)) Bool
   (and (>= n 0) (and (= i 0) (and (= x 0) (= y 0)))))
 
-(define-fun trans-f ((x Int) (x! Int) (y Int) (y! Int) (i Int) (i! Int) (n Int) (n! Int)) Bool
+(define-fun trans-f ((x Int) (y Int) (i! Int) (n! Int)
+                     (x! Int) (y! Int) (i Int) (n Int)) Bool
   (and (= n! n) (and (< i n)
                      (and (= i! (+ i 1))
                           (or (and (= x! (+ x 1)) (= y! (+ y 2)))

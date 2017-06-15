@@ -31,7 +31,7 @@ Usage: $0 [flags] <benchmark.sl>
 
 Flags:
     [--check, -c]
-    [--intermediates-path, -i <path>] (_logs)
+    [--intermediates-path, -i <path>] (_log)
     [--logging, -l <mode>] (none) {none|rec|inf|all}
     [--remove-intermediates, -r]
     [--steps-to-simulate, -s <count>] ($STEPS) {> $MIN_STEPS}

@@ -13,8 +13,8 @@ type func = {
 
 type t = {
   logic : string ;
+  all_inv_vars : var list ;
   inv_vars : var list ;
-  inv'_vars : var list ;
   state_vars : var list ;
   trans_vars : var list ;
   inv_name : string ;
@@ -34,20 +34,16 @@ let value_assignment_constraint ?(negate = false) (vars : var list)
   (if negate then "))" else ")")
 
 let shrink_vars (s : t) : t =
-  let (t_vars , s_vars) =
-    List.(partition_tf (dedup (s.pre.args @ s.trans.args @ s.post.args))
-                       ~f:(fun (v, _) -> String.is_suffix v ~suffix:"!"))
+  let s_vars =
+    List.(filter (dedup (s.pre.args @ s.trans.args @ s.post.args))
+                 ~f:(fun (v, _) -> not (String.is_suffix v ~suffix:"!")))
+  in let t_vars = List.map s_vars ~f:(fun (s, t) -> (s ^ "!", t))
   in let filter_on vars = List.(filter ~f:(mem ~equal:(=) vars))
   in { s with
+         all_inv_vars = s.inv_vars ;
          inv_vars = filter_on s_vars s.inv_vars ;
          state_vars = filter_on s_vars s.state_vars ;
          trans_vars = filter_on t_vars s.trans_vars ;
-         inv'_vars = List.filter_map s.inv'_vars
-           ~f:(fun ((v, t) as iv) ->
-                 if List.mem ~equal:(=) t_vars iv then Some iv
-                 else let s = String.chop_suffix_exn v ~suffix:"!"
-                       in if List.mem ~equal:(=) s_vars (s, t)
-                          then Some (s, t) else None)
      }
 
 let rec extract_args_and_consts (vars : var list) (exp : Sexp.t)
@@ -84,7 +80,7 @@ let load_define_fun lsexp : func * value list =
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: lsexp)))))
 
-let load chan : t =
+let load ?(shrink = true) chan : t =
   let logic : string ref = ref "" in
   let inv_name : string ref = ref "" in
   let pre_name : string ref = ref "" in
@@ -126,11 +122,10 @@ let load chan : t =
                         ^ (List.to_string_map ~sep:", " ~f:fst (!inv_vars))))
       ; Log.debug (lazy ("Detected Constants: "
                         ^ (serialize_values ~sep:", " (!consts))))
-      ; let s =
-          shrink_vars {
+      ; let s = {
             logic = !logic ;
+            all_inv_vars = !inv_vars ;
             inv_vars = !inv_vars ;
-            inv'_vars = List.map (!inv_vars) ~f:(fun (n, t) -> (n ^ "!", t)) ;
             state_vars = !state_vars ;
             trans_vars = !trans_vars ;
             inv_name = !inv_name ;
@@ -139,6 +134,7 @@ let load chan : t =
             post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;
             consts = !consts ;
           }
+       in let s = (if shrink then (shrink_vars s) else s)
        in Log.debug (lazy ("Final variables in state: "
                      ^ (List.to_string_map ~sep:", " ~f:fst (s.state_vars))))
         ; Log.debug (lazy ("Final variables in invariant: "
