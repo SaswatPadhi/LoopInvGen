@@ -97,10 +97,6 @@ TESTCASE_STATE="$TESTCASE_PREFIX.s"
 TESTCASE_STATE_PATTERN="$TESTCASE_STATE"?
 TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
 
-TESTCASE_ROOT="$TESTCASE_PREFIX.ar"
-TESTCASE_ROOT_PATTERN="$TESTCASE_ROOT"?
-TESTCASE_ALL_ROOTS="$TESTCASE_PREFIX.avoid_roots"
-
 if [ "$DO_LOG" == "all" ] ; then
   RECORD_LOG="-l $TESTCASE_REC_LOG"
   INFER_LOG="-l $TESTCASE_LOG"
@@ -115,31 +111,30 @@ for i in `seq 1 $FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
   (timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
            $RECORD -s $STEPS -r "seed$i" -o $TESTCASE_STATE$i $LOG_PARAM \
-                   -h $TESTCASE_ROOT$i $TESTCASE) >&2 &
+                   $TESTCASE) >&2 &
 done
 
 if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG"0 ; else LOG_PARAM="" ; fi
 (timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
          $RECORD -s $STEPS -r "seed0" -o $TESTCASE_STATE"0" $LOG_PARAM \
-                 -h $TESTCASE_ROOT"0" $TESTCASE) >&2
+                 $TESTCASE) >&2
 
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_ROOT_PATTERN | sort -u > $TESTCASE_ALL_ROOTS
 grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STATES
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
 if [ "$DO_CLEAN" == "yes" ]; then
-  rm -rf $TESTCASE_ROOT_PATTERN $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
+  rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
 fi
 
 timeout --kill-after=$TIMEOUT $TIMEOUT \
         $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-               -h $TESTCASE_ALL_ROOTS $INFER_LOG >&2
+               $INFER_LOG >&2
 RESULT_CODE=$?
 
 if ( [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ) && [ "$DO_CLEAN" == "yes" ] ; then
-  rm -rf $TESTCASE_ALL_ROOTS $TESTCASE_ALL_STATES
+  rm -rf $TESTCASE_ALL_STATES
 fi
 
 if [ "$DO_CHECK" = "yes" ]; then

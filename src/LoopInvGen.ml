@@ -85,46 +85,38 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
          else helper (ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")"))
   end in helper inv
 
-let counterPre ?(seed = default_config.base_random_seed)
-               ?(avoid_roots = []) (inv : PIE.desc) ~(sygus : SyGuS.t)
-               ~(z3 : ZProc.t) : value list option =
+let counterPre ?(seed = default_config.base_random_seed) ~(sygus : SyGuS.t)
+               ~(z3 : ZProc.t) (inv : PIE.desc) : value list option =
   Log.debug (lazy ("PRE >> Checking if weaker than precond:"
                   ^ Log.indented_sep ^ inv)) ;
   let open Quickcheck in
   random_value ~size:1 ~seed:(`Deterministic seed)
     (Simulator.gen_state_from_model sygus z3
-       (ZProc.implication_counter_example z3 sygus.pre.expr inv
-         ~db:(if avoid_roots = [] then []
-               else [ "(assert (and " ^ (String.concat avoid_roots ~sep:" ")
-                   ^ "))" ])))
+       (ZProc.implication_counter_example z3 sygus.pre.expr inv))
 
-let rec learnInvariant_internal ?(avoid_roots = []) ?(conf = default_config)
+let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                                 ~(states : value list list) (sygus : SyGuS.t)
-                                (restarts_left : int) (seed : string)
-                                (z3 : ZProc.t) : PIE.desc =
+                                (seed : string) (z3 : ZProc.t) : PIE.desc =
   let restart_with_counter model =
     if restarts_left < 1 then "false" else
       let open Quickcheck
       in learnInvariant_internal
-          ~avoid_roots:(List.cons_opt_value
-            (Simulator.build_avoid_constraints sygus model) avoid_roots)
           ~states:(List.dedup (
               states @ (random_value ~size:conf.max_steps_on_restart
                                      ~seed:(`Deterministic seed)
                                      (Simulator.simulate_from sygus z3 model))))
-          ~conf sygus (restarts_left - 1) (seed ^ "#") z3
+          ~conf (restarts_left - 1) sygus (seed ^ "#") z3
   in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
-  in match counterPre ~seed ~avoid_roots ~sygus ~z3 inv with
+  in match counterPre ~seed ~sygus ~z3 inv with
      | (Some _) as model -> restart_with_counter model
      | None -> inv
 
-let learnInvariant ?(avoid_roots = []) ?(conf = default_config)
-                   ~(states : value list list) ~(zpath : string)
-                   (sygus : SyGuS.t) : PIE.desc =
+let learnInvariant ?(conf = default_config) ~(states : value list list)
+                   ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =
   let open ZProc
   in process ~zpath (fun z3 ->
        Simulator.setup sygus z3 ;
        if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
                = None) then "false"
-       else learnInvariant_internal ~avoid_roots ~conf ~states sygus
-                                    conf.max_restarts conf.base_random_seed z3)
+       else learnInvariant_internal ~conf ~states conf.max_restarts sygus
+                                    conf.base_random_seed z3)

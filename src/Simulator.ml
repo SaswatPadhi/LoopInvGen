@@ -74,8 +74,8 @@ let build_avoid_constraints sygus head =
                    ~f:(fun head -> Some (SyGuS.value_assignment_constraint
                                            sygus.state_vars head ~negate:true))
 
-let record_states ?(avoid = []) ~size ~seeds ~state_chan ~head_chan
-                  (s : SyGuS.t) ~(zpath : string) : unit =
+let record_states ?(avoid = []) ~size ~seeds ~state_chan ~(zpath : string)
+                  (s : SyGuS.t) : unit =
   let record_and_update avoid head size seed z3 : (string list * int) =
     match head with
     | None -> (avoid, 0)
@@ -87,8 +87,7 @@ let record_states ?(avoid = []) ~size ~seeds ~state_chan ~head_chan
                         ~f:(fun s -> output_string state_chan
                                        (Types.serialize_values s)
                                    ; newline state_chan)
-            ; output_string head_chan head ; newline head_chan
-            ; flush head_chan ; flush state_chan
+            ; flush state_chan
             ; ((head :: avoid), (List.length states))
   in ZProc.process ~zpath ~init_options: [
         (* "(set-option :smt.arith.random_initial_value true)" *)
