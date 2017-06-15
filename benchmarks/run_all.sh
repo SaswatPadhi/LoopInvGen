@@ -36,5 +36,8 @@ print_counts () {
 }
 
 print_counts PASS FAIL TIMEOUT
-grep real `grep -l "^PASS\$" $LOG_PATH/*.result` \
-  | cut -f2 | datamash --header-out min 1 max 1 mean 1 median 1 sum 1
+
+PASSING_FILES=`grep -l "^PASS\$" $LOG_PATH/*.result`
+PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`
+echo -e "\nPASS Stats:"
+echo -e "time\n$PASSING_TIMES" | datamash -H min 1 max 1 mean 1 median 1 sum 1

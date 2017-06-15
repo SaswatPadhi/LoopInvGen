@@ -132,8 +132,8 @@ let simplify (z3 : t) (q : string) : string =
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
                   ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
     with [ goal ] -> goal
-        | goals -> raise (Internal_Exn ("Unexpected goals:\n"
-                                       ^ (String.concat ~sep:"\n" goals)))
+       | goals -> raise (Internal_Exn ("Unexpected goals:\n"
+                                      ^ (String.concat ~sep:"\n" goals)))
   in let unexpected_exn = Internal_Exn ("Unexpected z3 goals: " ^ goal)
   in match Sexp.parse goal with
      | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)

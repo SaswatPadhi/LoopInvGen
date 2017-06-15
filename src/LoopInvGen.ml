@@ -51,9 +51,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   let invf'_call =
     "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" "
                   ~f:(fun (s, _) -> s ^ "!")) ^ ")" in
-  let trans_desc = ZProc.simplify z3 sygus.trans.expr in
   let eval_term = (if not (conf.model_completion_mode = `UsingZ3) then "true"
-                   else "(and " ^ invf_call ^ " " ^ trans_desc ^ ")") in
+                   else "(and " ^ invf_call ^ " " ^ sygus.trans.expr ^ ")") in
   let rec helper inv =
   begin
     Log.debug (lazy ("IND >> Strengthening for inductiveness:"
@@ -65,7 +64,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                           ~f:(fun (s, t) -> "(" ^ s ^ " " ^
                                             (Types.string_of_typ t) ^ ")")) ^
       ") Bool " ^ inv ^ ")"
-    in ZProc.create_local z3 ~db:[ inv_def ; "(assert " ^ trans_desc ^ ")"
+    in ZProc.create_local z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
                                            ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
          VPIE.learnVPreCond
@@ -82,7 +81,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
       in ZProc.close_local z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
        ; if pre_inv = "true" then inv
-         else helper (ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")"))
+         else helper ("(and " ^ pre_inv ^ " " ^ inv ^ ")")
   end in helper inv
 
 let counterPre ?(seed = default_config.base_random_seed) ~(sygus : SyGuS.t)
@@ -109,7 +108,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
   in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
   in match counterPre ~seed ~sygus ~z3 inv with
      | (Some _) as model -> restart_with_counter model
-     | None -> inv
+     | None -> ZProc.simplify z3 inv
 
 let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =

@@ -12,7 +12,7 @@ RECORD="./Record.native"
 INFER="./Infer.native"
 CHECK="./Check.native"
 
-FORKS=2
+FORKS=1
 STEPS=512
 
 TIMEOUT=360
