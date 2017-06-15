@@ -15,10 +15,11 @@
 
 (define-fun trans-f ((i Int) (j Int) (k Int) (m Int) (n Int) (x Int) (y Int)
                      (i! Int) (j! Int) (k! Int) (m! Int) (n! Int) (x! Int) (y! Int)) Bool
-  (and (< j n) (and (= j! (+ j 1))
+  (and (< j n) (and (= i! i) (and (= k! k) (and (= n! n) 
+               (and (= j! (+ j 1))
                     (and (or (= m! m) (= m! j))
                          (or (and (= j i) (and (= x! (+ x 1)) (= y! (- y 1))))
-                             (and (not (= j i)) (and (= x! (- x 1)) (= y! (+ y 1)))))))))
+                             (and (not (= j i)) (and (= x! (- x 1)) (= y! (+ y 1))))))))))))
 
 (define-fun post-f ((i Int) (j Int) (k Int) (m Int) (n Int) (x Int) (y Int)) Bool
   (and (= k (+ x y))

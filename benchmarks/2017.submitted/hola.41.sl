@@ -15,7 +15,8 @@
 
 (define-fun trans-f ((i Int) (j Int) (k Int) (n Int)
                      (i! Int) (j! Int) (k! Int) (n! Int)) Bool
-  (and (<= i n) (and (= i! (+ i 1)) (= j! (+ j i)))))
+  (and (<= i n) (and (= n! n) (and (= k! k)
+                (and (= i! (+ i 1)) (= j! (+ j i)))))))
 
 (define-fun post-f ((i Int) (j Int) (k Int) (n Int)) Bool
   (or (<= i n) (> (+ i (+ j k)) (* 2 n))))
