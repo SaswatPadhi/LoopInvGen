@@ -1,3 +1,4 @@
+open Core
 open Components
 open Escher_Core
 open Types
@@ -23,7 +24,7 @@ let rec divide f arity target acc =
    additivity assumption *)
 let rec divide_depth f arity target acc =
   if arity = 0 then f acc
-  else if arity = 1 && List.for_all (fun x -> x < target) acc
+  else if arity = 1 && List.for_all ~f:(fun x -> x < target) acc
        then f (target::acc)
        else begin
          for i = 0 to target do
@@ -34,27 +35,27 @@ let rec divide_depth f arity target acc =
 let _unsupported_ = (fun l -> " **UNSUPPORTED** ")
 
 let apply_component (c : component) (args : Vector.t list) =
-  if (c.name = "not" && (match (snd (fst (List.hd args)))
+  if (c.name = "not" && (match (snd (fst (List.hd_exn args)))
                          with Node ("not", _) -> true | _ -> false))
-  || (c.name = "*" && (match ((snd (fst List.(hd args))), (snd (fst List.(hd (tl args)))))
+  || (c.name = "*" && (match ((snd (fst List.(hd_exn args))), (snd (fst List.(hd_exn (tl_exn args)))))
                           with (Node _, Node _) -> true
-                             | (Node _, Leaf a) -> not (BatString.starts_with a "const_")
-                             | (Leaf a, Node _) -> not (BatString.starts_with a "const_")
-                             | (Leaf a, Leaf b) -> not (BatString.((starts_with a "const_") || (starts_with b "const_")))))
-  then ((("", (fun _ -> VBool false)), Node ("", [])), Array.mapi (fun _ _ -> VError) (snd (List.hd args)))
+                             | (Node _, Leaf a) -> not (String.is_prefix a ~prefix:"const_")
+                             | (Leaf a, Node _) -> not (String.is_prefix a ~prefix:"const_")
+                             | (Leaf a, Leaf b) -> not (String.((is_prefix a ~prefix:"const_") || (is_prefix b ~prefix:"const_")))))
+  then ((("", (fun _ -> VBool false)), Node ("", [])), Array.mapi (fun _ _ -> VError) (snd (List.hd_exn args)))
   else (
-    let select i l = List.map (fun x -> x.(i)) l in
-    let prs = List.map (fun (((_,x),_),_) -> x) args in
-    let values = List.map snd args in
-    let new_prog = fun ars -> c.apply (List.map (fun p -> p ars) prs) in
-    let new_str = c.dump (List.map (fun (((x,_),_),_) -> x) args) in
-    let result = Array.mapi (fun i _ -> c.apply (select i values)) (List.hd values)
-    in (((new_str, new_prog), Node (c.name, List.map (fun ((_,x),_) -> x) args)), result))
+    let select i l = List.map ~f:(fun x -> x.(i)) l in
+    let prs = List.map ~f:(fun (((_,x),_),_) -> x) args in
+    let values = List.map ~f:snd args in
+    let new_prog = fun ars -> c.apply (List.map ~f:(fun p -> p ars) prs) in
+    let new_str = c.dump (List.map ~f:(fun (((x,_),_),_) -> x) args) in
+    let result = Array.mapi (fun i _ -> c.apply (select i values)) (List.hd_exn values)
+    in (((new_str, new_prog), Node (c.name, List.map ~f:(fun ((_,x),_) -> x) args)), result))
 
 (* Upper bound on the heuristic value a solution may take *)
 let max_h = ref 15
 
-let expand_ = ref "size"
+(* let expand_ = ref "size" *)
 let goal_graph = ref false
 
 let noisy = ref false
@@ -66,13 +67,13 @@ let synth_candidates = ref 0
 let rec is_boring = function
   | (Leaf "0") | (Leaf "[]") -> true
   | (Leaf _) -> false
-  | Node (_, args) -> List.for_all is_boring args
+  | Node (_, args) -> List.for_all ~f:is_boring args
 
 let rec fancy = function
   | Leaf _ -> 1
   | Node (x, args) ->
-      let h_values = List.map fancy args in
-      let h_sum = List.fold_left (+) 0 h_values in
+      let h_values = List.map ~f:fancy args in
+      let h_sum = List.fold_left ~f:(+) ~init:0 h_values in
       let size = h_sum in (* estimate size with h_sum *)
       let penalty = 0 in
       let penalty =
@@ -81,12 +82,12 @@ let rec fancy = function
              else penalty
       in 1 + h_sum + penalty
 
-let hvalue ((_,x),_) =
-  match !expand_ with
+let hvalue ((_,x),_) = program_size x
+  (* match !expand_ with
     | "size" -> program_size x
     | "depth" -> program_height x
     | "fancy" -> fancy x
-    | _ -> failwith "Unrecognized expand method!"
+    | _ -> failwith "Unrecognized expand method!" *)
 
 type goal_status =
   | Closed of Vector.t
@@ -105,12 +106,11 @@ let rec print_goal indent goal =
   else print_endline (indent ^ "goal: " ^ (varray_string goal.varray))
 
 let solve_impl ?ast:(ast=false) task consts =
-  let vector_size = Array.length (snd (List.hd task.inputs)) in
+  let vector_size = Array.length (snd (List.hd_exn task.inputs)) in
   let components = task.components in
 
-  let final_goal = {
-    varray = snd (apply_component task.target task.inputs);
-    status = Open; } in
+  let final_goal = { varray = snd (apply_component task.target task.inputs)
+                   ; status = Open } in
 
   let goals = ref (VArrayMap.add final_goal.varray final_goal VArrayMap.empty) in
 
@@ -120,11 +120,14 @@ let solve_impl ?ast:(ast=false) task consts =
       print_endline ("       with " ^ (Vector.string vector));
       end else ();
     goal.status <- Closed vector;
-    match final_goal.status with Closed cls -> (all_solutions := cls::all_solutions.contents; if not ast then raise Success else ()) | _ -> ()
+    match final_goal.status with
+    | Closed cls -> (all_solutions := cls::all_solutions.contents
+                    ; if not ast then raise Success else ())
+    | _ -> ()
   in
 
-  let int_array = Array.make !max_h VSet.empty in
-  let bool_array = Array.make !max_h VSet.empty in
+  let int_array = Array.create ~len:!max_h VSet.empty in
+  let bool_array = Array.create ~len:!max_h VSet.empty in
 
   let check_vector v =
     (* Close all matching goals *)
@@ -134,11 +137,11 @@ let solve_impl ?ast:(ast=false) task consts =
          print_endline ((string_of_int (hvalue v)) ^ ": " ^ (Vector.string v));
        end else ();
        synth_candidates := 1 + (!synth_candidates);
-       List.iter (close_goal v) v_closes; true
+       List.iter ~f:(close_goal v) v_closes; true
   in
 
-  let int_components = List.filter (fun c -> c.codomain = TInt) components in
-  let bool_components = List.filter (fun c -> c.codomain = TBool) components in
+  let int_components = List.filter ~f:(fun c -> c.codomain = TInt) components in
+  let bool_components = List.filter ~f:(fun c -> c.codomain = TBool) components in
 
   let apply_comp f types i =
     let rec apply_cells types acc locations = match types, locations with
@@ -155,7 +158,7 @@ let solve_impl ?ast:(ast=false) task consts =
     let f x =
       let vector = apply_component c x in
       let h_value = hvalue vector in
-      let has_err = Array.fold_left (fun p x -> match x with VError -> true | _ -> p) false (snd vector) in
+      let has_err = Array.fold ~f:(fun p x -> match x with VError -> true | _ -> p) ~init:false (snd vector) in
       if (h_value < !max_h && (not has_err))
       then ((if not (!noisy) then ()
             else print_endline (string_of_int h_value ^ ">>" ^ (Vector.string vector)));
@@ -163,31 +166,29 @@ let solve_impl ?ast:(ast=false) task consts =
     in apply_comp f c.domain i
   in
   let expand_type (mat, components) i =
-    List.iter (fun c -> expand_component c mat i) components;
+    List.iter ~f:(fun c -> expand_component c mat i) components;
   in
   let expand i =
-    List.iter (fun x -> expand_type x i)
-              [(int_array, int_components);
-               (bool_array, bool_components)]
+    List.iter ~f:(fun x -> expand_type x i) [(int_array, int_components); (bool_array, bool_components)]
   in
-  let zero = ((("0", (fun ars -> VInt 0)), Leaf "0"), Array.make vector_size (VInt 0)) in
-  let btrue = ((("true", (fun ars -> VBool true)), Leaf "true"), Array.make vector_size (VBool true)) in
-  let bfalse = ((("false", (fun ars -> VBool false)), Leaf "false"), Array.make vector_size (VBool false)) in
+  let zero = ((("0", (fun ars -> VInt 0)), Leaf "0"), Array.create ~len:vector_size (VInt 0)) in
+  let btrue = ((("true", (fun ars -> VBool true)), Leaf "true"), Array.create ~len:vector_size (VBool true)) in
+  let bfalse = ((("false", (fun ars -> VBool false)), Leaf "false"), Array.create ~len:vector_size (VBool false)) in
   if !quiet then () else (
     print_endline ("Inputs: ");
-    List.iter (fun v -> print_endline ("   " ^ (Vector.string v))) task.inputs;
+    List.iter ~f:(fun v -> print_endline ("   " ^ (Vector.string v))) task.inputs;
     print_endline ("Goal: " ^ (varray_string final_goal.varray)));
     (*TODO: Only handling string and int constants, extend for others*)
   int_array.(1)
-    <- List.fold_left (fun p i -> VSet.add ((((string_of_int i), (fun ars -> VInt i)), Leaf ("const_" ^ (string_of_int i))),
-                                            Array.make vector_size (VInt i)) p)
-                      (VSet.singleton zero)
-                      (BatList.sort_unique compare (1 :: (-1) :: 2 ::
-                                                    (BatList.filter_map (fun v -> match v with
-                                                                                  | VInt x -> Some x
-                                                                                  | _ -> None) consts)));
+    <- List.fold ~f:(fun p i -> VSet.add ((((string_of_int i), (fun ars -> VInt i)), Leaf ("const_" ^ (string_of_int i))),
+                                            Array.create ~len:vector_size (VInt i)) p)
+                      ~init:(VSet.singleton zero)
+                      (List.dedup ~compare (1 :: (-1) :: 2 ::
+                                            (List.filter_map consts ~f:(function
+                                                                        | VInt x -> Some x
+                                                                        | _ -> None))));
   bool_array.(1)   <- VSet. add btrue (VSet.singleton bfalse);
-  List.iter (fun input ->
+  List.iter ~f:(fun input ->
     let array = match (snd input).(1) with
       | VInt _ -> int_array
       | VBool _ -> bool_array
@@ -210,10 +211,12 @@ let solve_impl ?ast:(ast=false) task consts =
     expand i;
   done
 
-  let solve ?ast:(ast=false) task consts =
+  let solve ?(ast = false) task consts =
     all_solutions := [] ; synth_candidates := 0;
   (try solve_impl ~ast:ast task consts with Success -> ());
-  if not (!quiet) then (print_endline "Synthesis Result: "; List.iter (fun v -> print_endline (Vector.string v)) all_solutions.contents) ;
-  List.rev_map (fun (((x,y),_),_) -> (x, y)) all_solutions.contents
+  if not (!quiet) then (
+    print_endline "Synthesis Result: ";
+    List.iter ~f:(fun v -> print_endline (Vector.string v)) all_solutions.contents
+  ) ; List.rev_map ~f:(fun (((x,y),_),_) -> (x, y)) all_solutions.contents
 
   let default_components = Th_Bool.components @ Th_LIA.components

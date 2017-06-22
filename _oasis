@@ -29,7 +29,7 @@ Executable "infer"
   MainIs:           Infer.ml
   CompiledObject:   native
   NativeOpt:        -O3 -rounds 10 -nodynlink
-  BuildDepends:     batteries, core, core_extended, threads
+  BuildDepends:     core, core_extended, threads
 
 Executable "check"
   Path:             src
@@ -49,7 +49,7 @@ Executable "test"
   MainIs:           Test.ml
   CompiledObject:   native
   NativeOpt:        -O3 -rounds 10 -nodynlink
-  BuildDepends:     alcotest, batteries, core, core_extended, threads
+  BuildDepends:     alcotest, core, core_extended, threads
 
 Test "test"
   Run$:             flag(tests)
