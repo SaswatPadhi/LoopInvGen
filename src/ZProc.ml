@@ -39,8 +39,8 @@ let process ?(init_options = []) ~(zpath : string) (f : t -> 'a) : 'a =
   let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =
-  let last_line = "\"ABRACADABRA.ABRACADABRA^ABRACADABRA\""
-  in Out_channel.output_string z3.stdin ("\n(echo " ^ last_line ^ ")\n")
+  let last_line = "ABRACADABRA.ABRACADABRA^ABRACADABRA"
+  in Out_channel.output_string z3.stdin ("\n(echo \"" ^ last_line ^ "\")\n")
    ; Out_channel.flush z3.stdin
    ; let lines = ref [] in
      let rec read_line () : unit =

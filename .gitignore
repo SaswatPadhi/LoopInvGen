@@ -11,9 +11,12 @@ setup.ml
 Makefile
 configure
 
-# Temporaries
+# External
 _dep
 _log
+_comp
+
+# Temporaries
 ocamlprof.dump
 gmon.out
 *.tgz
