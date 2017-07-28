@@ -20,3 +20,4 @@ _comp
 ocamlprof.dump
 gmon.out
 *.tgz
+_tags

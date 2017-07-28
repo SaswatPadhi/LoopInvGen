@@ -1,0 +1,26 @@
+language: c
+sudo: false
+
+addons:
+  apt:
+    sources:
+    - avsm
+    packages:
+    - aspcud
+    - opam
+
+script: bash -ex .travis.sh
+env:
+  matrix:
+  - OCAML_VERSION=4.02.3
+  - OCAML_VERSION=4.02.3+fp
+  - OCAML_VERSION=4.04.2
+  - OCAML_VERSION=4.04.2+fp+flambda
+  - OCAML_VERSION=4.05.0
+  - OCAML_VERSION=4.05.0+flambda
+  global:
+  - MAKEFLAGS="-j 3"
+
+cache:
+  directories:
+  - $HOME/.opam
