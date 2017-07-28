@@ -1,3 +1,4 @@
+open Core
 open Exceptions
 
 type typ =
@@ -58,7 +59,7 @@ let deserialize_value (s : string) : value option =
     None
 
 let deserialize_values ?(sep = '\t') (s : string) : value option list =
-  let open Core in List.map (String.split ~on:sep s) ~f:deserialize_value
+  List.map (String.split ~on:sep s) ~f:deserialize_value
 
 let serialize_value (v : value) : string =
   match v with
@@ -68,7 +69,7 @@ let serialize_value (v : value) : string =
   | VDontCare    -> "-<UNKNOWN>-"
 
 let serialize_values ?(sep = "\t") (vs : value list) : string =
-  let open Core in String.concat ~sep (List.map vs ~f:serialize_value)
+  String.concat ~sep (List.map vs ~f:serialize_value)
 
 let rec print_data chan (data : value) : unit =
-  Core.Out_channel.output_string chan (serialize_value data)
+  Out_channel.output_string chan (serialize_value data)

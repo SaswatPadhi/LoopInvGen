@@ -34,4 +34,4 @@ oasis setup -setup-update dynamic
             ${LIG_DOCS_FLAG:- --disable-docs}       \
             ${LIG_PROFILE_FLAG:- --disable-profile} \
             ${LIG_TESTS_FLAG:- --disable-tests}
-make
+make clean ; make

@@ -14,10 +14,14 @@ env:
   matrix:
   - OCAML_VERSION=4.02.3
   - OCAML_VERSION=4.02.3+fp
+  - OCAML_VERSION=4.03.0
+  - OCAML_VERSION=4.03.0+fp+flambda
   - OCAML_VERSION=4.04.2
   - OCAML_VERSION=4.04.2+fp+flambda
   - OCAML_VERSION=4.05.0
   - OCAML_VERSION=4.05.0+flambda
+  - OCAML_VERSION=4.05.0+trunk+fp+flambda
+  - OCAML_VERSION=4.06.0+trunk+fp+flambda
   global:
   - MAKEFLAGS="-j 3"
 
