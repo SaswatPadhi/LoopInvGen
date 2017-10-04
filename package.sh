@@ -10,16 +10,21 @@ Flags:
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :z: --long make-z3 -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :z:j: --long make-z3:,jobs: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
+JOBS="4"
 MAKE_Z3=""
+
 while true ; do
   case "$1" in
     -z | --make-z3 )
          MAKE_Z3="$2" ;
+         shift ; shift ;;
+    -j | --jobs )
+         JOBS="$2" ;
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -28,12 +33,18 @@ done
 
 if [ -n "$MAKE_Z3" ] ; then
   LIG=`pwd`
+  Z3_BUILD_DIR="build_for_pie"
   cd "$MAKE_Z3"
-  #LDFLAGS="-static-libstdc++ -static-libgcc -static" \
-  #CXXFLAGS="-static-libstdc++ -static-libgcc -static" \
-  #python2 scripts/mk_make.py
-  cd build
-  make -j4
+
+  rm -rf "$Z3_BUILD_DIR"
+  mkdir -p "$Z3_BUILD_DIR"
+
+  python2 scripts/mk_make.py --staticbin --staticlib \
+                             --build "$Z3_BUILD_DIR"
+
+  cd "$Z3_BUILD_DIR"
+  make -j "$JOBS"
+
   mkdir -p "$LIG/_dep"
   cp z3 "$LIG/_dep/z3.bin"
   cd "$LIG"
@@ -45,7 +56,7 @@ make clean
 
 ./configure --disable-debug --disable-profile \
             --disable-tests --disable-docs
-make
+make -j "$JOBS"
 
 rm -rf bin && mkdir -p bin
 
