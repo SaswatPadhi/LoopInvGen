@@ -1,5 +1,46 @@
 #!/bin/bash
 
+usage() {
+  echo "
+Usage: $0 [flags]
+
+Flags:
+    [--make-z3, -z]
+" 1>&2 ;
+  exit 1 ;
+}
+
+OPTS=`getopt -n 'parse-options' -o :z: --long make-z3 -- "$@"`
+if [ $? != 0 ] ; then usage ; fi
+
+eval set -- "$OPTS"
+
+MAKE_Z3=""
+while true ; do
+  case "$1" in
+    -z | --make-z3 )
+         MAKE_Z3="$2" ;
+         shift ; shift ;;
+    -- ) shift; break ;;
+    * ) break ;;
+  esac
+done
+
+if [ -n "$MAKE_Z3" ] ; then
+  LIG=`pwd`
+  cd "$MAKE_Z3"
+  #LDFLAGS="-static-libstdc++ -static-libgcc -static" \
+  #CXXFLAGS="-static-libstdc++ -static-libgcc -static" \
+  #python2 scripts/mk_make.py
+  cd build
+  make -j4
+  mkdir -p "$LIG/_dep"
+  cp z3 "$LIG/_dep/z3.bin"
+  cd "$LIG"
+fi
+
+oasis setup -setup-update dynamic
+
 make clean
 
 ./configure --disable-debug --disable-profile \
@@ -11,14 +52,14 @@ rm -rf bin && mkdir -p bin
 cp _dep/z3.bin bin/z3
 cp _build/src/Record.native \
    _build/src/Infer.native  \
-   _build/src/Check.native  \
-   verify.sh                \
+   _build/src/Check.native \
+   loopinvgen.sh            \
    bin
 
 cat <<EOF > bin/starexec_run_default
 #!/bin/bash
 
-./verify.sh -t 36000 -i "." -z "./z3" "\$1"
+./loopinvgen.sh -t 36000 -i "." -z "./z3" "\$1"
 EOF
 chmod +x bin/starexec_run_default
 

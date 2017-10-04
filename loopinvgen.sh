@@ -10,7 +10,7 @@ REC_TIMEOUT=3s
 
 RECORD="./Record.native"
 INFER="./Infer.native"
-CHECK="./Check.native"
+VERIFY="./Verify.native"
 
 FORKS=1
 STEPS=512
@@ -19,18 +19,18 @@ TIMEOUT=360
 
 RECORD_LOG=""
 INFER_LOG=""
-CHECK_LOG=""
+VERIFY_LOG=""
 
 DO_LOG="no"
-DO_CHECK="no"
 DO_CLEAN="no"
+DO_VERIFY="no"
 
 usage() {
   echo "
 Usage: $0 [flags] <benchmark.sl>
 
 Flags:
-    [--check, -c]
+    [--verify, -v]
     [--intermediates-path, -i <path>] (_log)
     [--logging, -l <mode>] (none) {none|rec|inf|all}
     [--remove-intermediates, -r]
@@ -41,15 +41,15 @@ Flags:
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :ci:l:rs:t:z: --long check,intermediate-path:,logging:,remove-intermediates,steps-to-simulate:,timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :vi:l:rs:t:z: --long verify,intermediate-path:,logging:,remove-intermediates,steps-to-simulate:,timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 while true ; do
   case "$1" in
-    -c | --check )
-         DO_CHECK="yes" ; shift ;;
+    -v | --verify )
+         DO_VERIFY="yes" ; shift ;;
     -i | --intermediates-path )
          [ -d "$2" ] || usage
          INTERMEDIATES_DIR="$2"
@@ -80,7 +80,7 @@ done
 
 RECORD="$RECORD -z $Z3_PATH"
 INFER="$INFER -z $Z3_PATH"
-CHECK="$CHECK -z $Z3_PATH"
+VERIFY="$VERIFY -z $Z3_PATH"
 TIMEOUT="${TIMEOUT}s"
 
 TESTCASE="$1"
@@ -100,7 +100,7 @@ TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
 if [ "$DO_LOG" == "all" ] ; then
   RECORD_LOG="-l $TESTCASE_REC_LOG"
   INFER_LOG="-l $TESTCASE_LOG"
-  CHECK_LOG="-l $TESTCASE_LOG"
+  VERIFY_LOG="-l $TESTCASE_LOG"
 elif [ "$DO_LOG" == "rec" ] ; then
   RECORD_LOG="-l $TESTCASE_REC_LOG"
 elif [ "$DO_LOG" == "inf" ] ; then
@@ -137,12 +137,12 @@ if ( [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ) && [ "$DO_CLEAN" == "yes" 
   rm -rf $TESTCASE_ALL_STATES
 fi
 
-if [ "$DO_CHECK" = "yes" ]; then
+if [ "$DO_VERIFY" = "yes" ]; then
   if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ] ; then
     echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
   fi
 
-  $CHECK -i $TESTCASE_INVARIANT $CHECK_LOG $TESTCASE
+  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $TESTCASE
   exit $?
 elif [ $RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo

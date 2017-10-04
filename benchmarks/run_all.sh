@@ -24,7 +24,8 @@ for TESTCASE in benchmarks/*/*.sl ; do
   fi
 
   echo > $TESTCASE_RESULT
-  (time ./verify.sh -cr -t "$TIMEOUT" $TESTCASE) 2>> $TESTCASE_RESULT | tee -a $TESTCASE_RESULT
+  (time ./loopinvgen.sh -cr -t "$TIMEOUT" $TESTCASE) \
+    2>> $TESTCASE_RESULT | tee -a $TESTCASE_RESULT
 done
 
 print_counts () {
