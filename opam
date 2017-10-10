@@ -1,17 +1,22 @@
 opam-version: "1.2"
+
 name: "LoopInvGen"
 version: "0.6b"
+
 maintainer: "Saswat Padhi <saswat.sourav@gmail.com>"
 authors: "Saswat Padhi <saswat.sourav@gmail.com>"
 homepage: "http://saswatpadhi.github.io/"
+
 bug-reports: "https://github.com/SaswatPadhi/LoopInvGen/issues"
 license: ""
 dev-repo: "https://github.com/SaswatPadhi/LoopInvGen/"
+
 build: [
   ["oasis" "setup" "-setup-update" "dynamic"]
   ["./configure" "--disable-tests" "--disable-debug" "--disable-profile"]
   [make]
 ]
+
 depends: [
   "ocamlfind"     {build}
   "base-bytes"    {build}

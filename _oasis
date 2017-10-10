@@ -31,10 +31,10 @@ Executable "infer"
   NativeOpt:        -O3 -rounds 10 -nodynlink
   BuildDepends:     core, core_extended, threads
 
-Executable "check"
+Executable "verify"
   Path:             src
   Install:          false
-  MainIs:           Check.ml
+  MainIs:           Verify.ml
   CompiledObject:   native
   NativeOpt:        -O3 -rounds 10 -nodynlink
   BuildDepends:     core, core_extended, threads

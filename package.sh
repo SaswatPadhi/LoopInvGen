@@ -63,7 +63,7 @@ rm -rf bin && mkdir -p bin
 cp _dep/z3.bin bin/z3
 cp _build/src/Record.native \
    _build/src/Infer.native  \
-   _build/src/Check.native \
+   _build/src/Verify.native \
    loopinvgen.sh            \
    bin
 
@@ -79,8 +79,8 @@ cat <<EOF > bin/starexec_run_debug
 
 pwd
 ls -lah
-file z3 Record.native Infer.native Check.native
-ldd z3 Record.native Infer.native Check.native
+file z3 Record.native Infer.native Verify.native
+ldd z3 Record.native Infer.native Verify.native
 ./z3
 ./Record.native
 EOF

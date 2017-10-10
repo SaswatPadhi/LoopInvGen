@@ -8,6 +8,8 @@ TIMEOUT="$1"
 
 TIMEFORMAT=$'\nreal\t%3R\nuser\t%3U\n sys\t%3S\ncpu%%\t%P'
 
+mkdir -p _log
+
 for TESTCASE in benchmarks/*/*.sl ; do
   TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
   TESTCASE_PREFIX="$LOG_PATH/$TESTCASE_NAME"
@@ -24,7 +26,7 @@ for TESTCASE in benchmarks/*/*.sl ; do
   fi
 
   echo > $TESTCASE_RESULT
-  (time ./loopinvgen.sh -cr -t "$TIMEOUT" $TESTCASE) \
+  (time ./loopinvgen.sh -v -t "$TIMEOUT" $TESTCASE) \
     2>> $TESTCASE_RESULT | tee -a $TESTCASE_RESULT
 done
 
