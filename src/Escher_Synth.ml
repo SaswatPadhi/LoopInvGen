@@ -42,14 +42,15 @@ let apply_component (c : component) (args : Vector.t list) =
                              | (Node _, Leaf a) -> not (String.is_prefix a ~prefix:"const_")
                              | (Leaf a, Node _) -> not (String.is_prefix a ~prefix:"const_")
                              | (Leaf a, Leaf b) -> not (String.((is_prefix a ~prefix:"const_") || (is_prefix b ~prefix:"const_")))))
-  then ((("", (fun _ -> VBool false)), Node ("", [])), Array.mapi (fun _ _ -> VError) (snd (List.hd_exn args)))
+  then ((("", (fun _ -> VBool false)), Node ("", [])),
+        Array.map ~f:(fun _ -> VError) (snd (List.hd_exn args)))
   else (
     let select i l = List.map ~f:(fun x -> x.(i)) l in
     let prs = List.map ~f:(fun (((_,x),_),_) -> x) args in
     let values = List.map ~f:snd args in
     let new_prog = fun ars -> c.apply (List.map ~f:(fun p -> p ars) prs) in
     let new_str = c.dump (List.map ~f:(fun (((x,_),_),_) -> x) args) in
-    let result = Array.mapi (fun i _ -> c.apply (select i values)) (List.hd_exn values)
+    let result = Array.mapi ~f:(fun i _ -> c.apply (select i values)) (List.hd_exn values)
     in (((new_str, new_prog), Node (c.name, List.map ~f:(fun ((_,x),_) -> x) args)), result))
 
 (* Upper bound on the heuristic value a solution may take *)
@@ -178,15 +179,15 @@ let solve_impl ?ast:(ast=false) task consts =
     print_endline ("Inputs: ");
     List.iter ~f:(fun v -> print_endline ("   " ^ (Vector.string v))) task.inputs;
     print_endline ("Goal: " ^ (varray_string final_goal.varray)));
-    (*TODO: Only handling string and int constants, extend for others*)
+    (*TODO: Only handles string and int constants, extend for others*)
   int_array.(1)
     <- List.fold ~f:(fun p i -> VSet.add ((((string_of_int i), (fun ars -> VInt i)), Leaf ("const_" ^ (string_of_int i))),
                                             Array.create ~len:vector_size (VInt i)) p)
                       ~init:(VSet.singleton zero)
-                      (List.dedup ~compare (1 :: (-1) :: 2 ::
-                                            (List.filter_map consts ~f:(function
-                                                                        | VInt x -> Some x
-                                                                        | _ -> None))));
+                      (List.dedup_and_sort ~compare (1 :: (-1) :: 2 ::
+                                                      (List.filter_map consts ~f:(function
+                                                                                  | VInt x -> Some x
+                                                                                  | _ -> None))));
   bool_array.(1)   <- VSet. add btrue (VSet.singleton bfalse);
   List.iter ~f:(fun input ->
     let array = match (snd input).(1) with

@@ -67,7 +67,7 @@ let main zpath invfile logfile filename () =
    ; exit (exit_code_of_result res)
 
 let cmd =
-  Command.basic
+  Command.basic_spec
     ~summary: "Check sufficiency of a generated invariant for proving correctness."
     Command.Spec.(
       empty

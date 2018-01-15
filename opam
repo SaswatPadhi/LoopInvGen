@@ -8,8 +8,8 @@ authors: "Saswat Padhi <saswat.sourav@gmail.com>"
 homepage: "http://saswatpadhi.github.io/"
 
 bug-reports: "https://github.com/SaswatPadhi/LoopInvGen/issues"
-license: ""
-dev-repo: "https://github.com/SaswatPadhi/LoopInvGen/"
+license: "MIT"
+dev-repo: "git+https://github.com:SaswatPadhi/LoopInvGen.git"
 
 build: [
   ["oasis" "setup" "-setup-update" "dynamic"]
@@ -22,7 +22,7 @@ depends: [
   "base-bytes"    {build}
   "base-threads"  {build}
   "alcotest"      {>= "0.7"}
-  "core"          {>= "0.9"}
-  "core_extended" {>= "0.9"}
+  "core"          {>= "0.10"}
+  "core_extended" {>= "0.10"}
   "oasis"         {>= "0.4"}
 ]

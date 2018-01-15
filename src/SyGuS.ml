@@ -35,7 +35,7 @@ let value_assignment_constraint ?(negate = false) (vars : var list)
 
 let shrink_vars (s : t) : t =
   let s_vars =
-    List.(filter (dedup (s.pre.args @ s.trans.args @ s.post.args))
+    List.(filter (dedup_and_sort (s.pre.args @ s.trans.args @ s.post.args))
                  ~f:(fun (v, _) -> not (String.is_suffix v ~suffix:"!")))
   in let t_vars = List.map s_vars ~f:(fun (s, t) -> (s ^ "!", t))
   in let filter_on vars = List.(filter ~f:(mem ~equal:(=) vars))
@@ -63,7 +63,7 @@ let rec extract_args_and_consts (vars : var list) (exp : Sexp.t)
                    ~f:(fun (args, consts) farg ->
                          let (a, c) = extract_args_and_consts vars farg
                          in ((a @ args), (c @ consts)))
-       in List.((dedup args) , (dedup consts))
+       in List.((dedup_and_sort args) , (dedup_and_sort consts))
 
 let load_var_usage (sexp : Sexp.t) : var =
   match sexp with
@@ -115,7 +115,7 @@ let load ?(shrink = true) chan : t =
          )
       (input_rev_sexps chan)
   ; let state_var_names = List.map ~f:fst (!state_vars)
-     in consts := List.dedup (!consts)
+     in consts := List.dedup_and_sort (!consts)
       ; Log.debug (lazy ("Variables in state: "
                         ^ (String.concat ~sep:", " state_var_names)))
       ; Log.debug (lazy ("Variables in invariant: "

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+### Initialize `opam`
+
 export OPAMYES=1
 
 if [ -f "$HOME/.opam/config" ]; then
@@ -19,8 +21,14 @@ if [ -n "${OCAML_VERSION}" ]; then
 fi
 eval `opam config env --shell=bash`
 
+
+### Pin `LoopInvGen` package, install deps
+
 opam pin add LoopInvGen . --no-action --yes --kind=path
 opam install LoopInvGen --deps-only
+
+
+### Check installation status and build
 
 RC=$?
 if [ $RC -ne 0 ]; then

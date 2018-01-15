@@ -26,7 +26,7 @@ let main zpath statefile outfile logfile do_false filename () =
       ; exit (if inv = "false" then 1 else 0)
 
 let cmd =
-  Command.basic
+  Command.basic_spec
     ~summary: "Attempts to infer a loop invariant sufficient for proving correctness."
     Command.Spec.(
       empty

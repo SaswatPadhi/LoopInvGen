@@ -15,7 +15,7 @@ let main zpath size forks seeds statefile logfile filename () =
      end
 
 let cmd =
-  Command.basic
+  Command.basic_spec
     ~summary: "Record program states for a given SyGuS-INV benchmark."
     Command.Spec.(
       empty
