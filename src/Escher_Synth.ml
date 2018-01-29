@@ -34,14 +34,16 @@ let rec divide_depth f arity target acc =
 
 let _unsupported_ = (fun l -> " **UNSUPPORTED** ")
 
+let is_non_zero_one_const a = (String.is_prefix a ~prefix:"const_") && (a <> "const_0") && (a <> "const_1")
+
 let apply_component (c : component) (args : Vector.t list) =
   if (c.name = "not" && (match (snd (fst (List.hd_exn args)))
                          with Node ("not", _) -> true | _ -> false))
   || (c.name = "*" && (match ((snd (fst List.(hd_exn args))), (snd (fst List.(hd_exn (tl_exn args)))))
                           with (Node _, Node _) -> true
-                             | (Node _, Leaf a) -> not (String.is_prefix a ~prefix:"const_")
-                             | (Leaf a, Node _) -> not (String.is_prefix a ~prefix:"const_")
-                             | (Leaf a, Leaf b) -> not (String.((is_prefix a ~prefix:"const_") || (is_prefix b ~prefix:"const_")))))
+                             | (Node _, Leaf a) -> not (is_non_zero_one_const a)
+                             | (Leaf a, Node _) -> not (is_non_zero_one_const a)
+                             | (Leaf a, Leaf b) -> not ((is_non_zero_one_const a) || (is_non_zero_one_const b))))
   then ((("", (fun _ -> VBool false)), Node ("", [])),
         Array.map ~f:(fun _ -> VError) (snd (List.hd_exn args)))
   else (
@@ -56,7 +58,6 @@ let apply_component (c : component) (args : Vector.t list) =
 (* Upper bound on the heuristic value a solution may take *)
 let max_h = ref 15
 
-(* let expand_ = ref "size" *)
 let goal_graph = ref false
 
 let noisy = ref false
@@ -65,30 +66,7 @@ let quiet = ref true
 let all_solutions = ref []
 let synth_candidates = ref 0
 
-let rec is_boring = function
-  | (Leaf "0") | (Leaf "[]") -> true
-  | (Leaf _) -> false
-  | Node (_, args) -> List.for_all ~f:is_boring args
-
-let rec fancy = function
-  | Leaf _ -> 1
-  | Node (x, args) ->
-      let h_values = List.map ~f:fancy args in
-      let h_sum = List.fold_left ~f:(+) ~init:0 h_values in
-      let size = h_sum in (* estimate size with h_sum *)
-      let penalty = 0 in
-      let penalty =
-        if size <= 3 then penalty
-        else if is_boring (Node (x, args)) then 2 + penalty
-             else penalty
-      in 1 + h_sum + penalty
-
 let hvalue ((_,x),_) = program_size x
-  (* match !expand_ with
-    | "size" -> program_size x
-    | "depth" -> program_height x
-    | "fancy" -> fancy x
-    | _ -> failwith "Unrecognized expand method!" *)
 
 type goal_status =
   | Closed of Vector.t
@@ -96,7 +74,8 @@ type goal_status =
 
 and goal = {
   varray : value array;
-  mutable status : goal_status; }
+  mutable status : goal_status;
+}
 
 let short_goal_string goal = match goal.status with
   | Open -> "<open> " ^ (varray_string goal.varray)
