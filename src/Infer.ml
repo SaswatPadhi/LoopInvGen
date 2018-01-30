@@ -13,15 +13,18 @@ let main zpath statefile outfile logfile do_false filename () =
    ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
-     in let inv = LoopInvGen.learnInvariant ~zpath ~states sygus
+     in let conf = {
+       LoopInvGen.default_config with for_VPIE = {
+         LoopInvGen.default_config.for_VPIE with for_PIE = {
+           LoopInvGen.default_config.for_VPIE.for_PIE
+           with synth_logic = Types.logic_of_string sygus.logic
+         }
+       }
+     }
+     in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
      in if (not do_false) && inv = "false" then ()
-        else output_string out_chan
-               ("(define-fun " ^ sygus.inv_name ^ " ("
-               ^ (List.to_string_map sygus.all_inv_vars ~sep:" "
-                    ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t)
-                                    ^ ")"))
-               ^ ") Bool " ^ (ZProc.normalize inv) ^ ")\n")
+        else output_string out_chan ((build_inv_func (ZProc.normalize inv) ~sygus) ^ "\n")
       ; Out_channel.close out_chan
       ; exit (if inv = "false" then 1 else 0)
 

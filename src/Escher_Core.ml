@@ -4,12 +4,6 @@ type bin_tree =
   | BTLeaf of int
   | BTNode of int * bin_tree * bin_tree
 
-type program =
-  | Node of string * program list
-  | Leaf of string
-
-type runnable = (string * (value list -> value)) * program
-
 let rec bt_height = function
   | BTLeaf _ -> 1
   | BTNode (_, left, right) -> 1 + (max (bt_height left) (bt_height right))

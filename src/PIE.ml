@@ -29,6 +29,7 @@ type ('a, 'b) job = {
 type config = {
   for_BFL : BFL.config ;
 
+  synth_logic : logic ;
   disable_synth : bool ;
   max_c_group_size : int ;
 }
@@ -36,6 +37,7 @@ type config = {
 let default_config : config = {
   for_BFL = BFL.default_config ;
 
+  synth_logic = LLIA ;
   disable_synth = false ;
   max_c_group_size = 64 ;
 }
@@ -121,7 +123,7 @@ let conflictingTests (job : ('a, 'b) job) : 'a conflict list =
 
 (* Synthesize a new feature to resolve a conflict group. *)
 let synthFeatures ?(consts = []) ~(job : (value list, value) job)
-                  (c_group : value list conflict)
+                  (c_group : value list conflict) (synth_logic : logic)
                   : value list feature with_desc list =
   let group_size = List.((length c_group.pos) + (length c_group.neg))
   in let tab = Hashtbl.Poly.create () ~size:group_size
@@ -134,6 +136,7 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
        target = {
          domain = job.farg_types;
          codomain = TBool;
+         check = (fun _ -> true);
          apply = (Hashtbl.find_default tab ~default:VDontCare);
          name = "synth";
          dump = _unsupported_
@@ -145,7 +148,7 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
                           ~f:(fun j args ->
                                 ith_args.(j) <- (List.nth_exn args i)))
               ; ith_args));
-       components = default_components
+       components = components_for synth_logic
      }
   in let solutions = solve f_synth_task consts
   in List.map solutions ~f:(fun (desc, f) -> (fun v -> (f v) = vtrue), desc)
@@ -161,11 +164,13 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                        pos = List.take c_group'.pos (conf.max_c_group_size / 2);
                        neg = List.take c_group'.neg (conf.max_c_group_size / 2)
                    }
-  in let new_features = synthFeatures c_group ~consts ~job
-  in Log.debug (lazy ("Synthesized features:" ^ Log.indented_sep ^
-                      (List.to_string_map new_features
-                         ~sep:Log.indented_sep ~f:snd)))
-   ; new_features
+  in Log.debug (lazy ("Invoking Escher with "
+                      ^ (string_of_logic conf.synth_logic) ^ " logic."))
+   ; let new_features = synthFeatures c_group conf.synth_logic ~consts ~job
+     in Log.debug (lazy ("Synthesized features:" ^ Log.indented_sep ^
+                         (List.to_string_map new_features
+                            ~sep:Log.indented_sep ~f:snd)))
+      ; new_features
 
 let rec resolveSomeConflicts ?(conf = default_config) ?(consts = [])
                              ~(job : (value list, value) job)

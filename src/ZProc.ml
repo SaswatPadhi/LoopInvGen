@@ -39,7 +39,7 @@ let process ?(init_options = []) ~(zpath : string) (f : t -> 'a) : 'a =
   let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =
-  let last_line = "ABRACADABRA.ABRACADABRA^ABRACADABRA"
+  let last_line = "THIS.LINE>WILL.BE#PRINTED=AFTER+THE-RESULT."
   in Out_channel.output_string z3.stdin ("\n(echo \"" ^ last_line ^ "\")\n")
    ; Out_channel.flush z3.stdin
    ; let lines = ref [] in
@@ -176,7 +176,7 @@ let normalize (expr : string) : string =
     match body with
     | Atom a when a = name -> expr
     | List(l) -> List(List.map l ~f:(replace name expr))
-    | _  -> body
+    | _ -> body
   in let rec helper sexp =
     match sexp with
     | List([Atom("-") ; Atom(num)]) when (String.for_all num ~f:Char.is_digit)

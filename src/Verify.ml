@@ -9,10 +9,9 @@ type result = PASS | FAIL of (string list) | IMPOSSIBLE_PASS | IMPOSSIBLE_FAIL
 let checkInvariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result =
   let open ZProc in process ~zpath (fun z3 ->
     Simulator.setup sygus z3 ;
-    if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
-            = None)
+    if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr) = None)
     then (if inv = "" then IMPOSSIBLE_PASS else IMPOSSIBLE_FAIL)
-    else let inv = (if inv = "" then "false" else inv) in (
+    else let inv = (if inv <> "" then inv else build_inv_func "false" ~sygus) in (
       ignore (run_queries ~local:false z3 [] ~db:[ inv ]) ;
       let inv_call = "(" ^ sygus.inv_name ^ " "
                    ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst)
@@ -22,14 +21,14 @@ let checkInvariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result 
                     ("(and " ^ sygus.trans.expr ^ " " ^ inv_call ^ ")")
                     ("(" ^ sygus.inv_name ^ " "
                     ^ (List.to_string_map sygus.inv_vars ~sep:" "
-                         ~f:(fun (s, _) -> s ^ "!"))
+                        ~f:(fun (s, _) -> s ^ "!"))
                     ^ ")"))
               ; (implication_counter_example z3 inv_call sygus.post.expr) ]
         with [ None ; None ; None ] -> PASS
-           | x -> FAIL (List.filter_mapi x
-                          ~f:(fun i v -> if v = None then None
-                                         else Some [| "pre" ; "trans"
-                                                    ; "post" |].(i)))))
+        | x -> FAIL (List.filter_mapi x
+                       ~f:(fun i v -> if v = None then None
+                                      else Some [| "pre" ; "trans"
+                                                 ; "post" |].(i)))))
 
 let read_inv_from_chan in_chan ~(sygus : SyGuS.t) : string =
   let open Sexplib.Sexp in

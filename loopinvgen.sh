@@ -6,16 +6,16 @@ Z3_PATH="_dep/z3.bin"
 
 MIN_STEPS=63
 MIN_TIMEOUT=5
-REC_TIMEOUT=3s
+REC_TIMEOUT=3.5s
 
 RECORD="./Record.native"
 INFER="./Infer.native"
 VERIFY="./Verify.native"
 
 FORKS=1
-STEPS=512
+STEPS=640
 
-TIMEOUT=360
+TIMEOUT=300
 
 RECORD_LOG=""
 INFER_LOG=""
@@ -124,27 +124,28 @@ wait
 grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STATES
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
-if [ "$DO_CLEAN" == "yes" ]; then
-  rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
-fi
-
-timeout --kill-after=$TIMEOUT $TIMEOUT \
-        $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-               $INFER_LOG >&2
-RESULT_CODE=$?
-
-if ( [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ) && [ "$DO_CLEAN" == "yes" ] ; then
-  rm -rf $TESTCASE_ALL_STATES
-fi
+(timeout --kill-after=$TIMEOUT $TIMEOUT \
+         $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
+                $INFER_LOG) >&2
+INFER_RESULT_CODE=$?
 
 if [ "$DO_VERIFY" = "yes" ]; then
-  if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ] ; then
+  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
   fi
 
   $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $TESTCASE
-  exit $?
-elif [ $RESULT_CODE == 0 ] ; then
+  RESULT_CODE=$?
+elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo
+  RESULT_CODE=0
 fi
+
+if [ "$DO_CLEAN" == "yes" ]; then
+  rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
+  if [ $INFER_RESULT_CODE == 0 ] || [ $INFER_RESULT_CODE == 2 ]; then
+    rm -rf $TESTCASE_ALL_STATES
+  fi
+fi
+
 exit $RESULT_CODE

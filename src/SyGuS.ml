@@ -80,6 +80,13 @@ let load_define_fun lsexp : func * value list =
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: lsexp)))))
 
+let build_inv_func (inv : string) ~(sygus : t) : string =
+  "(define-fun " ^ sygus.inv_name ^ " ("
+  ^ (List.to_string_map
+       sygus.all_inv_vars ~sep:" "
+       ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Types.string_of_typ t) ^ ")"))
+  ^ ") Bool " ^ inv ^ ")"
+
 let load ?(shrink = true) chan : t =
   let logic : string ref = ref "" in
   let inv_name : string ref = ref "" in

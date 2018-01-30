@@ -1,6 +1,21 @@
 open Core
 open Exceptions
 
+type logic =
+  | LLIA
+  | LNIA
+
+let string_of_logic (l : logic) : string =
+  match l with
+  | LLIA -> "LIA"
+  | LNIA -> "NIA"
+
+let logic_of_string (s : string) : logic =
+  match s with
+  | "LIA" -> LLIA
+  | "NIA" -> LNIA
+  | _ -> raise (Parse_Exn ("Unknown logic " ^ s))
+
 type typ =
   | TInt
   | TBool
@@ -25,6 +40,12 @@ type value =
   | VBool of bool
   | VError
   | VDontCare
+
+  type program =
+    | Node of string * program list
+    | Leaf of string
+
+  type runnable = (string * (value list -> value)) * program
 
 let typeof (v : value) : typ =
   match v with

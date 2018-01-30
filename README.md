@@ -20,3 +20,7 @@ Alternatively, you can copy a precompiled version of Z3 to `./dep/` and run `./c
 ## Testing
 
 Execute `./benchmarks/run_all.sh` to run all the tests (SyGuS benchmarks from previous years).
+
+## Usage
+
+Run `./loopinvgen.sh /path/to/sygus.sl` to infer the loop invariant for the SuGuS test case `sygus.sl`.

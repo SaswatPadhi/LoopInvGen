@@ -37,13 +37,7 @@ let _unsupported_ = (fun l -> " **UNSUPPORTED** ")
 let is_non_zero_one_const a = (String.is_prefix a ~prefix:"const_") && (a <> "const_0") && (a <> "const_1")
 
 let apply_component (c : component) (args : Vector.t list) =
-  if (c.name = "not" && (match (snd (fst (List.hd_exn args)))
-                         with Node ("not", _) -> true | _ -> false))
-  || (c.name = "*" && (match ((snd (fst List.(hd_exn args))), (snd (fst List.(hd_exn (tl_exn args)))))
-                          with (Node _, Node _) -> true
-                             | (Node _, Leaf a) -> not (is_non_zero_one_const a)
-                             | (Leaf a, Node _) -> not (is_non_zero_one_const a)
-                             | (Leaf a, Leaf b) -> not ((is_non_zero_one_const a) || (is_non_zero_one_const b))))
+  if (not (c.check List.(map ~f:(fun a -> (snd (fst a))) args)))
   then ((("", (fun _ -> VBool false)), Node ("", [])),
         Array.map ~f:(fun _ -> VError) (snd (List.hd_exn args)))
   else (
@@ -52,7 +46,7 @@ let apply_component (c : component) (args : Vector.t list) =
     let values = List.map ~f:snd args in
     let new_prog = fun ars -> c.apply (List.map ~f:(fun p -> p ars) prs) in
     let new_str = c.dump (List.map ~f:(fun (((x,_),_),_) -> x) args) in
-    let result = Array.mapi ~f:(fun i _ -> c.apply (select i values)) (List.hd_exn values)
+    let result = Array.mapi ~f:(fun i _ -> try c.apply (select i values) with _ -> VError) (List.hd_exn values)
     in (((new_str, new_prog), Node (c.name, List.map ~f:(fun ((_,x),_) -> x) args)), result))
 
 (* Upper bound on the heuristic value a solution may take *)
@@ -191,12 +185,15 @@ let solve_impl ?ast:(ast=false) task consts =
     expand i;
   done
 
-  let solve ?(ast = false) task consts =
-    all_solutions := [] ; synth_candidates := 0;
+let solve ?(ast = false) task consts =
+  all_solutions := [] ; synth_candidates := 0;
   (try solve_impl ~ast:ast task consts with Success -> ());
   if not (!quiet) then (
     print_endline "Synthesis Result: ";
     List.iter ~f:(fun v -> print_endline (Vector.string v)) all_solutions.contents
   ) ; List.rev_map ~f:(fun (((x,y),_),_) -> (x, y)) all_solutions.contents
 
-  let default_components = Th_Bool.components @ Th_LIA.components
+let components_for (l : logic) : component list =
+  match l with
+  | LLIA -> Th_LIA.all_components
+  | LNIA -> Th_NIA.all_components

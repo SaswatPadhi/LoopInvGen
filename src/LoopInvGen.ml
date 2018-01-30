@@ -15,8 +15,7 @@ type 'a config = {
 
 let default_config = {
   for_VPIE = {
-    VPIE.default_config with
-      simplify = false ;
+    VPIE.default_config with simplify = false ;
   } ;
 
   base_random_seed = "LoopInvGen" ;
