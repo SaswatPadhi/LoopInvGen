@@ -172,7 +172,7 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                       ^ (Log.indented_sep 2) ^ "POS:" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map c_group.pos ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))
-                      ^ (Log.indented_sep 2) ^ "  NEG:" ^ (Log.indented_sep 4)
+                      ^ (Log.indented_sep 2) ^ "NEG:" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map c_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))))
    ; let new_features = synthFeatures c_group conf.synth_logic ~consts ~job

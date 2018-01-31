@@ -40,10 +40,8 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(FCall _) ; (FCall _)] -> false
              | [(Const c) ; _] -> (c <> vzero) && (c <> vone) && (c <> vnegone)
              | [_ ; (Const c)] -> (c <> vzero) && (c <> vone) && (c <> vnegone)
-             | [_ ; _] -> true
              | _ -> false);
     apply = (function
              | [VInt x; VInt y] -> VInt (x * y)
