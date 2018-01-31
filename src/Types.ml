@@ -42,8 +42,9 @@ type value =
   | VDontCare
 
 type program =
-  | Node of string * program list
-  | Leaf of string
+  | FCall of string * program list
+  | Const of value
+  | Var of string
 
 type runnable = (string * (value list -> value)) * program
 

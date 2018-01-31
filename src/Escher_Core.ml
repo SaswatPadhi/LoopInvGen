@@ -20,16 +20,19 @@ let rec bt_string = function
   | BTLeaf x -> string_of_int x
 
 let rec program_string = function
-  | Node (x, args) -> "(" ^ x ^ " " ^ (String.concat " " (List.map program_string args)) ^ ")"
-  | Leaf x -> x
+  | FCall (x, args) -> "(" ^ x ^ " " ^ (String.concat " " (List.map program_string args)) ^ ")"
+  | Const v -> serialize_value v
+  | Var x -> x
 
 let rec program_height = function
-  | Node (_, args) -> 1 + (List.fold_left max 0 (List.map program_height args))
-  | Leaf _ -> 1
+  | FCall (_, args) -> 1 + (List.fold_left max 0 (List.map program_height args))
+  | Const _ -> 1
+  | Var _ -> 1
 
 let rec program_size = function
-  | Node (_, args) -> List.fold_left (+) 1 (List.map program_size args)
-  | Leaf _ -> 1
+  | FCall (_, args) -> List.fold_left (+) 1 (List.map program_size args)
+  | Const _ -> 1
+  | Var _ -> 1
 
 let value_lt x y = match x,y with
   | (VInt x, VInt y) -> x >= 0 && y >= 0 && x < y

@@ -207,7 +207,7 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
              (neg : bool list list) : int CNF.t =
   let rec helper k =
   begin
-    Log.debug (lazy ("Attempting with K = " ^ (string_of_int k))) ;
+    Log.debug (lazy ("Attempting BFL with K = " ^ (string_of_int k))) ;
     (* create one variable per possible k-clause over the given variables *)
     let varEncoding = cnfVarsToClauseVars k n in
     let costs = Hashtbl.Poly.of_alist_exn

@@ -2,14 +2,18 @@ open Core
 open Components
 open Types
 
+let vzero = VInt 0
+let vone = VInt 1
+let vnegone = VInt (-1)
+
 let new_components = [
   {
     name = "lia-add";
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Leaf "const_0") ; _] -> false
-             | [_ ; (Leaf "const_0")] -> false
+             | [(Const c) ; _] -> c <> vzero
+             | [_ ; (Const c)] -> c <> vzero
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
@@ -22,9 +26,8 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Leaf "const_0") ; _] -> false
-             | [_ ; (Leaf "const_0")] -> false
-             | [_ ; (Leaf a)] -> not (String.is_prefix a ~prefix:"const_-")
+             | [(Const c) ; _] -> c <> vzero
+             | [_ ; (Const c)] -> (match c with VInt i -> i > 0 | _ -> false)
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
@@ -37,11 +40,9 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Node _) ; (Node _)] -> false
-             | [(Leaf a) ; _] -> String.is_prefix a ~prefix:"const_"
-                              && (a <> "const_1") && (a <> "const_0") && (a <> "const_-1")
-             | [_ ; (Leaf a)] -> String.is_prefix a ~prefix:"const_"
-                              && (a <> "const_1") && (a <> "const_0") && (a <> "const_-1")
+             | [(FCall _) ; (FCall _)] -> false
+             | [(Const c) ; _] -> (c <> vzero) && (c <> vone) && (c <> vnegone)
+             | [_ ; (Const c)] -> (c <> vzero) && (c <> vone) && (c <> vnegone)
              | [_ ; _] -> true
              | _ -> false);
     apply = (function

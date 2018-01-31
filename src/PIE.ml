@@ -142,7 +142,7 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
          dump = _unsupported_
        };
        inputs = List.mapi job.farg_names ~f:(fun i n ->
-          (((n, (fun ars -> List.nth_exn ars i)), Leaf n),
+          (((n, (fun ars -> List.nth_exn ars i)), Var n),
            let ith_args = Array.create ~len:group_size VDontCare
            in (List.iteri (Hashtbl.keys tab)
                           ~f:(fun j args ->
@@ -223,7 +223,7 @@ let rec augmentFeatures ?(conf = default_config) ?(consts = [])
    'c) with each feature and postcondition. *)
 let learnPreCond ?(conf = default_config) ?(consts = []) (job : ('a, 'b) job)
                  : ('a feature with_desc) CNF.t option =
-  Log.debug (lazy ("Learning with "
+  Log.debug (lazy ("New PI task with "
                   ^ (string_of_int (List.length job.pos_tests))
                   ^ " POS + "
                   ^ (string_of_int (List.length job.neg_tests))

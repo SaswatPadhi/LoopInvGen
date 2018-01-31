@@ -34,11 +34,9 @@ let rec divide_depth f arity target acc =
 
 let _unsupported_ = (fun l -> " **UNSUPPORTED** ")
 
-let is_non_zero_one_const a = (String.is_prefix a ~prefix:"const_") && (a <> "const_0") && (a <> "const_1")
-
 let apply_component (c : component) (args : Vector.t list) =
   if (not (c.check List.(map ~f:(fun a -> (snd (fst a))) args)))
-  then ((("", (fun _ -> VBool false)), Node ("", [])),
+  then ((("", (fun _ -> VBool false)), FCall ("", [])),
         Array.map ~f:(fun _ -> VError) (snd (List.hd_exn args)))
   else (
     let select i l = List.map ~f:(fun x -> x.(i)) l in
@@ -47,7 +45,7 @@ let apply_component (c : component) (args : Vector.t list) =
     let new_prog = fun ars -> c.apply (List.map ~f:(fun p -> p ars) prs) in
     let new_str = c.dump (List.map ~f:(fun (((x,_),_),_) -> x) args) in
     let result = Array.mapi ~f:(fun i _ -> try c.apply (select i values) with _ -> VError) (List.hd_exn values)
-    in (((new_str, new_prog), Node (c.name, List.map ~f:(fun ((_,x),_) -> x) args)), result))
+    in (((new_str, new_prog), FCall (c.name, List.map ~f:(fun ((_,x),_) -> x) args)), result))
 
 (* Upper bound on the heuristic value a solution may take *)
 let max_h = ref 15
@@ -145,23 +143,29 @@ let solve_impl ?ast:(ast=false) task consts =
   let expand i =
     List.iter ~f:(fun x -> expand_type x i) [(int_array, int_components); (bool_array, bool_components)]
   in
-  let zero = ((("0", (fun ars -> VInt 0)), Leaf "0"), Array.create ~len:vector_size (VInt 0)) in
-  let btrue = ((("true", (fun ars -> VBool true)), Leaf "true"), Array.create ~len:vector_size (VBool true)) in
-  let bfalse = ((("false", (fun ars -> VBool false)), Leaf "false"), Array.create ~len:vector_size (VBool false)) in
+  let btrue = let vtrue = Th_Bool.vtrue
+              in ((("true", (fun ars -> vtrue)), Const vtrue), Array.create ~len:vector_size vtrue) in
+  let bfalse = let vfalse = Th_Bool.vfalse
+                in ((("false", (fun ars -> vfalse)), Const vfalse), Array.create ~len:vector_size vfalse) in
+  let bzero = let vzero = Th_LIA.vzero
+              in ((("0", (fun ars -> vzero)), Const vzero), Array.create ~len:vector_size vzero) in
+  let bone = let vone = Th_LIA.vone
+                in ((("1", (fun ars -> vone)), Const vone), Array.create ~len:vector_size vone) in
+  let bnegone = let vnegone = Th_LIA.vnegone
+              in ((("-1", (fun ars -> vnegone)), Const vnegone), Array.create ~len:vector_size vnegone) in
   if !quiet then () else (
     print_endline ("Inputs: ");
     List.iter ~f:(fun v -> print_endline ("   " ^ (Vector.string v))) task.inputs;
     print_endline ("Goal: " ^ (varray_string final_goal.varray)));
     (*TODO: Only handles string and int constants, extend for others*)
   int_array.(1)
-    <- List.fold ~f:(fun p i -> VSet.add ((((string_of_int i), (fun ars -> VInt i)), Leaf ("const_" ^ (string_of_int i))),
-                                            Array.create ~len:vector_size (VInt i)) p)
-                      ~init:(VSet.singleton zero)
-                      (List.dedup_and_sort ~compare (1 :: (-1) :: 2 ::
-                                                      (List.filter_map consts ~f:(function
-                                                                                  | VInt x -> Some x
-                                                                                  | _ -> None))));
-  bool_array.(1)   <- VSet. add btrue (VSet.singleton bfalse);
+    <- List.fold ~f:(fun p i -> let vi = VInt i
+                                in VSet.add ((((string_of_int i), (fun ars -> vi)), Const vi),
+                                             Array.create ~len:vector_size vi) p)
+                 ~init:(VSet.add bone (VSet.add bzero (VSet.singleton bnegone)))
+                 (List.dedup_and_sort ~compare (List.filter_map consts ~f:(function VInt x -> Some x
+                                                                                  | _ -> None)));
+  bool_array.(1) <- VSet.add btrue (VSet.singleton bfalse);
   List.iter ~f:(fun input ->
     let array = match (snd input).(1) with
       | VInt _ -> int_array

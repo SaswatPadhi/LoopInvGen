@@ -32,8 +32,8 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Leaf a) ; _] -> (a <> "const_1") && (a <> "const_0") && (a <> "const_-1")
-             | [_ ; (Leaf a)] -> (a <> "const_1") && (a <> "const_0") && (a <> "const_-1")
+             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone) && (c <> Th_LIA.vnegone)
+             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone) && (c <> Th_LIA.vnegone)
              | [_ ; _] -> true
              | _ -> false);
     apply = (function

@@ -2,14 +2,18 @@ open Core
 open Components
 open Types
 
+let vtrue = VBool true
+let vfalse = VBool false
+
 let new_components = [
   {
     name = "not";
     codomain = TBool;
     domain = [TBool];
     check = (function
-             | [Node ("not", _)] -> false
-             | [Leaf a] -> (a <> "true") && (a <> "false")
+             | [FCall ("not", _)] -> false
+             | [Const _] -> false
+             | [_] -> true
              | _ -> false);
     apply = (function
              | [VBool x] -> VBool (not x)
@@ -21,8 +25,8 @@ let new_components = [
     codomain = TBool;
     domain = [TBool;TBool];
     check = (function
-             | [(Leaf a) ; _] -> (a <> "true") && (a <> "false")
-             | [_ ; (Leaf a)] -> (a <> "true") && (a <> "false")
+             | [(Const a) ; _] -> false
+             | [_ ; (Const a)] -> false
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
@@ -35,8 +39,8 @@ let new_components = [
     codomain = TBool;
     domain = [TBool;TBool];
     check = (function
-             | [(Leaf a) ; _] -> (a <> "true") && (a <> "false")
-             | [_ ; (Leaf a)] -> (a <> "true") && (a <> "false")
+             | [(Const a) ; _] -> false
+             | [_ ; (Const a)] -> false
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
