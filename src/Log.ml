@@ -3,8 +3,7 @@ open Core_extended.Logger
 let logger = ref (create_default "")
 
 let enabled = ref false
-let indent = Core.String.make 42 ' '
-let indented_sep = "\n  " ^ indent
+let indented_sep (indent : int) = "\n" ^ (Core.String.make (42 + indent) ' ')
 
 let fatal lstr = if !enabled then log (!logger) (`Fatal , (Lazy.force lstr)) else ()
 let error lstr = if !enabled then log (!logger) (`Error , (Lazy.force lstr)) else ()

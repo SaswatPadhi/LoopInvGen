@@ -41,11 +41,11 @@ type value =
   | VError
   | VDontCare
 
-  type program =
-    | Node of string * program list
-    | Leaf of string
+type program =
+  | Node of string * program list
+  | Leaf of string
 
-  type runnable = (string * (value list -> value)) * program
+type runnable = (string * (value list -> value)) * program
 
 let typeof (v : value) : typ =
   match v with

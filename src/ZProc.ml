@@ -49,12 +49,12 @@ let flush_and_collect (z3 : t) : string =
            else if l <> "" then (lines := l :: (!lines) ; read_line ())
        in read_line () ; lines := List.rev (!lines)
         ; Log.debug (lazy (String.concat ("Result:" :: (!lines))
-                                         ~sep:Log.indented_sep))
+                                         ~sep:(Log.indented_sep 4)))
         ; String.concat ~sep:" " (!lines)
 
 let create_local ?(db = []) (z3 : t) : unit =
   Log.debug (lazy (String.concat ("Created Z3 local." :: db)
-                                 ~sep:Log.indented_sep)) ;
+                                 ~sep:(Log.indented_sep 4))) ;
   Out_channel.output_lines z3.stdin ("(push)" :: db) ;
   Out_channel.flush z3.stdin
 
@@ -67,7 +67,7 @@ let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
   (if local then create_local z3 else ()) ;
   Log.debug (lazy (String.concat ("New Z3 call:" :: (db @ queries))
-                                 ~sep:Log.indented_sep)) ;
+                                 ~sep:(Log.indented_sep 4))) ;
   if queries = []
   then begin
     if local then () else

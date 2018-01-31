@@ -165,11 +165,20 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                        neg = List.take c_group'.neg (conf.max_c_group_size / 2)
                    }
   in Log.debug (lazy ("Invoking Escher with "
-                      ^ (string_of_logic conf.synth_logic) ^ " logic."))
+                      ^ (string_of_logic conf.synth_logic) ^ " logic."
+                      ^ (Log.indented_sep 0) ^ "Conflict group ("
+                      ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
+                           ~f:(fun n t -> n ^ " :" ^ (string_of_typ t)))^ "):"
+                      ^ (Log.indented_sep 2) ^ "POS:" ^ (Log.indented_sep 4)
+                      ^ (List.to_string_map c_group.pos ~sep:(Log.indented_sep 4)
+                           ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))
+                      ^ (Log.indented_sep 2) ^ "  NEG:" ^ (Log.indented_sep 4)
+                      ^ (List.to_string_map c_group.neg ~sep:(Log.indented_sep 4)
+                           ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))))
    ; let new_features = synthFeatures c_group conf.synth_logic ~consts ~job
-     in Log.debug (lazy ("Synthesized features:" ^ Log.indented_sep ^
+     in Log.debug (lazy ("Synthesized features:" ^ (Log.indented_sep 4) ^
                          (List.to_string_map new_features
-                            ~sep:Log.indented_sep ~f:snd)))
+                            ~sep:(Log.indented_sep 4) ~f:snd)))
       ; new_features
 
 let rec resolveSomeConflicts ?(conf = default_config) ?(consts = [])

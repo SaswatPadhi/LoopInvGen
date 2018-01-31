@@ -55,7 +55,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   let rec helper inv =
   begin
     Log.debug (lazy ("IND >> Strengthening for inductiveness:"
-                    ^ Log.indented_sep ^ inv)) ;
+                    ^ (Log.indented_sep 4) ^ inv)) ;
     if inv = "false" then inv else
     let inv_def =
       "(define-fun invf (" ^
@@ -86,7 +86,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
 let counterPre ?(seed = default_config.base_random_seed) ~(sygus : SyGuS.t)
                ~(z3 : ZProc.t) (inv : PIE.desc) : value list option =
   Log.debug (lazy ("PRE >> Checking if weaker than precond:"
-                  ^ Log.indented_sep ^ inv)) ;
+                  ^ (Log.indented_sep 4) ^ inv)) ;
   let open Quickcheck in
   random_value ~size:1 ~seed:(`Deterministic seed)
     (Simulator.gen_state_from_model sygus z3

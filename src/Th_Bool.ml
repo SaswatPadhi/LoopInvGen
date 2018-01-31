@@ -9,7 +9,7 @@ let new_components = [
     domain = [TBool];
     check = (function
              | [Node ("not", _)] -> false
-             | [_] -> true
+             | [Leaf a] -> (a <> "true") && (a <> "false")
              | _ -> false);
     apply = (function
              | [VBool x] -> VBool (not x)
@@ -21,8 +21,8 @@ let new_components = [
     codomain = TBool;
     domain = [TBool;TBool];
     check = (function
-             | [(Leaf _) ; _] -> false
-             | [_ ; (Leaf _)] -> false
+             | [(Leaf a) ; _] -> (a <> "true") && (a <> "false")
+             | [_ ; (Leaf a)] -> (a <> "true") && (a <> "false")
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
@@ -35,8 +35,8 @@ let new_components = [
     codomain = TBool;
     domain = [TBool;TBool];
     check = (function
-             | [(Leaf _) ; _] -> false
-             | [_ ; (Leaf _)] -> false
+             | [(Leaf a) ; _] -> (a <> "true") && (a <> "false")
+             | [_ ; (Leaf a)] -> (a <> "true") && (a <> "false")
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
