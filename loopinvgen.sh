@@ -13,7 +13,7 @@ INFER="./Infer.native"
 VERIFY="./Verify.native"
 
 FORKS=1
-STEPS=640
+STEPS=768
 
 TIMEOUT=300
 

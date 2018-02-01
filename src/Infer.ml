@@ -13,11 +13,13 @@ let main zpath statefile outfile logfile do_false filename () =
    ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
+     in let sygus_logic = Types.logic_of_string sygus.logic
      in let conf = {
        LoopInvGen.default_config with for_VPIE = {
          LoopInvGen.default_config.for_VPIE with for_PIE = {
            LoopInvGen.default_config.for_VPIE.for_PIE
-           with synth_logic = Types.logic_of_string sygus.logic
+           with synth_logic = sygus_logic;
+                max_c_group_size = (PIE.conflict_group_size_multiplier_for_logic sygus_logic) * PIE.base_max_conflict_group_size;
          }
        }
      }

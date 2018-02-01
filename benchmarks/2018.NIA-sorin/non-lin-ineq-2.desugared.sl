@@ -16,7 +16,7 @@
   (and (< i (* j k)) (= i! (+ i 1)) (= j! j) (= k! k)))
 
 (define-fun post-f ((i Int) (j Int) (k Int)) Bool
-  (or  (< i (* j k)) (= i (* j k))))
+  (or (< i (* j k)) (= i (* j k))))
 
 (inv-constraint inv-f pre-f trans-f post-f)
 

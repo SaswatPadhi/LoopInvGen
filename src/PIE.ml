@@ -34,12 +34,19 @@ type config = {
   max_c_group_size : int ;
 }
 
+let base_max_conflict_group_size = 64
+
+let conflict_group_size_multiplier_for_logic (l : logic) : int =
+  match l with
+  | LLIA -> 1
+  | LNIA -> 4
+
 let default_config : config = {
   for_BFL = BFL.default_config ;
 
   synth_logic = LLIA ;
   disable_synth = false ;
-  max_c_group_size = 64 ;
+  max_c_group_size = base_max_conflict_group_size * (conflict_group_size_multiplier_for_logic LLIA) ;
 }
 
 let split_tests tests ~f ~post =
@@ -158,6 +165,7 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                      (c_group' : value list conflict)
                      : value list feature with_desc list =
   let group_size = List.((length c_group'.pos) + (length c_group'.neg))
+  in let group_size = group_size * (conflict_group_size_multiplier_for_logic conf.synth_logic)
   in let c_group = if group_size < conf.max_c_group_size then c_group'
                    else {
                      c_group' with
@@ -168,11 +176,11 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                       ^ (string_of_logic conf.synth_logic) ^ " logic."
                       ^ (Log.indented_sep 0) ^ "Conflict group ("
                       ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
-                           ~f:(fun n t -> n ^ " :" ^ (string_of_typ t)))^ "):"
-                      ^ (Log.indented_sep 2) ^ "POS:" ^ (Log.indented_sep 4)
+                           ~f:(fun n t -> n ^ " :" ^ (string_of_typ t)))^ "):" ^ (Log.indented_sep 2)
+		      ^ "POS (" ^ (string_of_int (List.length c_group.pos)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map c_group.pos ~sep:(Log.indented_sep 4)
-                           ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))
-                      ^ (Log.indented_sep 2) ^ "NEG:" ^ (Log.indented_sep 4)
+                           ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")")) ^ (Log.indented_sep 2)
+		      ^ "NEG (" ^ (string_of_int (List.length c_group.neg)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map c_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))))
    ; let new_features = synthFeatures c_group conf.synth_logic ~consts ~job
