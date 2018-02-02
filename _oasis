@@ -20,7 +20,7 @@ Executable "record"
   Install:          false
   MainIs:           Record.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 10 -nodynlink
+  NativeOpt:        -O3 -rounds 13 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 Executable "infer"
@@ -28,7 +28,7 @@ Executable "infer"
   Install:          false
   MainIs:           Infer.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 10 -nodynlink
+  NativeOpt:        -O3 -rounds 13 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 Executable "verify"
@@ -36,7 +36,7 @@ Executable "verify"
   Install:          false
   MainIs:           Verify.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 10 -nodynlink
+  NativeOpt:        -O3 -rounds 13 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 
@@ -48,7 +48,7 @@ Executable "test"
   Install:          false
   MainIs:           Test.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 10 -nodynlink
+  NativeOpt:        -O3 -rounds 13 -nodynlink
   BuildDepends:     alcotest, core, core_extended, threads
 
 Test "test"

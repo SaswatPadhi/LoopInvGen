@@ -146,13 +146,11 @@ let solve_impl ?ast:(ast=false) task consts =
   let btrue = let vtrue = Th_Bool.vtrue
               in ((("true", (fun ars -> vtrue)), Const vtrue), Array.create ~len:vector_size vtrue) in
   let bfalse = let vfalse = Th_Bool.vfalse
-                in ((("false", (fun ars -> vfalse)), Const vfalse), Array.create ~len:vector_size vfalse) in
+               in ((("false", (fun ars -> vfalse)), Const vfalse), Array.create ~len:vector_size vfalse) in
   let bzero = let vzero = Th_LIA.vzero
               in ((("0", (fun ars -> vzero)), Const vzero), Array.create ~len:vector_size vzero) in
   let bone = let vone = Th_LIA.vone
-                in ((("1", (fun ars -> vone)), Const vone), Array.create ~len:vector_size vone) in
-  let bnegone = let vnegone = Th_LIA.vnegone
-              in ((("-1", (fun ars -> vnegone)), Const vnegone), Array.create ~len:vector_size vnegone) in
+             in ((("1", (fun ars -> vone)), Const vone), Array.create ~len:vector_size vone) in
   if !quiet then () else (
     print_endline ("Inputs: ");
     List.iter ~f:(fun v -> print_endline ("   " ^ (Vector.string v))) task.inputs;
@@ -162,8 +160,8 @@ let solve_impl ?ast:(ast=false) task consts =
     <- List.fold ~f:(fun p i -> let vi = VInt i
                                 in VSet.add ((((string_of_int i), (fun ars -> vi)), Const vi),
                                              Array.create ~len:vector_size vi) p)
-                 ~init:(VSet.add bone (VSet.add bzero (VSet.singleton bnegone)))
-                 (List.dedup_and_sort ~compare (List.filter_map consts ~f:(function VInt x -> Some x
+                 ~init:(VSet.add bone (VSet.singleton bzero))
+                 (List.dedup_and_sort ~compare (List.filter_map consts ~f:(function VInt x -> Some (abs x)
                                                                                   | _ -> None)));
   bool_array.(1) <- VSet.add btrue (VSet.singleton bfalse);
   List.iter ~f:(fun input ->

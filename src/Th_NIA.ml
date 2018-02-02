@@ -8,7 +8,7 @@ let new_components = [
     codomain = TInt;
     domain = [TInt;TInt];
     check = (function
-             | [_ ; _] -> true
+             | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
              | [VInt x; VInt y] -> VInt (x / y)
@@ -20,7 +20,7 @@ let new_components = [
     codomain = TInt;
     domain = [TInt;TInt];
     check = (function
-             | [_ ; _] -> true
+             | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
              | [VInt x; VInt y] -> VInt (x mod y)
@@ -32,8 +32,8 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone) && (c <> Th_LIA.vnegone)
-             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone) && (c <> Th_LIA.vnegone)
+             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
+             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
              | [_ ; _] -> true
              | _ -> false);
     apply = (function

@@ -27,7 +27,7 @@ let new_components = [
     check = (function
              | [(Const a) ; _] -> false
              | [_ ; (Const a)] -> false
-             | [_ ; _] -> true
+             | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
              | [VBool x; VBool y] -> VBool (x && y)
@@ -41,7 +41,7 @@ let new_components = [
     check = (function
              | [(Const a) ; _] -> false
              | [_ ; (Const a)] -> false
-             | [_ ; _] -> true
+             | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
              | [VBool x; VBool y] -> VBool (x || y)
