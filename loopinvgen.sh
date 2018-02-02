@@ -6,16 +6,17 @@ Z3_PATH="_dep/z3.bin"
 
 MIN_STEPS=63
 MIN_TIMEOUT=5
-REC_TIMEOUT=3.5s
+MAX_STATES=1024
 
 RECORD="./Record.native"
 INFER="./Infer.native"
 VERIFY="./Verify.native"
 
-FORKS=1
-STEPS=768
+FORKS=2
+STEPS=512
 
 TIMEOUT=300
+REC_TIMEOUT=3s
 
 RECORD_LOG=""
 INFER_LOG=""
@@ -25,23 +26,28 @@ DO_LOG="no"
 DO_CLEAN="no"
 DO_VERIFY="no"
 
+DO_INTERACTIVE="no"
+ERASE_INTERACTIVE_STATUS="\b\b\b\b\b\b\b\b\b\b"
+
 usage() {
   echo "
 Usage: $0 [flags] <benchmark.sl>
 
 Flags:
     [--verify, -v]
-    [--intermediates-path, -i <path>] (_log)
+    [--interactive, -i]
+    [--intermediates-path, -p <path>] (_log)
     [--logging, -l <mode>] (none) {none|rec|inf|all}
     [--remove-intermediates, -r]
     [--steps-to-simulate, -s <count>] ($STEPS) {> $MIN_STEPS}
+    [--max-states, -m <count>] ($MAX_STEPS) {> 0}
     [--timeout, -t <seconds>] ($TIMEOUT) {> $MIN_TIMEOUT}
     [--z3-path, -z <path>] (_dep/z3.bin)
 " 1>&2 ;
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :vi:l:rs:t:z: --long verify,intermediate-path:,logging:,remove-intermediates,steps-to-simulate:,timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :vip:l:rs:m:t:z: --long verify,interactive,intermediate-path:,logging:,remove-intermediates,steps-to-simulate:,max-states:,timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -50,7 +56,9 @@ while true ; do
   case "$1" in
     -v | --verify )
          DO_VERIFY="yes" ; shift ;;
-    -i | --intermediates-path )
+    -i | --interactive )
+         DO_INTERACTIVE="yes" ; shift ;;
+    -p | --intermediates-path )
          [ -d "$2" ] || usage
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
@@ -64,6 +72,10 @@ while true ; do
     -s | --steps-to-simulate )
          [ "$2" -gt "$MIN_STEPS" ] || usage
          STEPS="$2"
+         shift ; shift ;;
+    -m | --max-states )
+         [ "$2" -gt "0" ] || usage
+         MAX_STATES="$2"
          shift ; shift ;;
     -t | --timeout )
          [ "$2" -gt "$MIN_TIMEOUT" ] || usage
@@ -107,6 +119,10 @@ elif [ "$DO_LOG" == "inf" ] ; then
   INFER_LOG="-l $TESTCASE_LOG"
 fi
 
+if [ "$DO_INTERACTIVE" = "yes" ]; then
+  echo -en "(@ record)"
+fi
+
 for i in `seq 1 $FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
   (timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
@@ -121,13 +137,22 @@ if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG"0 ; else LOG_PARAM="" ; fi
 
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STATES
+grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
+  | head -n $MAX_STATES > $TESTCASE_ALL_STATES
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
+
+if [ "$DO_INTERACTIVE" = "yes" ]; then
+  echo -en "${ERASE_INTERACTIVE_STATUS}(@ infer) "
+fi
 
 (timeout --kill-after=$TIMEOUT $TIMEOUT \
          $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
                 $INFER_LOG) >&2
 INFER_RESULT_CODE=$?
+
+if [ "$DO_INTERACTIVE" = "yes" ]; then
+  echo -en "${ERASE_INTERACTIVE_STATUS}          ${ERASE_INTERACTIVE_STATUS}"
+fi
 
 if [ "$DO_VERIFY" = "yes" ]; then
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then

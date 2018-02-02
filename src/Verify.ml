@@ -62,7 +62,7 @@ let main zpath invfile logfile filename () =
   let sygus = SyGuS.load ~shrink:false (Utils.get_in_channel filename) in
   let inv = read_inv_from_chan (Utils.get_in_channel invfile) ~sygus in
   let res = checkInvariant ~zpath ~sygus inv
-  in output_lines stdout [string_of_result res]
+  in output_string stdout (string_of_result res)
    ; exit (exit_code_of_result res)
 
 let cmd =

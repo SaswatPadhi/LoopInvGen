@@ -70,7 +70,7 @@ cp _build/src/Record.native \
 cat <<EOF > bin/starexec_run_default
 #!/bin/bash
 
-./loopinvgen.sh -t 36000 -i "." -z "./z3" "\$1"
+./loopinvgen.sh -t 36000 -p "." -z "./z3" "\$1"
 EOF
 chmod +x bin/starexec_run_default
 

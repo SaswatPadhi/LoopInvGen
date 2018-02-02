@@ -3,10 +3,10 @@
 LOG_PATH="_log"
 SYGUS_EXT=".sl"
 
-TIMEOUT="$1"
-(( TIMEOUT > 0 )) || TIMEOUT="100"
+TIMEOUT="60"
+LOOPINVGEN_ARGS="$@"
 
-# This is not dead code. Don't remove!
+# This is NOT dead code. Don't remove!
 TIMEFORMAT=$'\nreal\t%3R\nuser\t%3U\n sys\t%3S\ncpu%%\t%P'
 
 mkdir -p _log
@@ -19,16 +19,20 @@ for TESTCASE in benchmarks/*/*.sl ; do
   echo -n "$TESTCASE => "
 
   if [ -f "$TESTCASE_RESULT" ] ; then
-    OLD_VERDICT=`tail -n 6 $TESTCASE_RESULT | head -n 1`
-    if [[ "$OLD_VERDICT" =~ ^PASS.* ]] ; then
-      echo "SKIPPED (PASSING)"
+    OLD_VERDICT=`tail -n 5 $TESTCASE_RESULT | head -n 1`
+    if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
+      TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RESULT | cut -f2`
+      echo "[SKIPPED] PASS @ $TESTCASE_REAL_TIME"
       continue
     fi
   fi
 
   echo > $TESTCASE_RESULT
-  (time ./loopinvgen.sh -v -t "$TIMEOUT" $TESTCASE) \
+  (time ./loopinvgen.sh -v -t "$TIMEOUT" $TESTCASE $LOOPINVGEN_ARGS) \
     2>> $TESTCASE_RESULT | tee -a $TESTCASE_RESULT
+
+  TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RESULT | cut -f2`
+  echo " @ $TESTCASE_REAL_TIME"
 done
 
 print_counts () {
@@ -41,8 +45,8 @@ print_counts () {
 
 print_counts PASS FAIL TIMEOUT
 
-PASSING_FILES=`grep -l "^PASS\$" $LOG_PATH/*.result`
+PASSING_FILES=`grep -l "PASS" $LOG_PATH/*.result`
 PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`
 
 echo -e "\nPASS Stats:"
-echo -e "time\n$PASSING_TIMES" | datamash -H min 1 max 1 mean 1 median 1 sum 1
+echo -e "time\n$PASSING_TIMES" | datamash -H -R 6 min 1 max 1 mean 1 median 1 sum 1

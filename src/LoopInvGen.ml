@@ -20,7 +20,7 @@ let default_config = {
 
   base_random_seed = "LoopInvGen" ;
   max_restarts = 64 ;
-  max_steps_on_restart = 512 ;
+  max_steps_on_restart = 256 ;
   model_completion_mode = `RandomGeneration ;
 }
 

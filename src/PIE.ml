@@ -39,7 +39,7 @@ let base_max_conflict_group_size = 64
 let conflict_group_size_multiplier_for_logic (l : logic) : int =
   match l with
   | LLIA -> 1
-  | LNIA -> 4
+  | LNIA -> 2
 
 let default_config : config = {
   for_BFL = BFL.default_config ;

@@ -26,7 +26,7 @@ let main zpath statefile outfile logfile do_false filename () =
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
      in if (not do_false) && inv = "false" then ()
-        else output_string out_chan ((build_inv_func (ZProc.normalize inv) ~sygus) ^ "\n")
+        else output_string out_chan (build_inv_func (ZProc.normalize inv) ~sygus)
       ; Out_channel.close out_chan
       ; exit (if inv = "false" then 1 else 0)
 
