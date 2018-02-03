@@ -9,7 +9,7 @@
 (declare-primed-var k Int)
 
 (define-fun pre-f ((i Int) (j Int) (k Int)) Bool
-  (and (= i 0) (= j 10)))
+  (and (= j 0) (= i 10)))
 
 (define-fun trans-f ((i Int) (j Int) (k Int)
                      (i! Int) (j! Int) (k! Int)) Bool

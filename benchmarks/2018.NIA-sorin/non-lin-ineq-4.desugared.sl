@@ -13,7 +13,8 @@
 
 (define-fun trans-f ((i Int) (j Int) (k Int)
                      (i! Int) (j! Int) (k! Int)) Bool
-  (and (< i 1000) (= i! (+ i 1)) (= j! (+ j 1)) (= k! (+ k (* i j)))))
+  (and (< i 1000) (= i! (+ i 1)) (= j! (+ j 1))
+                  (= k! (+ k (* i! j!)))))
 
 (define-fun post-f ((i Int) (j Int) (k Int)) Bool
   (or (< i 1000) (<= (* 1000 j) k)))

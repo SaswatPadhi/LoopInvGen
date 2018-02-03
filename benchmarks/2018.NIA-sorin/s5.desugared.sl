@@ -11,8 +11,10 @@
 (define-fun pre-f ((i Int) (j Int) (k Int)) Bool
   (and (= j 0) (= i 0) (> k 0)))
 
-(define-fun trans-f ((i Int) (j Int) (k Int) (i! Int) (j! Int) (k! Int)) Bool
-  (and (< j k) (= i! (+ i (* 2 k))) (= j! (+ j 1)) (= k! k)))
+(define-fun trans-f ((i Int) (j Int) (k Int)
+                     (i! Int) (j! Int) (k! Int)) Bool
+  (and (< j k) (= k! k) (= j! (+ j 1)
+               (= i! (+ i (* 2 k))))))
 
 (define-fun post-f ((i Int) (j Int) (k Int)) Bool
   (or (< j k) (= i (* 2 (* k j)))))
