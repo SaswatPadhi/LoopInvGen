@@ -27,7 +27,6 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Const c) ; _] -> c <> vzero
              | [_ ; (Const c)] -> c <> vzero
              | [x ; y] -> x <> y
              | _ -> false);

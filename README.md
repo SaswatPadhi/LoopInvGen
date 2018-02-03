@@ -1,11 +1,11 @@
-# LoopInvGen [![Build Status](https://travis-ci.org/SaswatPadhi/LoopInvGen.svg?branch=master)](https://travis-ci.org/SaswatPadhi/LoopInvGen)
+# LoopInvGen [![Build Status](https://travis-ci.org/SaswatPadhi/LoopInvGen.svg?branch=master)][travis]
 
 A loop invariant generator.
 
 ## Installation
 
 #### 1. Install `ocaml` >= 4.04.2.
-It is recommended to use an OCaml compiler with `flambda` optimizations enabled.
+It is recommended to use an OCaml compiler with [`flambda`][flambda] optimizations enabled.
 For example, with [`opam`](https://opam.ocaml.org/), you could run `opam install 4.06.0+flambda`.
 
 #### 2. Install (for example, using `opam install`) the following packages:
@@ -29,3 +29,9 @@ Execute `./benchmarks/run_all.sh` to run all the tests (SyGuS benchmarks from pr
 ## Usage
 
 Run `./loopinvgen.sh /path/to/sygus.sl` to infer the loop invariant for the SuGuS test case `sygus.sl`.
+
+
+
+
+[flambda]: https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
+[travis]:  https://travis-ci.org/SaswatPadhi/LoopInvGen

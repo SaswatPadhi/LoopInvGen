@@ -49,4 +49,4 @@ PASSING_FILES=`grep -l "PASS" $LOG_PATH/*.result`
 PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`
 
 echo -e "\nPASS Stats:"
-echo -e "time\n$PASSING_TIMES" | datamash -H -R 6 min 1 max 1 mean 1 median 1 sum 1
+echo -e "time\n$PASSING_TIMES" | awk -f print_stats.awk
