@@ -1,4 +1,4 @@
-; Benchmark adapted from "s11.desugared.bpl" provided by Dimitar Bounov
+; Benchmark adapted from "s11.desugared.bpl"
 
 (set-logic NIA)
 

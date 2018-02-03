@@ -21,9 +21,9 @@ env:
 
 matrix:
   fast_finish: true
-  allow_failures:
-    - env: OCAML_VERSION=4.05.0
-    - env: OCAML_VERSION=4.05.0+flambda
+#  allow_failures:
+#    - env: OCAML_VERSION=4.05.0
+#    - env: OCAML_VERSION=4.05.0+flambda
 
 cache:
   directories:
