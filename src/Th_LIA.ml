@@ -11,10 +11,10 @@ let new_components = [
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Const c) ; _] -> c <> vzero
-             | [_ ; (Const c)] -> c <> vzero
              | [(Const c1) ; (FCall ("lia-sub", [_ ; (Const c2)]))] -> c1 <> c2
              | [(FCall ("lia-sub", [_ ; (Const c1)])) ; (Const c2)] -> c1 <> c2
+             | [(Const c) ; _] -> c <> vzero
+             | [_ ; (Const c)] -> c <> vzero
              | [_ ; _] -> true
              | _ -> false);
     apply = (function

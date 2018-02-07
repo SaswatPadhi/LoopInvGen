@@ -4,7 +4,7 @@ open SyGuS
 open Types
 
 let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
-  ignore (ZProc.run_queries ~local:false z3 ~db:(
+  ignore (ZProc.run_queries ~scoped:false z3 ~db:(
     ("(set-logic " ^ s.logic ^ ")") ::
     (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^
                                  (string_of_typ t) ^ ")"))
@@ -81,7 +81,7 @@ let record_states ?(avoid = []) ~size ~seeds ~state_chan ~(zpath : string)
     | None -> (avoid, 0)
     | _ -> let states = Quickcheck.random_value ~size ~seed
                                               (simulate_from s z3 head) in
-           let Some head = build_avoid_constraints s head in
+           let [@warning "-8"] Some head = build_avoid_constraints s head in
            let open Core.Out_channel
            in List.iter states
                         ~f:(fun s -> output_string state_chan

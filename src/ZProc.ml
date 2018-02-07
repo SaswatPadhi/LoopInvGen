@@ -52,25 +52,25 @@ let flush_and_collect (z3 : t) : string =
                                          ~sep:(Log.indented_sep 4)))
         ; String.concat ~sep:" " (!lines)
 
-let create_local ?(db = []) (z3 : t) : unit =
-  Log.debug (lazy (String.concat ("Created Z3 local." :: db)
+let create_scope ?(db = []) (z3 : t) : unit =
+  Log.debug (lazy (String.concat ("Created Z3 scope." :: db)
                                  ~sep:(Log.indented_sep 4))) ;
   Out_channel.output_lines z3.stdin ("(push)" :: db) ;
   Out_channel.flush z3.stdin
 
-let close_local (z3 : t) : unit =
-  Log.debug (lazy ("Closed Z3 local.")) ;
+let close_scope (z3 : t) : unit =
+  Log.debug (lazy ("Closed Z3 scope.")) ;
   Out_channel.output_string z3.stdin "(pop)\n" ;
   Out_channel.flush z3.stdin
 
-let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
+let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
-  (if local then create_local z3 else ()) ;
+  (if scoped then create_scope z3 else ()) ;
   Log.debug (lazy (String.concat ("New Z3 call:" :: (db @ queries))
                                  ~sep:(Log.indented_sep 4))) ;
   if queries = []
   then begin
-    if local then () else
+    if scoped then () else
       Out_channel.output_lines z3.stdin db ;
       Out_channel.flush z3.stdin ; []
     end
@@ -81,7 +81,7 @@ let run_queries ?(local = true) (z3 : t) ?(db = []) (queries : string list)
             Out_channel.newline z3.stdin ;
             results := (flush_and_collect z3) :: (!results)
           )
-        ; (if local then close_local z3 else ())
+        ; (if scoped then close_scope z3 else ())
         ; Out_channel.flush z3.stdin ; List.rev (!results)
 
 let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
@@ -89,26 +89,28 @@ let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
   let vstr = match sexp with
              | Atom v -> v
              | List([(Atom "-") ; (Atom v)]) -> "-" ^ v
+             | _ -> raise (Internal_Exn ("Unable to deserialize value: "
+                                        ^ (to_string_hum sexp)))
   in Option.value_exn (Types.deserialize_value vstr)
 
 let z3_result_to_values (result : string list) : model option =
   let open Sexp in
-  let err_and_ignore () =
-    Log.error (lazy ("Error parsing z3 model: "
-                    ^ (String.concat ~sep:"\n" result))) ;
-    None
-  in try match result with
-     | "unsat" :: _ -> None
-     | [ "sat" ; _ ; result ]
-       -> begin match Sexp.parse result with
-           | Done (List((Atom model) :: varexps), _)
-             -> let open List in
-                Some (map varexps ~f:(
-                  function
-                  | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                               in (n, (z3_sexp_to_value v))))
-          end
-     with _ -> err_and_ignore ()
+  try [@warning "-8"]
+  match result with
+  | "unsat" :: _ -> None
+  | [ "sat" ; _ ; result ]
+    -> begin match Sexp.parse result with
+        | Done (List((Atom model) :: varexps), _)
+          -> let open List in
+            Some (map varexps ~f:(
+              function
+              | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
+                            in (n, (z3_sexp_to_value v))))
+      end
+  with e -> Log.error (lazy ("Error parsing z3 model: "
+                            ^ (String.concat ~sep:"\n" result)
+                            ^ "\n\n" ^ (Exn.to_string e)))
+          ; None
 
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =

@@ -28,7 +28,7 @@ let default_config = {
                 ~(z3 : ZProc.t) ~(sygus : SyGuS.t) (inv : PIE.desc) : PIE.desc =
   Log.debug (lazy ("POST >> Strengthening against postcondition:"
                   ^ Log.indented_sep ^ inv)) ;
-  ZProc.create_local z3 ~db:[ "(assert " ^ inv ^ ")" ] ;
+  ZProc.create_scope z3 ~db:[ "(assert " ^ inv ^ ")" ] ;
   let pre_inv = VPIE.learnVPreCond ~conf:conf.for_VPIE ~consts:sygus.consts ~z3
     ((PIE.create_pos_job ()
         ~f: (ZProc.constraint_sat_function ("(not " ^ inv ^ ")")
@@ -39,7 +39,7 @@ let default_config = {
                             | _ -> false)
         ~pos_tests: states
      ), sygus.post.expr)
-  in ZProc.close_local z3
+  in ZProc.close_scope z3
    ; Log.debug (lazy ("POST Delta: " ^ pre_inv))
    ; ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")")*)
 
@@ -63,8 +63,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                           ~f:(fun (s, t) -> "(" ^ s ^ " " ^
                                             (Types.string_of_typ t) ^ ")")) ^
       ") Bool " ^ inv ^ ")"
-    in ZProc.create_local z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
-                                           ; "(assert " ^ invf_call ^ ")" ]
+    in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
+                                                ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
          VPIE.learnVPreCond
            ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 ~eval_term
@@ -77,7 +77,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                     | _ -> false)
                ~pos_tests: states
             ), invf'_call)
-      in ZProc.close_local z3
+      in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
        ; if pre_inv = "true" then inv
          else helper ("(and " ^ pre_inv ^ " " ^ inv ^ ")")

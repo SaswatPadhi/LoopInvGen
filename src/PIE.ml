@@ -121,7 +121,7 @@ let conflictingTests (job : ('a, 'b) job) : 'a conflict list =
   (* find feature vectors that are in pos_groups and neg_groups *)
   in List.(filter_map
        p_groups
-       ~f:(fun (((_, pfv) :: _) as ptests) ->
+       ~f:(fun [@warning "-8"] (((_, pfv) :: _) as ptests) ->
              match find n_groups ~f:(fun ((_, nfv) :: _) -> nfv = pfv) with
              | None -> None
              | Some ntests -> Some { pos = map ~f:fst ptests

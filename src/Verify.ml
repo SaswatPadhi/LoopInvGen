@@ -12,7 +12,7 @@ let checkInvariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result 
     if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr) = None)
     then (if inv = "" then IMPOSSIBLE_PASS else IMPOSSIBLE_FAIL)
     else let inv = (if inv <> "" then inv else build_inv_func "false" ~sygus) in (
-      ignore (run_queries ~local:false z3 [] ~db:[ inv ]) ;
+      ignore (run_queries ~scoped:false z3 [] ~db:[ inv ]) ;
       let inv_call = "(" ^ sygus.inv_name ^ " "
                    ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst)
                    ^ ")" in

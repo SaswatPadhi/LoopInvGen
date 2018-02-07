@@ -1,6 +1,7 @@
 open Core
 open Components
 open Escher_Core
+open Exceptions
 open Types
 
 exception Success
@@ -121,6 +122,8 @@ let solve_impl ?ast:(ast=false) task consts =
           match typ with
             | TInt -> int_array.(i)
             | TBool -> bool_array.(i)
+            | _ -> raise (Invalid_Type_Exn ("Escher does not handle type: "
+                                           ^ (string_of_typ typ)))
           end
       | ([], []) -> f (List.rev acc)
       | _ -> failwith "Impossible!"

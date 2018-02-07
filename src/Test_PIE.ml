@@ -6,14 +6,14 @@ open Types
 open Utils
 
 let abs_job = create_job ()
-  ~f:(fun [ VInt x ] -> VInt (if x > 0 then x else -x))
+  ~f:(fun [@warning "-8"] [ VInt x ] -> VInt (if x > 0 then x else -x))
   ~args:([ "x", TInt ])
   ~post:(fun inp res ->
            match inp , res with
            | [ VInt x ], Ok (VInt y) -> x = y
            | _ -> false)
   ~features:[
-    ((fun [VInt x] -> x > 0), "(> x 0)")
+    ((fun [@warning "-8"] [VInt x] -> x > 0), "(> x 0)")
   ]
   ~tests:(List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [VInt i]))
 
@@ -41,7 +41,7 @@ let abs_conflict_group () =
 let abs_precond_1_cnf () =
   let res = cnf_opt_to_desc (
     learnPreCond (add_features ~job:abs_job
-                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ])
+                    [ ((fun [@warning "-8"] [VInt x] -> x + x = x), "(= x (+ x x))") ])
                  ~conf:{ PIE.default_config with
                            disable_synth = true ;
                            for_BFL = { BFL.default_config with
@@ -51,7 +51,7 @@ let abs_precond_1_cnf () =
 let abs_precond_auto_1 () =
   let res = cnf_opt_to_desc (
     learnPreCond (add_features ~job:abs_job
-                    [ ((fun [VInt x] -> x + x = x), "(= x (+ x x))") ])
+                    [ ((fun [@warning "-8"] [VInt x] -> x + x = x), "(= x (+ x x))") ])
                  ~conf:{ PIE.default_config with
                            disable_synth = true ;
                            for_BFL = { BFL.default_config with
@@ -60,14 +60,14 @@ let abs_precond_auto_1 () =
 
 let abs_feature_synthesis () =
   let res = List.(to_string_map ~sep:" | " ~f:snd
-              (synthFeatures ~job:abs_job (hd_exn (conflictingTests abs_job))))
+              (synthFeatures ~job:abs_job (hd_exn (conflictingTests abs_job)) Types.LLIA))
   in Alcotest.(check string) "identical" "(= 0 x)" res
 
 let abs_zero_features () =
   let res = cnf_opt_to_desc (
     learnPreCond (
       create_job ()
-      ~f:(fun [ VInt x ] -> VInt (if x > 0 then x else -x))
+      ~f:(fun [@warning "-8"] [ VInt x ] -> VInt (if x > 0 then x else -x))
       ~args:([ "x", TInt ])
       ~post:(fun inp res -> match inp , res with
                             | [ VInt x ], Ok (VInt y) -> x = y
