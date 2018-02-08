@@ -11,12 +11,14 @@ TIMEFORMAT=$'\nreal\t%3R\nuser\t%3U\n sys\t%3S\ncpu%%\t%P'
 
 mkdir -p _log
 
+COUNTER=0
 for TESTCASE in benchmarks/*/*.sl ; do
   TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
   TESTCASE_PREFIX="$LOG_PATH/$TESTCASE_NAME"
   TESTCASE_RESULT="$TESTCASE_PREFIX.result"
 
-  echo -n "$TESTCASE => "
+  (( COUNTER++ ))
+  printf "[%4d] $TESTCASE => " $COUNTER
 
   if [ -f "$TESTCASE_RESULT" ] ; then
     OLD_VERDICT=`tail -n 5 $TESTCASE_RESULT | head -n 1`
@@ -43,7 +45,11 @@ print_counts () {
   done
 }
 
-print_counts PASS FAIL TIMEOUT
+echo ""
+print_counts PASS FAIL
+
+echo ""
+print_counts TIMEOUT
 
 PASSING_FILES=`grep -l "PASS" $LOG_PATH/*.result`
 PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`

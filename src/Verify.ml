@@ -65,17 +65,18 @@ let main zpath invfile logfile filename () =
   in output_string stdout (string_of_result res)
    ; exit (exit_code_of_result res)
 
+let spec =
+  let open Command.Spec in (
+    empty
+    +> flag "-z" (required string)  ~doc:"FILENAME path to the z3 executable"
+    +> flag "-i" (required string)  ~doc:"FILENAME input file containing the loop invariant"
+    +> flag "-l" (optional string)  ~doc:"FILENAME output file for logs, defaults to null"
+    +> anon (maybe_with_default "-" ("filename" %: file))
+  )
+
 let cmd =
-  Command.basic_spec
+  Command.basic_spec spec main
     ~summary: "Check sufficiency of a generated invariant for proving correctness."
-    Command.Spec.(
-      empty
-      +> flag "-z" (required string)  ~doc:"FILENAME path to the z3 executable"
-      +> flag "-i" (required string)  ~doc:"FILENAME input file containing the loop invariant"
-      +> flag "-l" (optional string)  ~doc:"FILENAME output file for logs, defaults to null"
-      +> anon (maybe_with_default "-" ("filename" %: file))
-    )
-    main
 
 let () =
   Command.run

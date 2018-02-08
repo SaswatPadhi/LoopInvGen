@@ -14,20 +14,21 @@ let main zpath size forks seeds statefile logfile filename () =
         ; Out_channel.close state_chan
      end
 
+let spec =
+  let open Command.Spec in (
+    empty
+    +> flag "-z" (required string)                ~doc:"FILENAME path to the z3 executable"
+    +> flag "-s" (optional_with_default 512 int)  ~doc:"COUNT number of steps to simulate"
+    +> flag "-f" (optional_with_default 3 int)    ~doc:"COUNT number of forks to create (not yet implemented)"
+    +> flag "-r" (listed string)                  ~doc:"STRING random-string seed(s)"
+    +> flag "-o" (optional string)                ~doc:"FILENAME output file for states, defaults to stdout"
+    +> flag "-l" (optional string)                ~doc:"FILENAME output file for logs, defaults to null"
+    +> anon (maybe_with_default "-" ("filename" %: file))
+  )
+
 let cmd =
-  Command.basic_spec
+  Command.basic_spec spec main
     ~summary: "Record program states for a given SyGuS-INV benchmark."
-    Command.Spec.(
-      empty
-      +> flag "-z" (required string)                ~doc:"FILENAME path to the z3 executable"
-      +> flag "-s" (optional_with_default 512 int)  ~doc:"COUNT number of steps to simulate"
-      +> flag "-f" (optional_with_default 3 int)    ~doc:"COUNT number of forks to create (not yet implemented)"
-      +> flag "-r" (listed string)                  ~doc:"STRING random-string seed(s)"
-      +> flag "-o" (optional string)                ~doc:"FILENAME output file for states, defaults to stdout"
-      +> flag "-l" (optional string)                ~doc:"FILENAME output file for logs, defaults to null"
-      +> anon (maybe_with_default "-" ("filename" %: file))
-    )
-    main
 
 let () =
   Command.run

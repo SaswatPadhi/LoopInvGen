@@ -64,7 +64,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                             (Types.string_of_typ t) ^ ")")) ^
       ") Bool " ^ inv ^ ")"
     in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
-                                                ; "(assert " ^ invf_call ^ ")" ]
+                                           ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
          VPIE.learnVPreCond
            ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 ~eval_term
@@ -96,7 +96,14 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                                 ~(states : value list list) (sygus : SyGuS.t)
                                 (seed : string) (z3 : ZProc.t) : PIE.desc =
   let restart_with_counter model =
-    if restarts_left < 1 then "false" else
+    if restarts_left < 1
+    then (Log.error (lazy ("Reached MAX (" ^ (string_of_int conf.max_restarts)
+                          ^ ") restarts. Giving up ..."))
+         ; "false")
+    else begin
+      Log.warn (lazy ("Restarting inference engine. Attempt "
+                     ^ (string_of_int (1 + conf.max_restarts - restarts_left))
+                     ^ "/" ^ (string_of_int conf.max_restarts) ^".")) ;
       let open Quickcheck
       in learnInvariant_internal
           ~states:(List.dedup_and_sort (
@@ -104,6 +111,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                                      ~seed:(`Deterministic seed)
                                      (Simulator.simulate_from sygus z3 model))))
           ~conf (restarts_left - 1) sygus (seed ^ "#") z3
+    end
   in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
   in match counterPre ~seed ~sygus ~z3 inv with
      | (Some _) as model -> restart_with_counter model

@@ -11,6 +11,8 @@ bug-reports: "https://github.com/SaswatPadhi/LoopInvGen/issues"
 license: "MIT"
 dev-repo: "git+https://github.com:SaswatPadhi/LoopInvGen.git"
 
+available: [ ocaml-version >= "4.04.2" ]
+
 build: [
   ["oasis" "setup" "-setup-update" "dynamic"]
   ["./configure" "--disable-tests" "--disable-debug" "--disable-profile"]

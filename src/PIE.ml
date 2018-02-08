@@ -31,7 +31,7 @@ type config = {
 
   synth_logic : logic ;
   disable_synth : bool ;
-  max_c_group_size : int ;
+  max_conflict_group_size : int ;
 }
 
 let base_max_conflict_group_size = 64
@@ -46,7 +46,8 @@ let default_config : config = {
 
   synth_logic = LLIA ;
   disable_synth = false ;
-  max_c_group_size = base_max_conflict_group_size * (conflict_group_size_multiplier_for_logic LLIA) ;
+  max_conflict_group_size = (base_max_conflict_group_size
+                            * (conflict_group_size_multiplier_for_logic LLIA)) ;
 }
 
 let split_tests tests ~f ~post =
@@ -130,12 +131,12 @@ let conflictingTests (job : ('a, 'b) job) : 'a conflict list =
 
 (* Synthesize a new feature to resolve a conflict group. *)
 let synthFeatures ?(consts = []) ~(job : (value list, value) job)
-                  (c_group : value list conflict) (synth_logic : logic)
+                  (conflict_group : value list conflict) (synth_logic : logic)
                   : value list feature with_desc list =
-  let group_size = List.((length c_group.pos) + (length c_group.neg))
+  let group_size = List.((length conflict_group.pos) + (length conflict_group.neg))
   in let tab = Hashtbl.Poly.create () ~size:group_size
-  in List.iter c_group.pos ~f:(fun v -> Hashtbl.add_exn tab ~key:v ~data:vtrue)
-   ; List.iter c_group.neg ~f:(fun v -> Hashtbl.add_exn tab ~key:v ~data:vfalse)
+  in List.iter conflict_group.pos ~f:(fun v -> Hashtbl.add_exn tab ~key:v ~data:vtrue)
+   ; List.iter conflict_group.neg ~f:(fun v -> Hashtbl.add_exn tab ~key:v ~data:vfalse)
    ; let open Components in
      let open Escher_Core in
      let open Escher_Synth in
@@ -162,28 +163,28 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
 
 let resolveAConflict ?(conf = default_config) ?(consts = [])
                      ~(job : (value list, value) job)
-                     (c_group' : value list conflict)
+                     (conflict_group' : value list conflict)
                      : value list feature with_desc list =
-  let group_size = List.((length c_group'.pos) + (length c_group'.neg))
+  let group_size = List.((length conflict_group'.pos) + (length conflict_group'.neg))
   in let group_size = group_size * (conflict_group_size_multiplier_for_logic conf.synth_logic)
-  in let c_group = if group_size < conf.max_c_group_size then c_group'
+  in let conflict_group = if group_size < conf.max_conflict_group_size then conflict_group'
                    else {
-                     c_group' with
-                       pos = List.take c_group'.pos (conf.max_c_group_size / 2);
-                       neg = List.take c_group'.neg (conf.max_c_group_size / 2)
+                     conflict_group' with
+                       pos = List.take conflict_group'.pos (conf.max_conflict_group_size / 2);
+                       neg = List.take conflict_group'.neg (conf.max_conflict_group_size / 2)
                    }
   in Log.debug (lazy ("Invoking Escher with "
                       ^ (string_of_logic conf.synth_logic) ^ " logic."
                       ^ (Log.indented_sep 0) ^ "Conflict group ("
                       ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
                            ~f:(fun n t -> n ^ " :" ^ (string_of_typ t)))^ "):" ^ (Log.indented_sep 2)
-		      ^ "POS (" ^ (string_of_int (List.length c_group.pos)) ^ "):" ^ (Log.indented_sep 4)
-                      ^ (List.to_string_map c_group.pos ~sep:(Log.indented_sep 4)
+          ^ "POS (" ^ (string_of_int (List.length conflict_group.pos)) ^ "):" ^ (Log.indented_sep 4)
+                      ^ (List.to_string_map conflict_group.pos ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")")) ^ (Log.indented_sep 2)
-		      ^ "NEG (" ^ (string_of_int (List.length c_group.neg)) ^ "):" ^ (Log.indented_sep 4)
-                      ^ (List.to_string_map c_group.neg ~sep:(Log.indented_sep 4)
+          ^ "NEG (" ^ (string_of_int (List.length conflict_group.neg)) ^ "):" ^ (Log.indented_sep 4)
+                      ^ (List.to_string_map conflict_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))))
-   ; let new_features = synthFeatures c_group conf.synth_logic ~consts ~job
+   ; let new_features = synthFeatures conflict_group conf.synth_logic ~consts ~job
      in Log.debug (lazy ("Synthesized features:" ^ (Log.indented_sep 4) ^
                          (List.to_string_map new_features
                             ~sep:(Log.indented_sep 4) ~f:snd)))
@@ -191,23 +192,23 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
 
 let rec resolveSomeConflicts ?(conf = default_config) ?(consts = [])
                              ~(job : (value list, value) job)
-                             (c_groups : value list conflict list)
+                             (conflict_groups : value list conflict list)
                              : value list feature with_desc list =
-  if c_groups = [] then []
-  else let new_features = resolveAConflict (List.hd_exn c_groups)
+  if conflict_groups = [] then []
+  else let new_features = resolveAConflict (List.hd_exn conflict_groups)
                                            ~conf ~consts ~job
        in if not (new_features = []) then new_features
-          else resolveSomeConflicts (List.tl_exn c_groups) ~conf ~consts ~job
+          else resolveSomeConflicts (List.tl_exn conflict_groups) ~conf ~consts ~job
 
 let rec augmentFeatures ?(conf = default_config) ?(consts = [])
                         (job : (value list, value) job)
                         : (value list, value) job =
-  let c_groups = conflictingTests job
-  in if c_groups = [] then job
+  let conflict_groups = conflictingTests job
+  in if conflict_groups = [] then job
      else if conf.disable_synth
           then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
                ; raise NoSuchFunction)
-     else let new_features = resolveSomeConflicts c_groups ~job ~conf ~consts
+     else let new_features = resolveSomeConflicts conflict_groups ~job ~conf ~consts
           in if new_features = []
              then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
                   ; raise NoSuchFunction)
