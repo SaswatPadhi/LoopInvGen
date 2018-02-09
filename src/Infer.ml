@@ -4,7 +4,8 @@ open SyGuS
 open Utils
 
 let main zpath statefile outfile logfile do_false
-         max_conflicts max_restarts max_steps_on_restart
+         max_conflicts max_strengthening_attempts
+         max_restarts max_steps_on_restart
          filename () =
   Utils.start_logging_to ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
@@ -26,10 +27,11 @@ let main zpath statefile outfile logfile do_false
            max_conflict_group_size = (if max_conflicts > 0 then max_conflicts
                                       else ((PIE.conflict_group_size_multiplier_for_logic synth_logic)
                                             * PIE.base_max_conflict_group_size)) ;
-         } ;
-       } ;
-       max_restarts ;
-       max_steps_on_restart ;
+         }
+       ; max_tries = max_strengthening_attempts
+       }
+     ; max_restarts
+     ; max_steps_on_restart
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
@@ -47,12 +49,14 @@ let spec =
       +> flag "-l" (optional string)  ~doc:"FILENAME enable logging"
       +> flag "-f" (no_arg)           ~doc:"generate `false` instead of an empty invariant, in case of failure"
 
-      +> flag "-max-conflicts"        (optional_with_default 0 int)
-                                      ~doc:"maximum size of the conflict group (POS+NEG). 0 = auto"
-      +> flag "-max-restarts"         (optional_with_default (LoopInvGen.default_config.max_restarts) int)
-                                      ~doc:"number of times the inference engine may restart"
-      +> flag "-max-steps-on-restart" (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
-                                      ~doc:"number of states to collect after each restart"
+      +> flag "-max-conflicts"              (optional_with_default 0 int)
+                                            ~doc:"max size of the conflict group (POS+NEG). 0 = auto"
+      +> flag "-max-strengthening-attempts" (optional_with_default (LoopInvGen.default_config.for_VPIE.max_tries) int)
+                                            ~doc:"max candidates to consider, per strengthening. 0 = unlimited"
+      +> flag "-max-restarts"               (optional_with_default (LoopInvGen.default_config.max_restarts) int)
+                                            ~doc:"number of times the inference engine may restart"
+      +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
+                                            ~doc:"number of states to collect after each restart"
 
       +> anon (maybe_with_default "-" ("filename" %: file))
     )

@@ -24,7 +24,7 @@ let default_config = {
 let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
                   ?(consts = []) (job_post : ('a, 'b) job with_desc) : desc =
   let rec helper tries_left (job, post_desc) =
-    if tries_left < 1
+    if conf.max_tries > 0 && tries_left < 1
     then (Log.error (lazy ("VPIE Reached MAX attempts ("
                           ^ (string_of_int conf.max_tries)
                           ^ "). Giving up ..."))

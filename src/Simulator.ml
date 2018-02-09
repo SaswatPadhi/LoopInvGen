@@ -80,7 +80,7 @@ let record_states ?(avoid = []) ~size ~seeds ~state_chan ~(zpath : string)
     match head with
     | None -> (avoid, 0)
     | _ -> let states = Quickcheck.random_value ~size ~seed
-                                              (simulate_from s z3 head) in
+                                                (simulate_from s z3 head) in
            let [@warning "-8"] Some head = build_avoid_constraints s head in
            let open Core.Out_channel
            in List.iter states
