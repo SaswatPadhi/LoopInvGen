@@ -1,5 +1,7 @@
 #!/bin/bash
 
+trap 'jobs -p | xargs kill >&2 2> /dev/null' EXIT
+
 INTERMEDIATES_DIR="_log"
 SYGUS_EXT=".sl"
 Z3_PATH="_dep/z3.bin"
@@ -51,9 +53,9 @@ Configuration:
     [--z3-path, -z <path>]            (_dep/z3.bin)
 
 Arguments to Internal Programs:
-    [--Record-args, -R]               for ${RECORD}
-    [--Infer-args, -I]                for ${INFER}
-    [--Verify-args, -V]               for ${VERIFY}
+    [--Record-args, -R \"<args>\"]    for ${RECORD}
+    [--Infer-args, -I \"<args>\"]     for ${INFER}
+    [--Verify-args, -V \"<args>\"]    for ${VERIFY}
 " 1>&2 ;
   exit 1 ;
 }
@@ -119,9 +121,9 @@ TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
+TESTCASE_LOG="$TESTCASE_PREFIX.log"
 TESTCASE_REC_LOG="$TESTCASE_PREFIX.rlog"
 TESTCASE_REC_LOG_PATTERN="$TESTCASE_REC_LOG"?
-TESTCASE_LOG="$TESTCASE_PREFIX.log"
 
 TESTCASE_STATE="$TESTCASE_PREFIX.s"
 TESTCASE_STATE_PATTERN="$TESTCASE_STATE"?
@@ -153,22 +155,17 @@ if [ "$DO_INTERACTIVE" = "yes" ]; then
   echo -en "(@ record)"
 fi
 
-for i in `seq 1 $FORKS` ; do
+for i in `seq 0 $FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
   (timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
            $RECORD -s $STATES -r "seed$i" -o $TESTCASE_STATE$i $LOG_PARAM \
                    $RECORD_ARGS $TESTCASE) >&2 &
 done
-
-if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG"0 ; else LOG_PARAM="" ; fi
-(timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
-         $RECORD -s $STATES -r "seed0" -o $TESTCASE_STATE"0" $LOG_PARAM \
-                 $RECORD_ARGS $TESTCASE) >&2
-
 wait
 
 grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
   | head -n $MAX_STATES > $TESTCASE_ALL_STATES
+
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
 if [ "$DO_INTERACTIVE" = "yes" ]; then
@@ -177,7 +174,8 @@ fi
 
 (timeout --kill-after=$TIMEOUT $TIMEOUT \
          $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-                $INFER_ARGS $INFER_LOG) >&2
+                $INFER_ARGS $INFER_LOG) >&2 &
+wait
 INFER_RESULT_CODE=$?
 
 if [ "$DO_INTERACTIVE" = "yes" ]; then
@@ -189,7 +187,8 @@ if [ "$DO_VERIFY" = "yes" ]; then
     echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
   fi
 
-  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE
+  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE &
+  wait
   RESULT_CODE=$?
 elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo
