@@ -2,6 +2,10 @@ open Core
 open Components
 open Types
 
+let pos_mod x y = ((x mod y) + (abs y)) mod y
+
+let pos_div x y = (x - (pos_mod x y)) / y
+
 let new_components = [
   {
     name = "nia-div";
@@ -13,7 +17,7 @@ let new_components = [
              | [x ; y] -> (x <> y)
              | _ -> false);
     apply = (function
-             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (x / y)
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_div x y)
              | _ -> VError);
     dump = List.(fun l -> "(div " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -27,7 +31,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (((x mod y) + y) mod y)
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_mod x y)
              | _ -> VError);
     dump = List.(fun l -> "(mod " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
