@@ -13,7 +13,7 @@ type model = (string * Types.value) list
 
 let query_for_model ?(eval_term = "true") () =
   [ "(check-sat)"
-  (* forces Z3 to generate complete models over variables in `eval_term` *)
+  (* forces z3 to generate complete models over variables in `eval_term` *)
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
@@ -53,20 +53,20 @@ let flush_and_collect (z3 : t) : string =
         ; String.concat ~sep:" " (!lines)
 
 let create_scope ?(db = []) (z3 : t) : unit =
-  Log.debug (lazy (String.concat ("Created Z3 scope." :: db)
+  Log.debug (lazy (String.concat ("Created z3 scope." :: db)
                                  ~sep:(Log.indented_sep 4))) ;
   Out_channel.output_lines z3.stdin ("(push)" :: db) ;
   Out_channel.flush z3.stdin
 
 let close_scope (z3 : t) : unit =
-  Log.debug (lazy ("Closed Z3 scope.")) ;
+  Log.debug (lazy ("Closed z3 scope.")) ;
   Out_channel.output_string z3.stdin "(pop)\n" ;
   Out_channel.flush z3.stdin
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
   (if scoped then create_scope z3 else ()) ;
-  Log.debug (lazy (String.concat ("New Z3 call:" :: (db @ queries))
+  Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
                                  ~sep:(Log.indented_sep 4))) ;
   if queries = []
   then begin
@@ -169,7 +169,7 @@ let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
             [ "(check-sat)" ]
     with [ "sat" ]   -> vtrue
        | [ "unsat" ] -> vfalse
-       | _ -> raise (Internal_Exn "Z3 could not verify the query.")
+       | _ -> raise (Internal_Exn "z3 could not verify the query.")
 
 let normalize (expr : string) : string =
   if expr = "true" || expr = "false" then expr else
