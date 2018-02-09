@@ -82,6 +82,40 @@ let create_job ~f ~args ~post ?(features = []) ~tests ()
          neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
      }
 
+let add_pos_test ~(job : (value list, 'b) job) (test : value list) : (value list, 'b) job =
+  if List.exists job.pos_tests ~f:(fun (p, _) -> p = test)
+  then raise (Duplicate_Test ("Test (" ^ (String.concat ~sep:"," job.farg_names)
+                             ^ ") = (" ^ (serialize_values ~sep:"," test)
+                             ^ "), already exists in POS set!"))
+  else try if job.post test (Result.try_with (fun () -> job.f test))
+           then {
+                  job with
+                  pos_tests = (test, lazy (compute_feature_vector job.features test))
+                           :: job.pos_tests
+                }
+           else raise IgnoreTest
+       with _ -> raise (Ambiguous_Test ("Test (" ^ (String.concat ~sep:"," job.farg_names)
+                                       ^ ") = (" ^ (serialize_values ~sep:"," test)
+                                       ^ "), does not belong in POS!"))
+
+let add_neg_test ~(job : (value list, 'b) job) (test : value list) : (value list, 'b) job =
+  if List.exists job.neg_tests ~f:(fun (p, _) -> p = test)
+  then raise (Duplicate_Test ("Test (" ^ (String.concat ~sep:"," job.farg_names)
+                             ^ ") = (" ^ (serialize_values ~sep:"," test)
+                             ^ "), already exists in NEG set!"))
+  else try if job.post test (Result.try_with (fun () -> job.f test))
+           then raise IgnoreTest
+           else raise Exit
+       with IgnoreTest
+            -> raise (Ambiguous_Test ("Test (" ^ (String.concat ~sep:"," job.farg_names)
+                                     ^ ") = (" ^ (serialize_values ~sep:"," test)
+                                     ^ "), does not belong in POS!"))
+          | Exit -> {
+                       job with
+                       neg_tests = (test, lazy (compute_feature_vector job.features test))
+                                :: job.neg_tests
+                    }
+
 let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
   let (pos, neg) = split_tests (List.dedup_and_sort tests) ~f:job.f ~post:job.post
   in let pos = List.(filter pos ~f:(fun t -> not (exists job.pos_tests
@@ -89,11 +123,12 @@ let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
   in let neg = List.(filter neg ~f:(fun t -> not (exists job.neg_tests
                                                     ~f:(fun (n, _) -> n = t))))
   in let compute_fvec = compute_feature_vector job.features
-  in ({ job with
+  in ({
+         job with
          pos_tests = List.map pos ~f:(fun t -> (t, lazy (compute_fvec t)))
-                   @ job.pos_tests ;
-         neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
-                   @ job.neg_tests ;
+                   @ job.pos_tests
+      ;  neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
+                   @ job.neg_tests
       },
       List.(length pos + length neg))
 
@@ -177,7 +212,7 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                       ^ (string_of_logic conf.synth_logic) ^ " logic."
                       ^ (Log.indented_sep 0) ^ "Conflict group ("
                       ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
-                           ~f:(fun n t -> n ^ " :" ^ (string_of_typ t)))^ "):" ^ (Log.indented_sep 2)
+                           ~f:(fun n t -> n ^ " :" ^ (string_of_typ t))) ^ "):" ^ (Log.indented_sep 2)
           ^ "POS (" ^ (string_of_int (List.length conflict_group.pos)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map conflict_group.pos ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")")) ^ (Log.indented_sep 2)

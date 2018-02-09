@@ -15,21 +15,21 @@ let main zpath statefile outfile logfile do_false
    ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
-     in let sygus_logic = Types.logic_of_string sygus.logic
+     in let synth_logic = Types.logic_of_string sygus.logic
      in let conf = {
        LoopInvGen.default_config with
        for_VPIE = {
          LoopInvGen.default_config.for_VPIE with
          for_PIE = {
            LoopInvGen.default_config.for_VPIE.for_PIE with
-           synth_logic = sygus_logic;
+           synth_logic;
            max_conflict_group_size = (if max_conflicts > 0 then max_conflicts
-                                      else ((PIE.conflict_group_size_multiplier_for_logic sygus_logic)
+                                      else ((PIE.conflict_group_size_multiplier_for_logic synth_logic)
                                             * PIE.base_max_conflict_group_size)) ;
          } ;
        } ;
-       max_restarts = max_restarts ;
-       max_steps_on_restart = max_steps_on_restart ;
+       max_restarts ;
+       max_steps_on_restart ;
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile

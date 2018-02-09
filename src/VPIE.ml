@@ -60,13 +60,11 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
                                                     (string_of_int tries_left))))
                       in Log.debug (lazy ("Counter example: {"
                                         ^ (List.to_string_map2
-                                              test job.farg_names ~sep:", "
-                                              ~f:(fun v n -> n ^ " = " ^
+                                             test job.farg_names ~sep:", "
+                                             ~f:(fun v n -> n ^ " = " ^
                                                             (serialize_value v)))
                                         ^ "}"))
-                      ; let (job, tests_added) = add_tests ~job [test]
-                          in if tests_added < 1 then (conf.describe None)
-                            else helper (tries_left - 1) (job, post_desc)
+                      ; helper (tries_left - 1) ((add_neg_test ~job test), post_desc)
                 end
     end
   in helper conf.max_tries job_post

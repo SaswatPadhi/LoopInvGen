@@ -30,7 +30,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VBool x; VBool y] -> VBool (x && y)
+             | [VBool x ; VBool y] -> VBool (x && y)
              | _ -> VError);
     dump = List.(fun l -> "(and " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -44,7 +44,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VBool x; VBool y] -> VBool (x || y)
+             | [VBool x ; VBool y] -> VBool (x || y)
              | _ -> VError);
     dump = List.(fun l -> "(or " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   }

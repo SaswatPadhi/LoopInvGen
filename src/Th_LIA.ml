@@ -18,7 +18,7 @@ let new_components = [
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VInt (x + y)
+             | [VInt x ; VInt y] -> VInt (x + y)
              | _ -> VError);
     dump = List.(fun l -> "(+ " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -32,7 +32,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VInt (x - y)
+             | [VInt x ; VInt y] -> VInt (x - y)
              | _ -> VError);
     dump = List.(fun l -> "(- " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -45,7 +45,7 @@ let new_components = [
              | [_ ; (Const c)] -> (c <> vzero) && (c <> vone)
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VInt (x * y)
+             | [VInt x ; VInt y] -> VInt (x * y)
              | _ -> VError);
     dump = List.(fun l -> "(* " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -57,7 +57,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VBool (x <= y)
+             | [VInt x ; VInt y] -> VBool (x <= y)
              | _ -> VError);
     dump = List.(fun l -> "(<= " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -69,7 +69,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VBool (x >= y)
+             | [VInt x ; VInt y] -> VBool (x >= y)
              | _ -> VError);
     dump = List.(fun l -> "(>= " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -81,7 +81,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VBool (x < y)
+             | [VInt x ; VInt y] -> VBool (x < y)
              | _ -> VError);
     dump = List.(fun l -> "(< " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -93,7 +93,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VBool (x > y)
+             | [VInt x ; VInt y] -> VBool (x > y)
              | _ -> VError);
     dump = List.(fun l -> "(> " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -105,7 +105,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x;VInt y] -> VBool (x = y)
+             | [VInt x ; VInt y] -> VBool (x = y)
              | _ -> VError);
     dump = List.(fun l -> "(= " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   }

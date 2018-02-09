@@ -13,7 +13,7 @@ let new_components = [
              | [x ; y] -> (x <> y)
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VInt (x / y)
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (x / y)
              | _ -> VError);
     dump = List.(fun l -> "(div " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -27,7 +27,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VInt (x mod y)
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (((x mod y) + y) mod y)
              | _ -> VError);
     dump = List.(fun l -> "(mod " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   } ;
@@ -41,7 +41,7 @@ let new_components = [
              | [_ ; _] -> true
              | _ -> false);
     apply = (function
-             | [VInt x; VInt y] -> VInt (x * y)
+             | [VInt x ; VInt y] -> VInt (x * y)
              | _ -> VError);
     dump = List.(fun l -> "(* " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
   }
