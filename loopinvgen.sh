@@ -33,7 +33,13 @@ DO_CLEAN="no"
 DO_VERIFY="no"
 
 DO_INTERACTIVE="no"
-ERASE_STATUS="\b\b\b\b\b\b\b\b\b\b"
+show_status() {
+  if [ "$DO_INTERACTIVE" == "yes" ]; then
+    MSG="$1                " ; MSG_LEN=${#MSG}
+    echo -en "$MSG"
+    printf %0"$MSG_LEN"d | tr 0 \\b
+  fi
+}
 
 usage() {
   echo -en "
@@ -151,9 +157,7 @@ if [ "$DO_LOG" != "none" ] ; then
   echo -en '' > "$TESTCASE_LOG"
 fi
 
-if [ "$DO_INTERACTIVE" = "yes" ]; then
-  echo -en "(@ record)"
-fi
+show_status "(@ record)"
 
 for i in `seq 0 $FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
@@ -168,27 +172,26 @@ grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
-if [ "$DO_INTERACTIVE" = "yes" ]; then
-  echo -en "${ERASE_STATUS}(@ infer) "
-fi
+
+show_status "(@ infer)"
 
 (timeout --kill-after=$TIMEOUT $TIMEOUT \
          $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
                 $INFER_ARGS $INFER_LOG) >&2 &
-wait
+INFER_PID=$!
+wait $INFER_PID
 INFER_RESULT_CODE=$?
-
-if [ "$DO_INTERACTIVE" = "yes" ]; then
-  echo -en "${ERASE_STATUS}          ${ERASE_STATUS}"
-fi
 
 if [ "$DO_VERIFY" = "yes" ]; then
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
   fi
 
+  show_status "(@ verify)"
+
   $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE &
-  wait
+  VERIFY_PID=$!
+  wait $VERIFY_PID
   RESULT_CODE=$?
 elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo
