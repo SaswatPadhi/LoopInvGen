@@ -17,7 +17,7 @@
                      (a! Int) (b! Int) (x! Int) (y! Int) (z! Int)) Bool
   (and (not (= 0 y)) (= a! a) (= b! b)
     (or (and (not (= 1 (mod y 2))) (= x! (* 2 x)) (= y! (div y 2)))
-        (and (= 1 (mod y 2)) (= z! (+ z x)) (= y! (- y 1))))))
+        (and (= 1 (mod y 2)) (= x! x) (= z! (+ z x)) (= y! (- y 1))))))
 
 (define-fun post-f ((a Int) (b Int) (x Int) (y Int) (z Int)) Bool
   (or (not (= y 0)) (= z (* a b))))

@@ -10,7 +10,7 @@
 (declare-primed-var t Int)
 
 (define-fun pre-f ((n Int) (a Int) (su Int) (t Int)) Bool
-  (and (= a 0) (= su 1) (= t 1)))
+  (and (= a 0) (= su 1) (= t 1) (> n 0)))
 
 (define-fun trans-f ((n Int) (a Int) (su Int) (t Int)
                      (n! Int) (a! Int) (su! Int) (t! Int)) Bool
