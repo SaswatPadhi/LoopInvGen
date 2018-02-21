@@ -13,7 +13,7 @@
 
 (define-fun trans-f ((i Int) (a Int) (c Int)
                      (i! Int) (a! Int) (c! Int)) Bool
-  (and (< i 10) (= c! (+ (c (+ 1 (* 6 a)))))
+  (and (< i 10) (= c! (+ c (+ 1 (* 6 a))))
                 (= a! (+ a (+ i 1)))
                 (= i! (+ i 1))))
 
