@@ -5,18 +5,23 @@ usage() {
 Usage: $0 [flags]
 
 Flags:
-    [--make-z3, -z]
+    [--optimize, -O]        Optimize for speed (build takes MUCH longer!)
+
+Configuration:
+    [--make-z3, -z <path>]  Also build a specialized version of `z3`
+    [--jobs, -j <num>]      Use <num> jobs in `make`
 " 1>&2 ;
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :z:j: --long make-z3:,jobs: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :Oz:j: --long optimize,make-z3:,jobs: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 JOBS="4"
 MAKE_Z3=""
+OPTIMIZE=""
 
 while true ; do
   case "$1" in
@@ -26,6 +31,9 @@ while true ; do
     -j | --jobs )
          JOBS="$2" ;
          shift ; shift ;;
+    -O | --optimize )
+         OPTIMIZE="--enable-optimize" ;
+         shift ;;
     -- ) shift; break ;;
     * ) break ;;
   esac
@@ -52,10 +60,11 @@ fi
 
 oasis setup -setup-update dynamic
 
-make clean
+make distclean
 
 ./configure --disable-debug --disable-profile \
-            --disable-tests --disable-docs
+            --disable-tests --disable-docs \
+            $OPTIMIZE
 make -j "$JOBS"
 
 rm -rf bin && mkdir -p bin

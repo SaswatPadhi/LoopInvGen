@@ -18,7 +18,7 @@ let new_components = [
     apply = (function
              | [VBool x] -> VBool (not x)
              | _ -> VError);
-    dump = List.(fun l -> "(not " ^ (hd_exn l) ^ ")")
+    dump = (fun [@warning "-8"] [a] -> "(not " ^ a ^ ")")
   } ;
   {
     name = "and";
@@ -32,7 +32,7 @@ let new_components = [
     apply = (function
              | [VBool x ; VBool y] -> VBool (x && y)
              | _ -> VError);
-    dump = List.(fun l -> "(and " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun [@warning "-8"] [a ; b] -> "(and " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "or";
@@ -46,7 +46,7 @@ let new_components = [
     apply = (function
              | [VBool x ; VBool y] -> VBool (x || y)
              | _ -> VError);
-    dump = List.(fun l -> "(or " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun [@warning "-8"] [a ; b] -> "(or " ^ a ^ " " ^ b ^ ")")
   }
 ]
 

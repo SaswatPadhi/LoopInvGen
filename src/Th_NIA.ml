@@ -19,7 +19,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_div x y)
              | _ -> VError);
-    dump = List.(fun l -> "(div " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun [@warning "-8"] [a ; b] -> "(div " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "nia-mod";
@@ -33,7 +33,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_mod x y)
              | _ -> VError);
-    dump = List.(fun l -> "(mod " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun [@warning "-8"] [a ; b] -> "(mod " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "nia-mult";
@@ -47,7 +47,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VInt (x * y)
              | _ -> VError);
-    dump = List.(fun l -> "(* " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")")
   }
 ]
 

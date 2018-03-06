@@ -189,6 +189,7 @@ if [ "$DO_VERIFY" = "yes" ]; then
 
   show_status "(@ verify)"
 
+  touch $TESTCASE_INVARIANT
   $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE &
   VERIFY_PID=$!
   wait $VERIFY_PID

@@ -13,7 +13,7 @@ type model = (string * Types.value) list
 
 let query_for_model ?(eval_term = "true") () =
   [ "(check-sat)"
-  (* forces z3 to generate complete models over variables in `eval_term` *)
+    (* forces z3 to generate complete models over variables in `eval_term` *)
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 

@@ -13,6 +13,9 @@ BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 
 
+Flag "optimize"
+  Description: Build with a highly optimized version (takes much longer!)
+  Default: false
 
 
 Executable "record"
@@ -20,7 +23,8 @@ Executable "record"
   Install:          false
   MainIs:           Record.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 14 -nodynlink
+  if flag(optimize)
+    NativeOpt:        -O3 -rounds 14 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 Executable "infer"
@@ -28,7 +32,8 @@ Executable "infer"
   Install:          false
   MainIs:           Infer.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 14 -nodynlink
+  if flag(optimize)
+    NativeOpt:        -O3 -rounds 14 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 Executable "verify"
@@ -36,7 +41,8 @@ Executable "verify"
   Install:          false
   MainIs:           Verify.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 14 -nodynlink
+  if flag(optimize)
+    NativeOpt:        -O3 -rounds 14 -nodynlink
   BuildDepends:     core, core_extended, threads
 
 
@@ -48,7 +54,8 @@ Executable "test"
   Install:          false
   MainIs:           Test.ml
   CompiledObject:   native
-  NativeOpt:        -O3 -rounds 14 -nodynlink
+  if flag(optimize)
+    NativeOpt:        -O3 -rounds 14 -nodynlink
   BuildDepends:     alcotest, core, core_extended, threads
 
 Test "test"

@@ -196,7 +196,8 @@ let solve ?(ast = false) task consts =
   if not (!quiet) then (
     print_endline "Synthesis Result: ";
     List.iter ~f:(fun v -> print_endline (Vector.string v)) all_solutions.contents
-  ) ; List.rev_map ~f:(fun (((x,y),_),_) -> (x, y)) all_solutions.contents
+  ) ; List.rev_map all_solutions.contents
+                   ~f:(fun (((dump, func), program), outputs) -> (dump, func))
 
 let components_for (l : logic) : component list =
   match l with

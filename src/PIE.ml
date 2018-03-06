@@ -132,8 +132,8 @@ let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
       },
       List.(length pos + length neg))
 
-let add_features ~(job : ('a, 'b) job) (features : 'a feature with_desc list)
-                 : ('a, 'b) job =
+let update_feature_vecs (features : 'a feature with_desc list)
+                        ~(job : ('a, 'b) job) : ('a, 'b) job =
   let add_to_fvec fs (t, fv) =
     (t, lazy ((compute_feature_vector fs t) @ (Lazy.force fv)))
   in { job with
@@ -190,7 +190,7 @@ let synthFeatures ?(consts = []) ~(job : (value list, value) job)
            in (List.iteri (Hashtbl.keys tab)
                           ~f:(fun j args ->
                                 ith_args.(j) <- (List.nth_exn args i)))
-              ; ith_args));
+            ; ith_args));
        components = components_for synth_logic
      }
   in let solutions = solve f_synth_task consts
@@ -247,7 +247,7 @@ let rec augmentFeatures ?(conf = default_config) ?(consts = [])
           in if new_features = []
              then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
                   ; raise NoSuchFunction)
-             else augmentFeatures (add_features new_features ~job) ~conf ~consts
+             else augmentFeatures (update_feature_vecs new_features ~job) ~conf ~consts
 
 (* k is the maximum clause length for the formula we will provide (i.e., it's
    a k-cnf formula) f is the function whose spec we are inferring tests is a

@@ -20,7 +20,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VInt (x + y)
              | _ -> VError);
-    dump = List.(fun l -> "(+ " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun [@warning "-8"] [a ; b] -> "(+ " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-sub";
@@ -34,7 +34,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VInt (x - y)
              | _ -> VError);
-    dump = List.(fun l -> "(- " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(- " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-mult";
@@ -47,7 +47,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VInt (x * y)
              | _ -> VError);
-    dump = List.(fun l -> "(* " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-leq";
@@ -59,7 +59,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VBool (x <= y)
              | _ -> VError);
-    dump = List.(fun l -> "(<= " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(<= " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-geq";
@@ -71,7 +71,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VBool (x >= y)
              | _ -> VError);
-    dump = List.(fun l -> "(>= " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-lt";
@@ -83,7 +83,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VBool (x < y)
              | _ -> VError);
-    dump = List.(fun l -> "(< " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(< " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-gt";
@@ -95,7 +95,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VBool (x > y)
              | _ -> VError);
-    dump = List.(fun l -> "(> " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")")
   } ;
   {
     name = "lia-eq";
@@ -107,7 +107,7 @@ let new_components = [
     apply = (function
              | [VInt x ; VInt y] -> VBool (x = y)
              | _ -> VError);
-    dump = List.(fun l -> "(= " ^ (hd_exn l) ^ " " ^ (hd_exn (tl_exn l)) ^ ")")
+    dump = (fun[@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")")
   }
 ]
 
