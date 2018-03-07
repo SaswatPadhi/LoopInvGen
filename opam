@@ -23,8 +23,8 @@ depends: [
   "ocamlfind"     {build}
   "base-bytes"    {build}
   "base-threads"  {build}
-  "alcotest"      {>= "0.7"}
+  "oasis"         {build & >= "0.4"}
+  "alcotest"      {test & >= "0.7"}
   "core"          {>= "0.10"}
   "core_extended" {>= "0.10"}
-  "oasis"         {>= "0.4"}
 ]

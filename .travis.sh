@@ -21,11 +21,12 @@ if [ -n "${OCAML_VERSION}" ]; then
 fi
 eval `opam config env --shell=bash`
 
+opam config report
 
 ### Pin `LoopInvGen` package, install deps
 
 opam pin add LoopInvGen . --no-action --yes --kind=path
-opam install LoopInvGen --deps-only
+opam install LoopInvGen --deps-only --verbose
 
 
 ### Check installation status and build
@@ -38,8 +39,11 @@ if [ $RC -ne 0 ]; then
 fi
 
 oasis setup -setup-update dynamic
-./configure ${LIG_DEBUG_FLAG:- --disable-debug}     \
-            ${LIG_DOCS_FLAG:- --disable-docs}       \
-            ${LIG_PROFILE_FLAG:- --disable-profile} \
-            ${LIG_TESTS_FLAG:- --disable-tests}
+
+./configure ${DEBUG_FLAG:- --disable-debug}     \
+            ${DOCS_FLAG:- --disable-docs}       \
+            ${PROFILE_FLAG:- --disable-profile} \
+            ${TESTS_FLAG:- --disable-tests}     \
+            ${BUILD_FLAGS}
+
 make clean ; make
