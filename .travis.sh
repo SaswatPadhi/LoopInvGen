@@ -38,12 +38,15 @@ if [ $RC -ne 0 ]; then
     opam install LoopInvGen --deps-only
 fi
 
-oasis setup -setup-update dynamic
+jbuilder build -f @fast-compile
 
-./configure ${DEBUG_FLAG:- --disable-debug}     \
-            ${DOCS_FLAG:- --disable-docs}       \
-            ${PROFILE_FLAG:- --disable-profile} \
-            ${TESTS_FLAG:- --disable-tests}     \
-            ${BUILD_FLAGS}
+BUILD_FLAGS=($BUILD_FLAGS)
+for flag in $BUILD_FLAGS ; do
+    if [ "$flag" = "-optimize" ]; then
+        jbuilder build -f @optimize
+    elif [ "$flag" = "-fast-compile" ]; then
+        jbuilder build -f @fast-compile
+    fi
+done
 
-make clean ; make
+jbuilder build --verbose
