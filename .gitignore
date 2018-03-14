@@ -1,15 +1,23 @@
-# OASIS Files
-_build
-*.native
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+
+# ocamlbuild working directory
+_build/
+
+# ocamlbuild targets
 *.byte
-*.docdir
+*.native
 
-setup.data
-setup.log
-setup.ml
-
-Makefile
-configure
+# jbuilder generated files
+*/.merlin
+*.install
 
 # External
 _dep
@@ -21,3 +29,6 @@ ocamlprof.dump
 gmon.out
 *.tgz
 _tags
+_bin
+flambda_flags
+starexec

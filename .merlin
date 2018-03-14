@@ -1,5 +1,0 @@
-S src
-
-B _build/src
-
-PKG alcotest core core_extended oasis threads

@@ -21,8 +21,8 @@ eval set -- "$OPTS"
 
 JOBS="4"
 MAKE_Z3=""
-OPTIMIZE=""
 
+jbuilder build -f @fast-compile
 while true ; do
   case "$1" in
     -z | --make-z3 )
@@ -32,7 +32,7 @@ while true ; do
          JOBS="$2" ;
          shift ; shift ;;
     -O | --optimize )
-         OPTIMIZE="--enable-optimize" ;
+         jbuilder build -f @optimize
          shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -54,55 +54,48 @@ if [ -n "$MAKE_Z3" ] ; then
   make -j "$JOBS"
 
   mkdir -p "$LIG/_dep"
-  cp z3 "$LIG/_dep/z3.bin"
+  cp z3 "$LIG/_dep/z3"
   cd "$LIG"
 fi
 
-oasis setup -setup-update dynamic
+jbuilder build @local -p LoopInvGen -j "$JOBS"
 
-make distclean
+rm -rf starexec && mkdir -p starexec/bin
 
-./configure --disable-debug --disable-profile \
-            --disable-tests --disable-docs \
-            $OPTIMIZE
-make -j "$JOBS"
+cp -rL _bin _dep loopinvgen.sh starexec/bin
 
-rm -rf bin && mkdir -p bin
-
-cp _dep/z3.bin bin/z3
-cp _build/src/Record.native \
-   _build/src/Infer.native  \
-   _build/src/Verify.native \
-   loopinvgen.sh            \
-   bin
-
-cat <<EOF > bin/starexec_run_default
+cat <<EOF > starexec/bin/starexec_run_default
 #!/bin/bash
 
-./loopinvgen.sh -t 36000 -p "." -z "./z3" "\$1"
+./loopinvgen.sh -t 36000 -p "." -z "_dep/z3" "\$1"
 EOF
-chmod +x bin/starexec_run_default
+chmod +x starexec/bin/starexec_run_default
 
-cat <<EOF > bin/starexec_run_debug
+cat <<EOF > starexec/bin/starexec_run_debug
 #!/bin/bash
 
 pwd
 ls -lah
-file z3 Record.native Infer.native Verify.native
-ldd z3 Record.native Infer.native Verify.native
-./z3
-./Record.native
-EOF
-chmod +x bin/starexec_run_debug
 
-cat <<EOF > starexec_description.txt
+file _dep/z3 _bin/lig-record _bin/lig-infer _bin/lig-verify
+ldd _dep/z3 _bin/lig-record _bin/lig-infer _bin/lig-verify
+
+_dep/z3
+_bin/lig-record -h
+_bin/lig-infer -h
+_bin/lig-verify -h
+EOF
+chmod +x starexec/bin/starexec_run_debug
+
+cat <<EOF > starexec/starexec_description.txt
 A loop invariant inference tool built using PIE: precondition inference engine.
 
 https://github.com/SaswatPadhi/LoopInvGen
 EOF
 
-chmod -R 777 bin
-CONTENTS="bin starexec_description.txt"
+chmod -R 777 starexec/bin
 
-tar cvzf LoopInvGen_SyGuS_INV.tgz $CONTENTS
-rm -rf $CONTENTS
+echo -ne "\nPreparing starexec package (starexec/):\n"
+cd starexec
+tar cvzf ../LoopInvGen_SyGuS_INV.tgz ./*
+#rm -rf starexec

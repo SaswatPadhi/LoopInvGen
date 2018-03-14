@@ -14,16 +14,11 @@ dev-repo: "git+https://github.com:SaswatPadhi/LoopInvGen.git"
 available: [ ocaml-version >= "4.04.2" ]
 
 build: [
-  ["oasis" "setup" "-setup-update" "dynamic"]
-  ["./configure" "--disable-tests" "--disable-debug" "--disable-profile"]
-  [make]
+  [ "jbuilder" "build" "-p" name "-j" jobs ]
 ]
 
 depends: [
-  "ocamlfind"     {build}
-  "base-bytes"    {build}
-  "base-threads"  {build}
-  "oasis"         {build & >= "0.4"}
+  "jbuilder"      {build & >= "1.0+beta10"}
   "alcotest"      {test & >= "0.7"}
   "core"          {>= "0.10"}
   "core_extended" {>= "0.10"}

@@ -1,18 +1,26 @@
 #!/bin/bash
 
+BIN_DIR="_bin"
+
+RECORD="$BIN_DIR/lig-record"
+INFER="$BIN_DIR/lig-infer"
+VERIFY="$BIN_DIR/lig-verify"
+
+if [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
+  echo -en "
+Building OCaml modules ...
+" 1>&2 ; jbuilder build @local
+fi
+
 trap 'jobs -p | xargs kill >&2 2> /dev/null' EXIT
 
 INTERMEDIATES_DIR="_log"
 SYGUS_EXT=".sl"
-Z3_PATH="_dep/z3.bin"
+Z3_PATH="_dep/z3"
 
 MIN_STATES=63
 MIN_TIMEOUT=5
 MAX_STATES=1024
-
-RECORD="./Record.native"
-INFER="./Infer.native"
-VERIFY="./Verify.native"
 
 FORKS=2
 STATES=512
@@ -56,14 +64,13 @@ Configuration:
     [--max-states, -m <count>]        ($MAX_STATES)\t{> 0}
     [--record-states, -s <count>]     ($STATES)\t{> $MIN_STATES}
     [--timeout, -t <seconds>]         ($TIMEOUT)\t{> $MIN_TIMEOUT}
-    [--z3-path, -z <path>]            (_dep/z3.bin)
+    [--z3-path, -z <path>]            (_dep/z3)
 
 Arguments to Internal Programs:
     [--Record-args, -R \"<args>\"]    for ${RECORD}
     [--Infer-args, -I \"<args>\"]     for ${INFER}
     [--Verify-args, -V \"<args>\"]    for ${VERIFY}
-" 1>&2 ;
-  exit 1 ;
+" 1>&2 ; exit -1
 }
 
 OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path: -- "$@"`
