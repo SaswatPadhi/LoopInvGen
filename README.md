@@ -6,7 +6,7 @@ A loop invariant generator.
 
 #### 1. Install `ocaml` >= 4.04.2.
 It is recommended to use an OCaml compiler with [`flambda`][flambda] optimizations enabled.
-For example, with [`opam`](https://opam.ocaml.org/), you could run `opam install 4.06.0+flambda`.
+For example, with [`opam`](https://opam.ocaml.org/), you could run `opam switch 4.06.1+flambda`.
 
 #### 2. Install (for example, using `opam install`) the following packages:
 ```
