@@ -43,18 +43,18 @@ let parse s : string =
   let ast = UserFunParser.main UserFunLexer.token lexbuf in
   ast
 
-let gen_user_functions userFs vars : (string*string) list = 
+let gen_user_functions userFs varList : (string*string) list = 
+  let flattenVars = (fun res (s,t) -> "(" ^ s ^ " " ^ string_of_typ t ^ ") " ^ res) in
+  let varString = "( " ^ Core.List.fold_right varList "" flattenVars ^ ")" in
   let rec g_u_f userFs iter acc =
     (match userFs with
       | [] -> acc
       | f :: restFs -> 
           let parsedF = parse f in
           let fname = "f_" ^ (string_of_int iter) in
-          let z3func = "(define-fun " ^ fname ^ " " ^ vars ^ " Bool " ^ parsedF ^ ")" in
+          let z3func = "(define-fun " ^ fname ^ " " ^ varString ^ " Bool " ^ parsedF ^ ")" in
           g_u_f restFs (iter + 1) ((z3func, fname) :: acc))
   in g_u_f userFs 0 []
-
-
 
 
 
