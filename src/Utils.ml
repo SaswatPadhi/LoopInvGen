@@ -37,3 +37,24 @@ let start_logging_to ~msg logfile =
   match logfile with
    | Some logfile -> Log.enable ~msg logfile
    | _ -> ()
+
+let parse s : string = 
+  let lexbuf = Lexing.from_string s in
+  let ast = UserFunParser.main UserFunLexer.token lexbuf in
+  ast
+
+let gen_user_functions userFs vars : (string*string) list = 
+  let rec g_u_f userFs iter acc =
+    (match userFs with
+      | [] -> acc
+      | f :: restFs -> 
+          let parsedF = parse f in
+          let fname = "f_" ^ (string_of_int iter) in
+          let z3func = "(define-fun " ^ fname ^ " " ^ vars ^ " Bool " ^ parsedF ^ ")" in
+          g_u_f restFs (iter + 1) ((z3func, fname) :: acc))
+  in g_u_f userFs 0 []
+
+
+
+
+
