@@ -44,8 +44,8 @@ let parse s : string =
   ast
 
 let gen_user_functions userFs varList : (string*string) list = 
-  let flattenVars = (fun res (s,t) -> "(" ^ s ^ " " ^ string_of_typ t ^ ") " ^ res) in
-  let varString = "( " ^ Core.List.fold_right varList "" flattenVars ^ ")" in
+  let flattenVars = (fun (s,t) res -> "(" ^ s ^ " " ^ string_of_typ t ^ ") " ^ res) in
+  let varString = "( " ^ (Core.List.fold_right varList flattenVars "") ^ ")" in
   let rec g_u_f userFs iter acc =
     (match userFs with
       | [] -> acc
