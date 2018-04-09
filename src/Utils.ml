@@ -27,7 +27,6 @@ end
 
 let get_in_channel = function
   | "-"      -> In_channel.stdin
-  | filename -> In_channel.create filename
 
 let get_out_channel = function
   | None -> Out_channel.stdout
@@ -39,7 +38,7 @@ let start_logging_to ~msg logfile =
    | _ -> ()
 
 let parse s : string = 
-  let lexbuf = Lexing.from_string s in
+  let lexbuf = Lexing.from_string (s ^ "\n") in
   let ast = UserFunParser.main UserFunLexer.token lexbuf in
   ast
 

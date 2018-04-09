@@ -5,7 +5,7 @@ open Utils
 
 let main zpath statefile outfile logfile do_false
          max_conflicts max_strengthening_attempts
-         max_restarts max_steps_on_restart
+         max_restarts max_steps_on_restart user_input_file
          filename () =
   Utils.start_logging_to ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
@@ -32,6 +32,8 @@ let main zpath statefile outfile logfile do_false
        }
      ; max_restarts
      ; max_steps_on_restart
+     ; user_input = if (compare user_input_file "") then [] 
+                    else In_channel.read_lines user_input_file
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile

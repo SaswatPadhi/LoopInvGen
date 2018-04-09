@@ -11,6 +11,7 @@ type 'a config = {
   max_restarts : int ;
   max_steps_on_restart : int ;
   model_completion_mode : [ `RandomGeneration | `UsingZ3 ] ;
+  user_input: string list ;
 }
 
 let default_config = {
@@ -22,6 +23,7 @@ let default_config = {
   max_restarts = 64 ;
   max_steps_on_restart = 256 ;
   model_completion_mode = `RandomGeneration ;
+  user_input = [] ;
 }
 
 (*let satisfyPost ?(conf = default_config) ~(states : value list list)
