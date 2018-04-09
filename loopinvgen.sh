@@ -28,6 +28,9 @@ STATES=512
 TIMEOUT=60
 REC_TIMEOUT=3s
 
+USER_INPUT_FILE=""
+PARSED_USER_INPUT = ""
+
 RECORD_LOG=""
 INFER_LOG=""
 VERIFY_LOG=""
@@ -65,6 +68,7 @@ Configuration:
     [--record-states, -s <count>]     ($STATES)\t{> $MIN_STATES}
     [--timeout, -t <seconds>]         ($TIMEOUT)\t{> $MIN_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
+    [--user-input, -ui <path>]        ($USER_INPUT_FILE)
 
 Arguments to Internal Programs:
     [--Record-args, -R \"<args>\"]    for ${RECORD}
@@ -73,7 +77,7 @@ Arguments to Internal Programs:
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z:ui: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path:,user-input: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -121,6 +125,10 @@ while true ; do
     -z | --z3-path )
          [ -f "$2" ] || usage
          Z3_PATH="$2"
+         shift ; shift ;;
+    -ui | --user-input )
+         [ -f "$2" ] || usage
+         USER_INPUT_FILE="$2"
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -179,6 +187,10 @@ grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
+if [ "$USER_INPUT_FILE" != "" ] ; then
+  PARSED_USER_INPUT = "$INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
+  cut -d ',' -f2 "$USER_INPUT_FILE" > "$INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
+fi 
 
 show_status "(@ infer)"
 
