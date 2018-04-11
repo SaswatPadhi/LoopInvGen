@@ -5,22 +5,24 @@ FROM ubuntu:16.04
 MAINTAINER Saswat Padhi, saswat.sourav@gmail.com
 
 
-ENV TZ            'America/Los_Angeles'
-
 ENV OPAM_VERSION  1.2.2
 ENV OCAML_VERSION 4.06.1+flambda
 ENV Z3_VERSION    4.6.0
 
+ENV TIME_ZONE     'America/Los_Angeles'
+
 ENV HOME /home/opam
 
 
-RUN apt update && apt upgrade -y && \
+RUN apt update && \
+    apt upgrade -y && \
     apt install -y aspcud binutils cmake curl g++ git libgmp-dev libgomp1 \
                    libomp5 libomp-dev libx11-dev m4 make patch python2.7  \
                    sudo tzdata unzip
 
 # Bug in Ubuntu Xenial: https://bugs.launchpad.net/ubuntu/+source/tzdata/+bug/1554806
-RUN ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
+RUN ln -fs /usr/share/zoneinfo/$TIME_ZONE /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
 RUN adduser --disabled-password --home $HOME --shell /bin/bash --gecos '' opam && \
     echo 'opam ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
@@ -50,11 +52,14 @@ RUN curl -LO https://github.com/Z3Prover/z3/archive/z3-$Z3_VERSION.zip && \
     unzip z3-$Z3_VERSION.zip && mv z3-z3-$Z3_VERSION z3-$Z3_VERSION
 RUN git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 
-RUN eval `opam config env` && cd LoopInvGen && \
-    ./create-package.sh --optimize --make-z3 ../z3-$Z3_VERSION \
+
+WORKDIR $HOME/LoopInvGen
+
+
+RUN cd LoopInvGen && \
+    ./create-package.sh --optimize --make-z3 $HOME/z3-$Z3_VERSION \
                         --jobs `cat /proc/cpuinfo | grep processor | wc -l`
 
 
-WORKDIR $HOME/LoopInvGen
 ENTRYPOINT [ "opam", "config", "exec", "--" ]
 CMD [ "bash" ]

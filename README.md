@@ -9,8 +9,8 @@ A loop invariant generator.
 
 _**Note:** The docker image consumes > 4GB of disk space._
 
-1. Build a docker image: `docker build -t LoopInvGen github.com/SaswatPadhi/LoopInvGen`
-2. Run a container over the image: `docker run -ti LoopInvGen`
+1. Build a docker image: `docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen`
+2. Run a container over the image: `docker run -ti loopinvgen`
 
 This would give you a `bash` shell within LoopInvGen directory.
 
