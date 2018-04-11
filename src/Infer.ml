@@ -17,6 +17,8 @@ let main zpath statefile outfile logfile do_false
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let synth_logic = Types.logic_of_string sygus.logic
+     in let user_input = if (compare user_input_file "") then [] 
+                    else In_channel.read_lines user_input_file
      in let conf = {
        LoopInvGen.default_config with
        for_VPIE = {
@@ -28,12 +30,11 @@ let main zpath statefile outfile logfile do_false
                                       else ((PIE.conflict_group_size_multiplier_for_logic synth_logic)
                                             * PIE.base_max_conflict_group_size)) ;
          }
-       ; max_tries = max_strengthening_attempts
+       ; max_tries = max_strengthening_attempts ;
        }
      ; max_restarts
      ; max_steps_on_restart
-     ; user_input = if (compare user_input_file "") then [] 
-                    else In_channel.read_lines user_input_file
+     ; user_functions = gen_user_functions user_input_unparsed sygus.state_vars ;
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
