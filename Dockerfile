@@ -2,20 +2,25 @@
 
 FROM ubuntu:16.04
 
+MAINTAINER Saswat Padhi, saswat.sourav@gmail.com
+
+
+ENV TZ            'America/Los_Angeles'
 
 ENV OPAM_VERSION  1.2.2
 ENV OCAML_VERSION 4.06.1+flambda
 ENV Z3_VERSION    4.6.0
 
-
 ENV HOME /home/opam
 
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y aspcud binutils cmake curl g++ git libgmp-dev libgomp1 \
-                       libomp5 libomp-dev libx11-dev m4 make patch python2.7  \
-                       sudo unzip
+RUN apt update && apt upgrade -y && \
+    apt install -y aspcud binutils cmake curl g++ git libgmp-dev libgomp1 \
+                   libomp5 libomp-dev libx11-dev m4 make patch python2.7  \
+                   sudo tzdata unzip
+
+# Bug in Ubuntu Xenial: https://bugs.launchpad.net/ubuntu/+source/tzdata/+bug/1554806
+RUN ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
 
 RUN adduser --disabled-password --home $HOME --shell /bin/bash --gecos '' opam && \
     echo 'opam ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
@@ -31,8 +36,8 @@ RUN find $HOME/.opam -regex '.*\.\(cmt\|cmti\|annot\|byte\)' -delete && \
            $HOME/.opam/$OCAML_VERSION/man \
            $HOME/.opam/$OCAML_VERSION/build
 
-RUN apt-get autoremove -y && \
-    apt-get autoclean
+RUN apt autoremove -y --purge && \
+    apt autoclean
 
 
 USER opam
