@@ -34,7 +34,7 @@ let main zpath statefile outfile logfile do_false
        }
      ; max_restarts
      ; max_steps_on_restart
-     ; user_functions = gen_user_functions user_input_unparsed sygus.state_vars ;
+     ; user_functions = Utils.gen_user_functions user_input_unparsed sygus.state_vars ;
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile

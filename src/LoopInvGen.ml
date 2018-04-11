@@ -11,7 +11,7 @@ type 'a config = {
   max_restarts : int ;
   max_steps_on_restart : int ;
   model_completion_mode : [ `RandomGeneration | `UsingZ3 ] ;
-  user_functions: (string list)*string ;
+  user_functions: string list ;
 }
 
 let default_config = {
@@ -23,7 +23,7 @@ let default_config = {
   max_restarts = 64 ;
   max_steps_on_restart = 256 ;
   model_completion_mode = `RandomGeneration ;
-  user_functions = ([], "") ;
+  user_functions = [] ;
 }
 
 (*let satisfyPost ?(conf = default_config) ~(states : value list list)
@@ -66,7 +66,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                             (Types.string_of_typ t) ^ ")")) ^
       ") Bool " ^ inv ^ ")"
     in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
-                                           ; "(assert " ^ invf_call ^ ")" ; (snd conf.user_functions)]
+                                           ; "(assert " ^ invf_call ^ ")" 
+                                           ; Utils.flatten_user_functions conf.user_functions ]
      ; let pre_inv =
          VPIE.learnVPreCond
            ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 ~eval_term
