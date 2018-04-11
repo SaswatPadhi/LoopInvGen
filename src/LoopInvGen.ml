@@ -106,7 +106,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                      ^ "/" ^ (string_of_int conf.max_restarts) ^".")) ;
       let open Quickcheck
       in learnInvariant_internal
-          ~states:(List.dedup_and_sort (
+          ~states:(List.dedup_and_sort ~compare:(List.compare value_compare) (
               states @ (random_value ~size:conf.max_steps_on_restart
                                      ~seed:(`Deterministic seed)
                                      (Simulator.simulate_from sygus z3 model))))

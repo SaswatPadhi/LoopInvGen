@@ -18,8 +18,8 @@ build: [
 ]
 
 depends: [
-  "jbuilder"      {build & >= "1.0+beta10"}
+  "jbuilder"      {build & >= "1.0+beta19"}
   "alcotest"      {test & >= "0.7"}
-  "core"          {>= "0.10"}
-  "core_extended" {>= "0.10"}
+  "core"          {>= "0.11"}
+  "core_extended" {>= "0.11"}
 ]

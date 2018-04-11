@@ -98,4 +98,4 @@ chmod -R 777 starexec/bin
 echo -ne "\nPreparing starexec package (starexec/):\n"
 cd starexec
 tar cvzf ../LoopInvGen_SyGuS_INV.tgz ./*
-#rm -rf starexec
+cd .. ; rm -rf starexec

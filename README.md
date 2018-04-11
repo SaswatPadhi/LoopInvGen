@@ -12,8 +12,9 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 
 #### 2. Install (for example, using `opam install`) the following packages:
 ```
-  "core"          {>= "0.10"}
-  "core_extended" {>= "0.10"}
+  "core"          {>= "0.11"}
+  "core_extended" {>= "0.11"}
+  "jbuilder"      {>= "1.0+beta19"}
 ```
 
 #### 3. `git checkout` the [Z3 project][z3].
@@ -24,11 +25,12 @@ Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply
 
 For future builds after any chances to the source code, you only need to run `jbuilder build`.
 
-You can also configure the build mode to either `fast-compile` (default) or `optimize`, using: `jbuilder build -f @<mode>`.
+You can also configure the build mode to either `fast-compile` (default) or `optimize`, using: `jbuilder build @<mode>`.
+(You would need to run `jbuilder build` after changing the build mode.)
 
 ## Testing
 
-Execute `./benchmarks/run_all.sh` to run all the tests (SyGuS benchmarks from previous years).
+Execute `./benchmarks/run_all.sh -i` to run all the tests (SyGuS benchmarks from previous years).
 
 ## Usage
 

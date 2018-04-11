@@ -41,6 +41,12 @@ type value =
   | VError
   | VDontCare
 
+let value_compare (v1: value) (v2: value) =
+  match (v1, v2) with
+  | (VInt i1), (VInt i2) -> Int.compare i1 i2
+  | (VBool b1), (VBool b2) -> Bool.compare b1 b2
+  | _ -> Poly.compare v1 v2
+
 type program =
   | FCall of string * program list
   | Const of value

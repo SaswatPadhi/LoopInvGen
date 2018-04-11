@@ -30,5 +30,5 @@ gmon.out
 *.tgz
 _tags
 _bin
-flambda_flags
+.flambda_flags
 starexec

@@ -11,32 +11,34 @@
 
 (alias
     ((name optimize)
+     (deps ((universe)))
      (action
         (progn
-            (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly longer!\nUse (jbuilder build -f @fast-compile) to switch to [fast-compile] mode.'")
-            (bash "echo -ne '(-linkall -O3 -rounds 13)' > ${SCOPE_ROOT}/../../src/flambda_flags")))))
+            (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly longer!\nUse (jbuilder build @fast-compile) to switch to [fast-compile] mode instead.'")
+            (bash "echo -ne '(-linkall -O3 -rounds 13)' > ${SCOPE_ROOT}/../../src/.flambda_flags")))))
 
 (alias
     ((name fast-compile)
+     (deps ((universe)))
      (action
         (progn
-            (bash "echo -ne 'Current build mode is set to [fast-compile].\nUse (jbuilder build -f @optimize) to generate highly optimized binaries.'")
-            (bash "echo -ne '()' > ${SCOPE_ROOT}/../../src/flambda_flags")))))
+            (bash "echo -ne 'Current build mode is set to [fast-compile].\nUse (jbuilder build @optimize) to generate optimized binaries instead.'")
+            (bash "echo -ne '()' > ${SCOPE_ROOT}/../../src/.flambda_flags")))))
 
 (rule
-    ((targets (flambda_flags))
-     (deps ((alias fast)))
+    ((targets (.flambda_flags))
+     (deps ((alias fast-compile)))
      (mode fallback)
      (action
-        (bash "cp ${SCOPE_ROOT}/../../src/flambda_flags ."))))
+        (bash "cp ${SCOPE_ROOT}/../../src/.flambda_flags ."))))
 
 (alias
     ((name clean)
      (action
-        (bash "rm -rf ${SCOPE_ROOT}/../../src/flambda_flags ${SCOPE_ROOT}/../../_bin"))))
+        (bash "rm -rf ${SCOPE_ROOT}/../../src/.flambda_flags ${SCOPE_ROOT}/../../_bin"))))
 
 (executables
     ((names (Record Infer Verify))
      (public_names (lig-record lig-infer lig-verify))
-     (ocamlopt_flags (:standard (:include flambda_flags)))
+     (ocamlopt_flags (:standard (:include .flambda_flags)))
      (libraries (core core_extended))))
