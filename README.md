@@ -23,11 +23,9 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 - run `opam switch 4.06.1+flambda` for opam 1.x
 - run `opam switch create 4.06.1+flambda` for opam 2.x
 
-#### 2. Install (for example, using `opam install`) the following packages:
+#### 2. `opam install` the dependencies:
 ```
-  "core"          {>= "0.11"}
-  "core_extended" {>= "0.11"}
-  "jbuilder"      {>= "1.0+beta19"}
+opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta19.1
 ```
 
 #### 3. `git checkout` the [Z3 project][z3].
@@ -36,9 +34,9 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 The `create-package.sh` script would build Z3, copy it to `./_dep/`, and then build LoopInvGen.
 Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply run `./create-package.sh`.
 
-For future builds after any chances to the source code, you only need to run `jbuilder build`.
+For future builds after any changes to the source code, you only need to run `jbuilder build`.
 
-You can also configure the build mode to either `fast-compile` (default) or `optimize`, using: `jbuilder build @<mode>`.
+You can also configure the build mode to either `fast-compile` (default) or `optimize`, using: `jbuilder build @<mode>`.  
 (You would need to run `jbuilder build` after changing the build mode.)
 
 
