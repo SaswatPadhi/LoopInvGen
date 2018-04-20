@@ -42,7 +42,7 @@ You can also configure the build mode to either `fast-compile` (default) or `opt
 
 ## Testing
 
-Execute `./test_all.sh -b benchmarks/ -- -iv` to run all the tests (SyGuS benchmarks from previous years).
+Execute `./test_all.sh -b benchmarks` to run all the tests (SyGuS benchmarks from previous years).
 
 
 ## Usage

@@ -68,16 +68,30 @@ if [ -z "$STAREXEC" ] ; then exit 0 ; fi
 
 rm -rf starexec && mkdir -p starexec/bin
 
-cp -rL _bin _dep loopinvgen.sh starexec/bin
+cp -rL _bin _dep starexec/bin
 
-cat <<EOF > starexec/bin/starexec_run_default
+cat << "EOF" > starexec/bin/starexec_run_default
 #!/bin/bash
 
-./loopinvgen.sh -t 36000 -p "." -z "_dep/z3" "\$1"
+TESTCASE="$1"
+TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
+
+RECORD_FORKS=2
+RECORD_TIMEOUT=1s
+RECORD_STATES_PER_FORK=512
+
+for i in `seq 1 $RECORD_FORKS` ; do
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT           \
+           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK  \
+                           -r "seed$i" -o $TESTCASE_NAME.r$i $TESTCASE) >&2
+done
+grep -hv "^[[:space:]]*$" $TESTCASE_NAME.r* > $TESTCASE_NAME.states
+
+_bin/lig-infer -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE
 EOF
 chmod +x starexec/bin/starexec_run_default
 
-cat <<EOF > starexec/bin/starexec_run_debug
+cat << "EOF" > starexec/bin/starexec_run_debug
 #!/bin/bash
 
 pwd

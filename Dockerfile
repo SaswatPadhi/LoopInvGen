@@ -2,7 +2,7 @@
 
 FROM ubuntu:16.04
 
-MAINTAINER Saswat Padhi, saswat.sourav@gmail.com
+LABEL maintainer="padhi@cs.ucla.edu"
 
 
 ENV OPAM_VERSION  1.2.2

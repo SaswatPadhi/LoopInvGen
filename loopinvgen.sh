@@ -9,7 +9,7 @@ VERIFY="$BIN_DIR/lig-verify"
 if [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
   echo -en "
 Building OCaml modules ...
-" 1>&2 ; jbuilder build @local
+" >&2 ; jbuilder build @local
 fi
 
 trap 'jobs -p | xargs kill >&2 2> /dev/null' EXIT
@@ -22,11 +22,10 @@ MIN_STATES=63
 MIN_TIMEOUT=5
 MAX_STATES=1024
 
-FORKS=2
-STATES=512
-
 TIMEOUT=60
-REC_TIMEOUT=3s
+RECORD_TIMEOUT=1s
+RECORD_FORKS=2
+RECORD_STATES_PER_FORK=512
 
 RECORD_LOG=""
 INFER_LOG=""
@@ -44,8 +43,8 @@ DO_INTERACTIVE="no"
 show_status() {
   if [ "$DO_INTERACTIVE" == "yes" ]; then
     MSG="$1                " ; MSG_LEN=${#MSG}
-    echo -en "$MSG"
-    printf %0"$MSG_LEN"d | tr 0 \\b
+    echo -en "$MSG" >&2
+    printf %0"$MSG_LEN"d | tr 0 \\b >&2
   fi
 }
 
@@ -62,7 +61,7 @@ Configuration:
     [--intermediates-path, -p <path>] (_log)
     [--logging, -l <mode>]            (none)\t{none|rec|inf|all}
     [--max-states, -m <count>]        ($MAX_STATES)\t{> 0}
-    [--record-states, -s <count>]     ($STATES)\t{> $MIN_STATES}
+    [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_STATES}
     [--timeout, -t <seconds>]         ($TIMEOUT)\t{> $MIN_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
 
@@ -70,7 +69,7 @@ Arguments to Internal Programs:
     [--Record-args, -R \"<args>\"]    for ${RECORD}
     [--Infer-args, -I \"<args>\"]     for ${INFER}
     [--Verify-args, -V \"<args>\"]    for ${VERIFY}
-" 1>&2 ; exit -1
+" >&2 ; exit -1
 }
 
 OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path: -- "$@"`
@@ -164,12 +163,14 @@ if [ "$DO_LOG" != "none" ] ; then
   echo -en '' > "$TESTCASE_LOG"
 fi
 
+
 show_status "(@ record)"
 
-for i in `seq 0 $FORKS` ; do
+for i in `seq 1 $RECORD_FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
-  (timeout --kill-after=$REC_TIMEOUT $REC_TIMEOUT \
-           $RECORD -s $STATES -r "seed$i" -o $TESTCASE_STATE$i $LOG_PARAM \
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT   \
+           $RECORD -s $RECORD_STATES_PER_FORK -r "seed$i" \
+                   -o $TESTCASE_STATE$i $LOG_PARAM        \
                    $RECORD_ARGS $TESTCASE) >&2 &
 done
 wait
@@ -189,6 +190,7 @@ INFER_PID=$!
 wait $INFER_PID
 INFER_RESULT_CODE=$?
 
+
 if [ "$DO_VERIFY" = "yes" ]; then
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
@@ -205,6 +207,7 @@ elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo
   RESULT_CODE=0
 fi
+
 
 if [ "$DO_CLEAN" == "yes" ]; then
   rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
