@@ -6,6 +6,7 @@ Usage: $0 [flags]
 
 Flags:
     [--optimize, -O]        Optimize for speed (build takes MUCH longer!)
+    [--star-exec, -S]       Generate package for running on StarExec
 
 Configuration:
     [--make-z3, -z <path>]  Also build a specialized version of `z3`
@@ -14,13 +15,14 @@ Configuration:
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :Oz:j: --long optimize,make-z3:,jobs: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :OSz:j: --long optimize,starexec,make-z3:,jobs: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 JOBS="4"
 MAKE_Z3=""
+STAREXEC=""
 
 jbuilder build -f @fast-compile
 while true ; do
@@ -33,6 +35,9 @@ while true ; do
          shift ; shift ;;
     -O | --optimize )
          jbuilder build -f @optimize
+         shift ;;
+    -S | --star-exec )
+         STAREXEC="YES" ;
          shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -59,6 +64,7 @@ if [ -n "$MAKE_Z3" ] ; then
 fi
 
 jbuilder build @local -p LoopInvGen -j "$JOBS"
+if [ -z "$STAREXEC" ] ; then exit 0 ; fi
 
 rm -rf starexec && mkdir -p starexec/bin
 

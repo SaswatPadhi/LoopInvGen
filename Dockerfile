@@ -46,7 +46,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta19.1
+RUN opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta20
 
 RUN curl -LO https://github.com/Z3Prover/z3/archive/z3-$Z3_VERSION.zip && \
     unzip z3-$Z3_VERSION.zip && mv z3-z3-$Z3_VERSION z3-$Z3_VERSION
@@ -57,8 +57,8 @@ WORKDIR $HOME/LoopInvGen
 
 
 RUN cd LoopInvGen && \
-    ./create-package.sh --optimize --make-z3 $HOME/z3-$Z3_VERSION \
-                        --jobs `cat /proc/cpuinfo | grep processor | wc -l`
+    ./build_all.sh --optimize --make-z3 $HOME/z3-$Z3_VERSION \
+                   --jobs `cat /proc/cpuinfo | grep processor | wc -l`
 
 
 ENTRYPOINT [ "opam", "config", "exec", "--" ]

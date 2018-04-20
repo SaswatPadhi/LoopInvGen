@@ -51,7 +51,7 @@ show_status() {
 
 usage() {
   echo -en "
-Usage: $0 [flags] <benchmark.sl>
+Usage: $0 [options] <benchmark.sl>
 
 Flags:
     [--clean-intermediates, -c]

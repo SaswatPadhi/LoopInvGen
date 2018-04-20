@@ -32,9 +32,9 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 
 #### 3. `git checkout` the [Z3 project][z3].
 
-#### 4. Run `./create-package.sh -z /PATH/TO/z3`.
-The `create-package.sh` script would build Z3, copy it to `./_dep/`, and then build LoopInvGen.
-Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply run `./create-package.sh`.
+#### 4. Run `./build_all.sh -z /PATH/TO/z3`.
+The `build_all.sh` script would build Z3, copy it to `./_dep/`, and then build LoopInvGen.
+Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply run `./build_all.sh`.
 
 For future builds after any chances to the source code, you only need to run `jbuilder build`.
 
@@ -44,7 +44,7 @@ You can also configure the build mode to either `fast-compile` (default) or `opt
 
 ## Testing
 
-Execute `./benchmarks/run_all.sh -i` to run all the tests (SyGuS benchmarks from previous years).
+Execute `./test_all.sh -b benchmarks/ -- -iv` to run all the tests (SyGuS benchmarks from previous years).
 
 
 ## Usage
