@@ -58,7 +58,8 @@ VERIFY="$VERIFY -z $Z3_PATH"
 TOOL_ARGS="$1"
 
 # This is NOT dead code. Don't remove!
-TIMEFORMAT=$'\nreal\t%3R\nuser\t%3U\n sys\t%3S\ncpu%%\t%P'
+TIME=$'\nreal\t%e\nuser\t%U\n sys\t%S\ncpu%%\t%P'
+TIMEFORMAT=$'\nreal\t%R\nuser\t%U\n sys\t%S\ncpu%%\t%P'
 
 mkdir -p "$LOG_PATH"
 

@@ -20,7 +20,7 @@ if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
-JOBS="4"
+JOBS="`cat /proc/cpuinfo | grep processor | wc -l`"
 MAKE_Z3=""
 STAREXEC=""
 
@@ -83,9 +83,11 @@ RECORD_STATES_PER_FORK=512
 for i in `seq 1 $RECORD_FORKS` ; do
   (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT           \
            _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK  \
-                           -r "seed$i" -o $TESTCASE_NAME.r$i $TESTCASE) >&2
+                           -r "seed$i" -o $TESTCASE_NAME.r$i $TESTCASE) >&2 &
 done
-grep -hv "^[[:space:]]*$" $TESTCASE_NAME.r* > $TESTCASE_NAME.states
+wait
+
+grep -hv "^[[:space:]]*$" $TESTCASE_NAME.r* | sort -u > $TESTCASE_NAME.states
 
 _bin/lig-infer -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE
 EOF
@@ -118,4 +120,3 @@ chmod -R 777 starexec/bin
 echo -ne "\nPreparing starexec package (starexec/):\n"
 cd starexec
 tar cvzf ../LoopInvGen_SyGuS_INV.tgz ./*
-cd .. ; rm -rf starexec
