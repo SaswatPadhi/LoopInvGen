@@ -3,7 +3,7 @@
 SELF_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
-trap "kill -9 -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
+trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 SYGUS_EXT=".sl"
 RESULT_EXT=".res"
@@ -64,6 +64,7 @@ done
 
 VERIFY="$VERIFY -z $Z3_PATH"
 TOOL_ARGS="$@"
+TIMEOUT="${TIMEOUT}s"
 
 # This is NOT dead code. Don't remove!
 TIME=$'\nreal\t%e\nuser\t%U\n sys\t%S\ncpu%%\t%P'
@@ -95,12 +96,12 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   fi
 
   show_status "(@ infer)"
-  (time timeout --foreground --kill-after=$TIMEOUT $TIMEOUT \
+  (time timeout --foreground --signal=KILL $TIMEOUT \
                 $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES
   INFER_RESULT_CODE=$?
 
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
-    echo -n "[TIMEOUT]" | tee -a $TESTCASE_RES
+    echo -n "[TIMEOUT] " | tee -a $TESTCASE_RES
   fi
 
   show_status "(@ verify)"
@@ -128,9 +129,9 @@ print_counts TIMEOUT
 PASSING_TIMES="0"
 RESULT_FILES="`find $LOG_PATH -name *$RESULT_EXT`"
 
-if [ -n "$PASSING_FILES" ]; then
+if [ -n "$PASSING_FILES" ] ; then
   PASSING_FILES="`grep -l PASS`"
-  if [ -n "$PASSING_FILES" ]; then
+  if [ -n "$PASSING_FILES" ] ; then
     PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`
   fi
 fi

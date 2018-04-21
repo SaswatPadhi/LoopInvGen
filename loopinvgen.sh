@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# For reproducible results, we use a PRNG with a given seed (the argument to this function).
+# Snippet from: https://www.gnu.org/software/coreutils/manual/html_node/Random-sources.html#Random-sources
+get_seeded_random()
+{
+  openssl enc -aes-256-ctr -pass pass:"$1" -nosalt < /dev/zero 2> /dev/null
+}
+
+RANDOM_SEED="97"
 BIN_DIR="_bin"
 
 RECORD="$BIN_DIR/lig-record"
@@ -13,7 +21,7 @@ Building OCaml modules ...
 fi
 
 trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
-trap "kill -9 -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
+trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 INTERMEDIATES_DIR="_log"
 SYGUS_EXT=".sl"
@@ -41,14 +49,14 @@ DO_VERIFY="no"
 
 DO_INTERACTIVE="no"
 show_status() {
-  if [ "$DO_INTERACTIVE" == "yes" ]; then
-    MSG="$1                " ; MSG_LEN=${#MSG}
-    echo -en "$MSG" >&2
-    printf %0"$MSG_LEN"d | tr 0 \\b >&2
+  if [ "$DO_INTERACTIVE" == "yes" ] ; then
+    echo -en "$1" >&2
+    printf %16s%0"$(( ${#1} + 16 ))"d | tr 0 \\b >&2
   fi
 }
 
 usage() {
+  if [ -n "$1" ] ; then echo -en "\nERROR: $1\n" >&2 ; fi
   echo -en "
 Usage: $0 [options] <benchmark.sl>
 
@@ -71,7 +79,7 @@ Arguments to Internal Programs:
 " >&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,infer-timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :R:I:V:icvl:p:s:t:z: --long Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,logging:,intermediates-path:,record-states:,infer-timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -97,23 +105,23 @@ while true ; do
 
     -l | --logging )
          [ "$2" == "none" ] || [ "$2" == "rec" ] || \
-         [ "$2" == "inf" ] || [ "$2" == "all" ] || usage
+         [ "$2" == "inf" ] || [ "$2" == "all" ] || usage "Unknown source [$2] for logging."
          DO_LOG="$2"
          shift ; shift ;;
     -p | --intermediates-path )
-         [ -d "$2" ] || usage
+         [ -d "$2" ] || mkdir -p "$2"
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
     -s | --record-states )
-         [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] || usage
+         [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] || usage "$2 must be > $MIN_RECORD_STATES_PER_FORK."
          STATES="$2"
          shift ; shift ;;
-    -t | --timeout )
-         [ "$2" -gt "$MIN_INFER_TIMEOUT" ] || usage
-         TIMEOUT="$2"
+    -t | --infer-timeout )
+         [ "$2" -gt "$MIN_INFER_TIMEOUT" ] || usage "$2 must be > $MIN_INFER_TIMEOUT."
+         INFER_TIMEOUT="$2"
          shift ; shift ;;
     -z | --z3-path )
-         [ -f "$2" ] || usage
+         [ -f "$2" ] || usage "Z3 [$2] not found."
          Z3_PATH="$2"
          shift ; shift ;;
     -- ) shift; break ;;
@@ -122,7 +130,7 @@ while true ; do
 done
 
 TESTCASE="$1"
-[ -f "$TESTCASE" ] || usage
+[ -f "$TESTCASE" ] || usage "Input file [$2] not found."
 
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
@@ -140,7 +148,7 @@ RECORD="$RECORD -z $Z3_PATH"
 INFER="$INFER -z $Z3_PATH"
 VERIFY="$VERIFY -z $Z3_PATH"
 
-TIMEOUT="${TIMEOUT}s"
+INFER_TIMEOUT="${INFER_TIMEOUT}s"
 
 if [ "$DO_LOG" == "all" ] ; then
   RECORD_LOG="-l $TESTCASE_REC_LOG"
@@ -152,38 +160,37 @@ elif [ "$DO_LOG" == "inf" ] ; then
   INFER_LOG="-l $TESTCASE_LOG"
 fi
 
-mkdir -p "$INTERMEDIATES_DIR"
-rm -rf $TESTCASE_STATE_PATTERN
-if [ "$DO_LOG" != "none" ] ; then
-  echo -en '' > "$TESTCASE_LOG"
-fi
+rm -rf $TESTCASE_INVARIANT $TESTCASE_STATE_PATTERN $TESTCASE_ALL_STATES
+
+if [ "$DO_LOG" != "none" ] ; then echo -en '' > "$TESTCASE_LOG" ; fi
 
 
 show_status "(@ record)"
 
 for i in `seq 1 $RECORD_FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
-  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT   \
+  (timeout $RECORD_TIMEOUT \
            $RECORD -s $RECORD_STATES_PER_FORK -r "seed$i" \
                    -o $TESTCASE_STATE$i $LOG_PARAM        \
                    $RECORD_ARGS $TESTCASE) >&2 &
 done
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf > $TESTCASE_ALL_STATES
+grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u \
+  | shuf --random-source=<(get_seeded_random $RANDOM_SEED) > $TESTCASE_ALL_STATES
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
 
 show_status "(@ infer)"
 
-timeout --foreground --kill-after=$INFER_TIMEOUT $INFER_TIMEOUT \
+timeout --foreground $INFER_TIMEOUT \
         $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
                $INFER_ARGS $INFER_LOG >&2
 INFER_RESULT_CODE=$?
 
 
-if [ "$DO_VERIFY" = "yes" ]; then
+if [ "$DO_VERIFY" = "yes" ] ; then
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
   fi
@@ -191,17 +198,19 @@ if [ "$DO_VERIFY" = "yes" ]; then
   show_status "(@ verify)"
 
   touch $TESTCASE_INVARIANT
-  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE
+  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE > "$TESTCASE_PREFIX.result"
   RESULT_CODE=$?
+
+  show_status "" ; cat "$TESTCASE_PREFIX.result"
 elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo
   RESULT_CODE=0
 fi
 
 
-if [ "$DO_CLEAN" == "yes" ]; then
+if [ "$DO_CLEAN" == "yes" ] ; then
   rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
-  if [ $INFER_RESULT_CODE == 0 ] || [ $INFER_RESULT_CODE == 2 ]; then
+  if [ $INFER_RESULT_CODE == 0 ] || [ $INFER_RESULT_CODE == 2 ] ; then
     rm -rf $TESTCASE_ALL_STATES
   fi
 fi

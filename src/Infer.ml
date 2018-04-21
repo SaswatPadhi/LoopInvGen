@@ -50,13 +50,13 @@ let spec =
       +> flag "-f" (no_arg)           ~doc:"generate `false` instead of an empty invariant, in case of failure"
 
       +> flag "-max-conflicts"              (optional_with_default 0 int)
-                                            ~doc:"max size of the conflict group (POS+NEG). 0 = auto"
+                                            ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
       +> flag "-max-strengthening-attempts" (optional_with_default (LoopInvGen.default_config.for_VPIE.max_tries) int)
-                                            ~doc:"max candidates to consider, per strengthening. 0 = unlimited"
+                                            ~doc:"NUMBER max candidates to consider, per strengthening. 0 = unlimited"
       +> flag "-max-restarts"               (optional_with_default (LoopInvGen.default_config.max_restarts) int)
-                                            ~doc:"number of times the inference engine may restart"
+                                            ~doc:"NUMBER number of times the inference engine may restart"
       +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
-                                            ~doc:"number of states to collect after each restart"
+                                            ~doc:"NUMBER number of states to collect after each restart"
 
       +> anon (maybe_with_default "-" ("filename" %: file))
     )
