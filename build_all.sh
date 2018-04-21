@@ -24,7 +24,7 @@ JOBS="`cat /proc/cpuinfo | grep processor | wc -l`"
 MAKE_Z3=""
 STAREXEC=""
 
-jbuilder build -f @fast-compile
+jbuilder build @fast-compile
 while true ; do
   case "$1" in
     -z | --make-z3 )
@@ -34,7 +34,7 @@ while true ; do
          JOBS="$2" ;
          shift ; shift ;;
     -O | --optimize )
-         jbuilder build -f @optimize
+         jbuilder build @optimize
          shift ;;
     -S | --star-exec )
          STAREXEC="YES" ;
@@ -63,7 +63,7 @@ if [ -n "$MAKE_Z3" ] ; then
   cd "$LIG"
 fi
 
-jbuilder build @local -p LoopInvGen -j "$JOBS"
+jbuilder build @local -j "$JOBS"
 if [ -z "$STAREXEC" ] ; then exit 0 ; fi
 
 rm -rf starexec && mkdir -p starexec/bin

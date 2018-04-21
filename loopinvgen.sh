@@ -12,20 +12,20 @@ Building OCaml modules ...
 " >&2 ; jbuilder build @local
 fi
 
-trap 'jobs -p | xargs kill >&2 2> /dev/null' EXIT
+trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
+trap "kill -9 -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 INTERMEDIATES_DIR="_log"
 SYGUS_EXT=".sl"
 Z3_PATH="_dep/z3"
 
-MIN_STATES=63
-MIN_TIMEOUT=5
-MAX_STATES=1024
+INFER_TIMEOUT=60
+MIN_INFER_TIMEOUT=5
 
-TIMEOUT=60
 RECORD_TIMEOUT=1s
 RECORD_FORKS=2
 RECORD_STATES_PER_FORK=512
+MIN_RECORD_STATES_PER_FORK=63
 
 RECORD_LOG=""
 INFER_LOG=""
@@ -60,9 +60,8 @@ Flags:
 Configuration:
     [--intermediates-path, -p <path>] (_log)
     [--logging, -l <mode>]            (none)\t{none|rec|inf|all}
-    [--max-states, -m <count>]        ($MAX_STATES)\t{> 0}
-    [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_STATES}
-    [--timeout, -t <seconds>]         ($TIMEOUT)\t{> $MIN_TIMEOUT}
+    [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
+    [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
 
 Arguments to Internal Programs:
@@ -72,7 +71,7 @@ Arguments to Internal Programs:
 " >&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,infer-timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -101,20 +100,16 @@ while true ; do
          [ "$2" == "inf" ] || [ "$2" == "all" ] || usage
          DO_LOG="$2"
          shift ; shift ;;
-    -m | --max-states )
-         [ "$2" -gt "0" ] || usage
-         MAX_STATES="$2"
-         shift ; shift ;;
     -p | --intermediates-path )
          [ -d "$2" ] || usage
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
     -s | --record-states )
-         [ "$2" -gt "$MIN_STATES" ] || usage
+         [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] || usage
          STATES="$2"
          shift ; shift ;;
     -t | --timeout )
-         [ "$2" -gt "$MIN_TIMEOUT" ] || usage
+         [ "$2" -gt "$MIN_INFER_TIMEOUT" ] || usage
          TIMEOUT="$2"
          shift ; shift ;;
     -z | --z3-path )
@@ -175,19 +170,16 @@ for i in `seq 1 $RECORD_FORKS` ; do
 done
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
-  | head -n $MAX_STATES > $TESTCASE_ALL_STATES
+grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf > $TESTCASE_ALL_STATES
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
 
 show_status "(@ infer)"
 
-(timeout --kill-after=$TIMEOUT $TIMEOUT \
-         $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-                $INFER_ARGS $INFER_LOG) >&2 &
-INFER_PID=$!
-wait $INFER_PID
+timeout --foreground --kill-after=$INFER_TIMEOUT $INFER_TIMEOUT \
+        $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
+               $INFER_ARGS $INFER_LOG >&2
 INFER_RESULT_CODE=$?
 
 
@@ -199,9 +191,7 @@ if [ "$DO_VERIFY" = "yes" ]; then
   show_status "(@ verify)"
 
   touch $TESTCASE_INVARIANT
-  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE &
-  VERIFY_PID=$!
-  wait $VERIFY_PID
+  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE
   RESULT_CODE=$?
 elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat $TESTCASE_INVARIANT ; echo

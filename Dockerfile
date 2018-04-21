@@ -57,8 +57,7 @@ WORKDIR $HOME/LoopInvGen
 
 
 RUN cd LoopInvGen && \
-    ./build_all.sh --optimize --make-z3 $HOME/z3-$Z3_VERSION \
-                   --jobs `cat /proc/cpuinfo | grep processor | wc -l`
+    ./build_all.sh --optimize --make-z3 $HOME/z3-$Z3_VERSION
 
 
 ENTRYPOINT [ "opam", "config", "exec", "--" ]

@@ -2,12 +2,16 @@
 
 SELF_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
+trap "kill -9 -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
+
 SYGUS_EXT=".sl"
 RESULT_EXT=".res"
 
 LOG_PATH="$SELF_DIR/_log"
 Z3_PATH="$SELF_DIR/_dep/z3"
 
+TIMEOUT="60"
 TOOL="$SELF_DIR/loopinvgen.sh"
 VERIFY="$SELF_DIR/_bin/lig-verify"
 
@@ -23,13 +27,14 @@ Usage: $0 [options] -b <benchmarks_path> -- [tool specific options]
 
 Configuration:
     --benchmarks, -b <path>
-    [--log-path, -l <path>]           ($LOG_PATH}
+    [--log-path, -l <path>]           ($LOG_PATH)
+    [--time-out, -m <seconds>]        ($TIMEOUT)
     [--tool, -t <path>]               ($TOOL)
     [--z3-path, -z <path>]            ($Z3_PATH)
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:l:t:z: --long benchmarks:,log-path:,tool:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :b:l:m:t:z: --long benchmarks:,log-path:,time-out:,tool:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -41,6 +46,9 @@ while true ; do
          shift ; shift ;;
     -l | --log-path )
          LOG_PATH="$2"
+         shift ; shift ;;
+    -m | --time-out )
+         TIMEOUT="$2"
          shift ; shift ;;
     -t | --tool )
          TOOL="$2"
@@ -55,7 +63,7 @@ while true ; do
 done
 
 VERIFY="$VERIFY -z $Z3_PATH"
-TOOL_ARGS="$1"
+TOOL_ARGS="$@"
 
 # This is NOT dead code. Don't remove!
 TIME=$'\nreal\t%e\nuser\t%U\n sys\t%S\ncpu%%\t%P'
@@ -87,14 +95,16 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   fi
 
   show_status "(@ infer)"
-  (time $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES
+  (time timeout --foreground --kill-after=$TIMEOUT $TIMEOUT \
+                $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES
+  INFER_RESULT_CODE=$?
 
-  INFER_RESULT_CODE=${PIPESTATUS[0]}
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo -n "[TIMEOUT]" | tee -a $TESTCASE_RES
   fi
 
   show_status "(@ verify)"
+  touch $TESTCASE_INV
   $VERIFY -i $TESTCASE_INV $TESTCASE | tee -a $TESTCASE_RES
 
   TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
@@ -115,11 +125,14 @@ print_counts PASS FAIL
 echo ""
 print_counts TIMEOUT
 
-PASSING_FILES=`grep -l "PASS" $(find $LOG_PATH -name *$RESULT_EXT)`
+PASSING_TIMES="0"
+RESULT_FILES="`find $LOG_PATH -name *$RESULT_EXT`"
+
 if [ -n "$PASSING_FILES" ]; then
-  PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`
-else
-  PASSING_TIMES="0"
+  PASSING_FILES="`grep -l PASS`"
+  if [ -n "$PASSING_FILES" ]; then
+    PASSING_TIMES=`grep real $PASSING_FILES | cut -f2`
+  fi
 fi
 
 echo -e "\nPASS Stats:"

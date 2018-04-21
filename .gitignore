@@ -21,7 +21,7 @@ _build/
 
 # External
 _dep
-_log
+_log*
 _comp
 
 # Temporaries
@@ -32,3 +32,6 @@ _tags
 _bin
 .flambda_flags
 starexec
+
+# Editor
+.vscode
