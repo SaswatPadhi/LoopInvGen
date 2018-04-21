@@ -72,6 +72,10 @@ $ ./loopinvgen.sh benchmarks/2016/array.sl
 We trap <kbd>CTRL</kbd>+<kbd>C</kbd> (`SIGINT` signal) to break out of the current stage,
 and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill LoopInvGen and with its child processes.
 
+<details>
+
+#### Verifying Generated Invariants
+
 The `-v` switch makes LoopInvGen verify the generated invariant:
 ```bash
 $ ./loopinvgen.sh -v benchmarks/2016/array.sl
@@ -93,6 +97,8 @@ FAIL (NO SOLUTION)  : The benchmark is invalid (no invariant can verify it),
 
 Try `./loopinvgen.sh -h` for other options that allow more control over the inference process.
 
+</details>
+
 
 ## Testing
 
@@ -102,18 +108,23 @@ Execute `./test_all.sh -b benchmarks` to run LoopInvGen on all benchmarks in [be
 we trap <kbd>CTRL</kbd>+<kbd>C</kbd> (`SIGINT` signal) to kill the currently running benchmark,
 and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill the `test_all.sh` script with its child processes.
 
+<details>
+
 The `test_all.sh` script invokes LoopInvGen for invariant inference,
 and then verifies that the generated invariant is sufficient to prove correctness of the SyGuS benchmark.  
-For each benchmark, it generates one of the verdicts mentioned [above](#verifying-generated-invariants),
-or:
+For each benchmark, it generates one of the verdicts mentioned [above](#verifying-generated-invariants), or:
 ```
 [SKIPPED] <verdict> : Invariant inference was skipped for an already passing benchmark.
                       <verdict> is one of the PASS verdicts above.
 ```
 
+#### Caching of Results
+
 Since `test_all.sh` caches results from previous runs, it skips benchmarks that are known to be passing.  
 This may be disabled by deleting the log directory (default: `_log`),
 or by specifying a new log directory (`-l -new_log`).
+
+#### Benchmarking with Other Inference Tools
 
 `test_all.sh` is a generic benchmarking script that may run any invariant inference tool.
 which accepts the SyGuS format. This makes it easier for us to compare various tools easily.  
@@ -122,7 +133,7 @@ To use an invariant inference tool other than LoopInvGen, invoke it as:
 
 Try `./test_all.sh -h` for more options.
 
-
+</details>
 
 
 

@@ -134,9 +134,8 @@ let simplify (z3 : t) (q : string) : string =
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
                   ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
     with [ goal ] -> goal
-       | goals -> raise (Internal_Exn ("Unexpected goals:\n"
+       | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n"
                                       ^ (String.concat ~sep:"\n" goals)))
-  in let unexpected_exn = Internal_Exn ("Unexpected z3 goals: " ^ goal)
   in match Sexp.parse goal with
      | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)
        -> let goals = List.filter_map goalexpr
@@ -146,7 +145,7 @@ let simplify (z3 : t) (q : string) : string =
                                    | l -> Some (to_string_hum l))
           in let goalstr = String.concat ~sep:" " goals
           in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"
-     | _ -> raise unexpected_exn
+     | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
 
 let model_to_string ?(rowsep = " ") ?(colsep = " ") ?(prefix = "(= ")
                     ?(postfix = ")") (model : model option) : string =
