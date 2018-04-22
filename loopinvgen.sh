@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# For reproducible results, we use a PRNG with a given seed (the argument to this function).
-# Snippet from: https://www.gnu.org/software/coreutils/manual/html_node/Random-sources.html#Random-sources
-get_seeded_random()
-{
-  openssl enc -aes-256-ctr -pass pass:"$1" -nosalt < /dev/zero 2> /dev/null
-}
-
-RANDOM_SEED="97"
 BIN_DIR="_bin"
 
 RECORD="$BIN_DIR/lig-record"
@@ -30,8 +22,8 @@ Z3_PATH="_dep/z3"
 INFER_TIMEOUT=60
 MIN_INFER_TIMEOUT=5
 
-RECORD_TIMEOUT=1s
-RECORD_FORKS=2
+RECORD_TIMEOUT=0.3s
+RECORD_FORKS=3
 RECORD_STATES_PER_FORK=512
 MIN_RECORD_STATES_PER_FORK=63
 
@@ -56,7 +48,7 @@ show_status() {
 }
 
 usage() {
-  if [ -n "$1" ] ; then echo -en "\nERROR: $1\n" >&2 ; fi
+  if [ -n "$1" ] ; then echo -e "\nERROR: $1" >&2 ; fi
   echo -en "
 Usage: $0 [options] <benchmark.sl>
 
@@ -66,7 +58,7 @@ Flags:
     [--verify, -v]
 
 Configuration:
-    [--intermediates-path, -p <path>] (_log)
+    [--intermediates-dir, -p <path>]  (_log)
     [--logging, -l <mode>]            (none)\t{none|rec|inf|all}
     [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
@@ -79,7 +71,7 @@ Arguments to Internal Programs:
 " >&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:icvl:p:s:t:z: --long Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,logging:,intermediates-path:,record-states:,infer-timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :R:I:V:icvl:p:s:t:z: --long Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,logging:,intermediates-dir:,record-states:,infer-timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -108,8 +100,7 @@ while true ; do
          [ "$2" == "inf" ] || [ "$2" == "all" ] || usage "Unknown source [$2] for logging."
          DO_LOG="$2"
          shift ; shift ;;
-    -p | --intermediates-path )
-         [ -d "$2" ] || mkdir -p "$2"
+    -p | --intermediates-dir )
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
     -s | --record-states )
@@ -129,8 +120,11 @@ while true ; do
   esac
 done
 
+[ -d "$INTERMEDIATES_DIR" ] || mkdir -p "$INTERMEDIATES_DIR"
+[ -d "$INTERMEDIATES_DIR" ] || usage "Intermediates directory [$INTERMEDIATES_DIR] not found."
+
 TESTCASE="$1"
-[ -f "$TESTCASE" ] || usage "Input file [$2] not found."
+[ -f "$TESTCASE" ] || usage "Input file [$TESTCASE] not found."
 
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
@@ -176,8 +170,7 @@ for i in `seq 1 $RECORD_FORKS` ; do
 done
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u \
-  | shuf --random-source=<(get_seeded_random $RANDOM_SEED) > $TESTCASE_ALL_STATES
+grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STATES
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 

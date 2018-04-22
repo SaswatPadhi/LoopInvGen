@@ -31,7 +31,7 @@ gmon.out
 _tags
 _bin
 .flambda_flags
-starexec
+starexec*
 
 # Editor
 .vscode

@@ -46,7 +46,7 @@ let read_inv_from_chan in_chan ~(sygus : SyGuS.t) : string =
 let string_of_result res =
   match res with
   | PASS -> "PASS"
-  | FAIL x -> "FAIL [" ^ (String.concat x ~sep:" , ") ^ "]"
+  | FAIL x -> "FAIL (" ^ (String.concat x ~sep:" , ") ^ ")"
   | IMPOSSIBLE_PASS -> "PASS (NO SOLUTION)"
   | IMPOSSIBLE_FAIL -> "FAIL (NO SOLUTION)"
 

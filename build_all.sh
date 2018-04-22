@@ -5,49 +5,56 @@ usage() {
 Usage: $0 [flags]
 
 Flags:
-    [--optimize, -O]        Optimize for speed (build takes MUCH longer!)
-    [--star-exec, -S]       Generate package for running on StarExec
+    [--debug, -D]             Create a debug build (little optimization + logging support)
+    [--star-exec, -S]         Generate package for running on StarExec
 
 Configuration:
-    [--make-z3, -z <path>]  Also build a specialized version of `z3`
-    [--jobs, -j <num>]      Use <num> jobs in `make`
+    [--build-z3, -z <path>]   Also create a statically-linked build of z3
+    [--jobs, -j <num>]        Use <num> jobs for building LoopInvGen (and z3)
 " 1>&2 ;
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :OSz:j: --long optimize,starexec,make-z3:,jobs: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :DSj:z: --long debug,starexec,jobs:,build-z3: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 JOBS="`cat /proc/cpuinfo | grep processor | wc -l`"
-MAKE_Z3=""
-STAREXEC=""
 
-jbuilder build @fast-compile
+MAKE_Z3_AT=""
+MAKE_STAREXEC=""
+MAKE_DEBUG=""
+
 while true ; do
   case "$1" in
-    -z | --make-z3 )
-         MAKE_Z3="$2" ;
-         shift ; shift ;;
+    -D | --debug )
+         MAKE_DEBUG="YES"
+         shift ;;
+    -S | --star-exec )
+         MAKE_STAREXEC="YES" ;
+         shift ;;
     -j | --jobs )
          JOBS="$2" ;
          shift ; shift ;;
-    -O | --optimize )
-         jbuilder build @optimize
-         shift ;;
-    -S | --star-exec )
-         STAREXEC="YES" ;
-         shift ;;
+    -z | --build-z3 )
+         MAKE_Z3_AT="$2" ;
+         shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
   esac
 done
 
-if [ -n "$MAKE_Z3" ] ; then
+if [ -n "$MAKE_DEBUG" ] ; then
+  jbuilder build @debug
+else
+  jbuilder build @optimize
+fi
+
+if [ -n "$MAKE_Z3_AT" ] ; then
   LIG=`pwd`
   Z3_BUILD_DIR="build_for_pie"
-  cd "$MAKE_Z3"
+  cd "$MAKE_Z3_AT"
 
   rm -rf "$Z3_BUILD_DIR"
   mkdir -p "$Z3_BUILD_DIR"
@@ -64,11 +71,12 @@ if [ -n "$MAKE_Z3" ] ; then
 fi
 
 jbuilder build @local -j "$JOBS"
-if [ -z "$STAREXEC" ] ; then exit 0 ; fi
+if [ -z "$MAKE_STAREXEC" ] ; then exit 0 ; fi
 
 rm -rf starexec && mkdir -p starexec/bin
 
 cp -rL _bin _dep starexec/bin
+rm -rf starexec/bin/_bin/lig-verify
 
 cat << "EOF" > starexec/bin/starexec_run_default
 #!/bin/bash
@@ -76,8 +84,8 @@ cat << "EOF" > starexec/bin/starexec_run_default
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 
-RECORD_FORKS=2
-RECORD_TIMEOUT=1s
+RECORD_FORKS=3
+RECORD_TIMEOUT=0.3s
 RECORD_STATES_PER_FORK=512
 
 for i in `seq 1 $RECORD_FORKS` ; do
@@ -99,13 +107,12 @@ cat << "EOF" > starexec/bin/starexec_run_debug
 pwd
 ls -lah
 
-file _dep/z3 _bin/lig-record _bin/lig-infer _bin/lig-verify
-ldd _dep/z3 _bin/lig-record _bin/lig-infer _bin/lig-verify
+file _dep/z3 _bin/lig-record _bin/lig-infer
+ldd _dep/z3 _bin/lig-record _bin/lig-infer
 
 _dep/z3
 _bin/lig-record -h
 _bin/lig-infer -h
-_bin/lig-verify -h
 EOF
 chmod +x starexec/bin/starexec_run_debug
 

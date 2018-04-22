@@ -14,20 +14,20 @@
      (deps ((universe)))
      (action
         (progn
-            (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly longer!\nUse (jbuilder build @fast-compile) to switch to [fast-compile] mode instead.'")
+            (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly (2x) longer!\nUse (jbuilder build @debug) to switch to [debug] mode instead.'")
             (bash "echo -ne '(-linkall -O3 -rounds 13)' > ${SCOPE_ROOT}/../../src/.flambda_flags")))))
 
 (alias
-    ((name fast-compile)
+    ((name debug)
      (deps ((universe)))
      (action
         (progn
-            (bash "echo -ne 'Current build mode is set to [fast-compile].\nUse (jbuilder build @optimize) to generate optimized binaries instead.'")
+            (bash "echo -ne 'Current build mode is set to [debug].\nUse (jbuilder build @optimize) to generate optimized binaries instead.'")
             (bash "echo -ne '()' > ${SCOPE_ROOT}/../../src/.flambda_flags")))))
 
 (rule
     ((targets (.flambda_flags))
-     (deps ((alias fast-compile)))
+     (deps ((alias optimize)))
      (mode fallback)
      (action
         (bash "cp ${SCOPE_ROOT}/../../src/.flambda_flags ."))))

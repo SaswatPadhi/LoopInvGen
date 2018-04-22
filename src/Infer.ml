@@ -9,9 +9,11 @@ let main zpath statefile outfile logfile do_false
          filename () =
   Utils.start_logging_to ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
-  let states = List.(map (In_channel.input_lines state_chan)
-                       ~f:(fun l -> map (Types.deserialize_values l)
-                                        ~f:(fun v -> Option.value_exn v)))
+  let states = List.(permute
+    ~random_state:(Random.State.make [| 79 ; 97 |]) 
+    (map (In_channel.input_lines state_chan)
+         ~f:(fun l -> map (Types.deserialize_values l)
+                          ~f:(fun v -> Option.value_exn v))))
   in In_channel.close state_chan
    ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
                       " program states."))

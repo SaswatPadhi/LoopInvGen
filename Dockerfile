@@ -17,8 +17,8 @@ ENV HOME /home/opam
 RUN apt update && \
     apt upgrade -y && \
     apt install -y aspcud binutils cmake curl g++ git libgmp-dev libgomp1 \
-                   libomp5 libomp-dev libx11-dev m4 make openssl patch    \
-                   python2.7 sudo tzdata unzip
+                   libomp5 libomp-dev libx11-dev m4 make patch python2.7  \
+                   sudo tzdata unzip
 
 # Bug in Ubuntu Xenial: https://bugs.launchpad.net/ubuntu/+source/tzdata/+bug/1554806
 RUN ln -fs /usr/share/zoneinfo/$TIME_ZONE /etc/localtime && \
@@ -56,8 +56,7 @@ RUN git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 WORKDIR $HOME/LoopInvGen
 
 
-RUN cd LoopInvGen && \
-    ./build_all.sh --optimize --make-z3 $HOME/z3-$Z3_VERSION
+RUN cd LoopInvGen && ./build_all.sh --make-z3 $HOME/z3-$Z3_VERSION
 
 
 ENTRYPOINT [ "opam", "config", "exec", "--" ]

@@ -2,6 +2,16 @@
 
 A loop invariant generator.
 
+#### :page_with_curl: Papers and Presentations
+
+- [SyGuS-COMP 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) -
+  Solver [Presentation](docs/2017_SyGuS-COMP-Presentation.pdf) and [Description](docs/2017_SyGuS-COMP-Description.pdf)
+- [PLDI 2016](http://conf.researchr.org/home/pldi-2016) -
+  Original [paper on PIE](http://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf) (Precondition Inference Engine), the backbone of LoopInvGen
+
+#### :trophy: Awards and Honors
+
+- :1st_place_medal: [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Results](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf))
 
 ## Installation
 
@@ -22,7 +32,7 @@ You may also limit the container's memory and/or CPU usage limits:
 ```bash
 # Create a LoopInvGen container with 4GB memory, no swap and 1 CPU
 
-docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
+$ docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
 ```
 
 See [the official Docker guide](https://docs.docker.com/config/containers/resource_constraints)
@@ -34,7 +44,14 @@ for more details on applying resource constraints.
 
 <details>
 
-<summary>[Click] to reveal instructions</summary>
+<summary><kbd>CLICK</kbd> to reveal instructions</summary>
+
+#### 0. Get the required packages for your OS.
+
+Please see the [`Dockerfile`](Dockerfile#L19-L21) for the complete list of required packages
+for building LoopInvGen and its dependencies.  
+Most of these packages are already installed on standard installations of most *nix distributions,
+except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 
 #### 1. Install `ocaml` >= 4.04.2.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enabled.
@@ -42,27 +59,36 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 - run `opam switch 4.06.1+flambda` for opam 1.x
 - run `opam switch create 4.06.1+flambda` for opam 2.x
 
-#### 2. `opam install` the dependencies:
-```
-opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta20
+#### 2. `opam install` the dependencies.
+```bash
+$ opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta20
 ```
 
-#### 3. `git checkout` the [Z3 project][z3].
+#### 3. Get the [Z3 project][z3].
+We have tested LoopInvGen with the latest stable version of Z3 (4.6.0).
+You could either:
+- `git checkout https://github.com/Z3Prover/z3.git` for the bleeding edge version, or
+- `wget https://github.com/Z3Prover/z3/archive/z3-4.6.0.zip && unzip z3-4.6.0.zip` for the stable version
 
-#### 4. Run `./build_all.sh -z /PATH/TO/z3`.
+#### 4. `git clone` this project, and build everything.
+```bash
+$ ./build_all.sh -z /PATH/TO/z3_dir
+```
 The `build_all.sh` script would build Z3, copy it to `./_dep/`, and then build LoopInvGen.
 Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply run `./build_all.sh`.
 
-For future builds after any changes to the source code, you only need to run `jbuilder build`.
+For debug builds, use the `-D` or `--debug` switch when invoking `./build_all.sh`.
 
-You can also configure the build mode to either `fast-compile` (default) or `optimize`, using: `jbuilder build @<mode>`.  
+For future builds after any changes to the source code, you only need to run `jbuilder build`.
+You can configure the build mode to either `debug` (default) or `optimize`,
+using: `jbuilder build @<mode>`.  
 (You would need to run `jbuilder build` after changing the build mode.)
 
 </details>
 
 ## Usage
 
-Infer invariants for SyGuS benchmarks by invoking LookInvGen as:
+Infer invariants for SyGuS benchmarks by invoking LoopInvGen as:
 ```bash
 $ ./loopinvgen.sh benchmarks/2016/array.sl
 (define-fun inv-f ((x Int) (y Int) (z Int)) Bool (not (and (>= x 5) (not (<= y z)))))
@@ -87,7 +113,7 @@ It gives one of the following verdicts:
 PASS                : The generated invariant successfully verifies the benchmark.
 PASS (NO SOLUTION)  : The benchmark is invalid (no invariant can verify it),
                       and no invariant was generated.
-FAIL [<vc1>,...]    : The generated invariant fails to verify the VCs: vc1, vc2 etc.
+FAIL (<vc1>,...)    : The generated invariant fails to verify the VCs: vc1, vc2 etc.
                       where each VC is one of [pre, post, trans].
 FAIL (NO SOLUTION)  : The benchmark is invalid (no invariant can verify it),
                       but an invariant (that is not empty/false) was generated.
@@ -121,15 +147,17 @@ For each benchmark, it generates one of the verdicts mentioned [above](#verifyin
 #### Caching of Results
 
 Since `test_all.sh` caches results from previous runs, it skips benchmarks that are known to be passing.  
-This may be disabled by deleting the log directory (default: `_log`),
-or by specifying a new log directory (`-l -new_log`).
+This may be disabled by:
+- using the `-r` or `--rerun-cached` switch with `test_all.sh`, or
+- deleting the previous log directory (default: `_log`), or
+- specifying a new log directory (`-l _new_log`).
 
 #### Benchmarking with Other Inference Tools
 
 `test_all.sh` is a generic benchmarking script that may run any invariant inference tool.
 which accepts the SyGuS format. This makes it easier for us to compare various tools easily.  
 To use an invariant inference tool other than LoopInvGen, invoke it as:
-`test_all.sh -b benchmarks -t <path/to/tool> [-- tool specific options ]`
+`test_all.sh -b <path/to/benchmarks> -t <path/to/tool> [-- -tool -specific -options]`
 
 Try `./test_all.sh -h` for more options.
 
@@ -141,3 +169,4 @@ Try `./test_all.sh -h` for more options.
 [travis]:       https://travis-ci.org/SaswatPadhi/LoopInvGen
 [z3]:           https://github.com/Z3Prover/z3
 [benchmarks/]:  benchmarks/
+[SyGuSCOMP17]:  http://www.sygus.org/SyGuS-COMP2017.html
