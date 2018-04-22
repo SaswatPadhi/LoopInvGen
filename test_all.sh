@@ -173,6 +173,12 @@ awk -F',' '{
   printf "AVG(%s) = %0.3f\n", header, sum/i
   printf "MAX(%s) = %0.3f  [%s]\n", header, max, max_file
   printf "SUM(%s) = %0.3f\n", header, sum
-}' "$SUMMARY"
+
+  printf "\nMIN, %s, %0.3f\n", min_file, min > "/dev/stderr"
+  printf "MED, ---, %0.3f\n", data[int((i-1)/2)] > "/dev/stderr"
+  printf "AVG, ---, %0.3f\n", sum/i > "/dev/stderr"
+  printf "MAX, %s, %0.3f\n", max_file, max > "/dev/stderr"
+  printf "SUM, ---, %0.3f\n", sum > "/dev/stderr"
+}' "$SUMMARY" 2>> "$SUMMARY"
 
 echo -e "\nA CSV summary has been saved to: $SUMMARY."

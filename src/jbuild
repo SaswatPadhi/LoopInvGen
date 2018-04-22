@@ -15,7 +15,8 @@
      (action
         (progn
             (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly (2x) longer!\nUse (jbuilder build @debug) to switch to [debug] mode instead.'")
-            (bash "echo -ne '(-linkall -O3 -rounds 13)' > ${SCOPE_ROOT}/../../src/.flambda_flags")))))
+            (bash "echo -ne '(-O3 -rounds 5)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
+            (bash "echo -ne '#define LOGGING 0' > ${SCOPE_ROOT}/../../src/config.h")))))
 
 (alias
     ((name debug)
@@ -23,7 +24,8 @@
      (action
         (progn
             (bash "echo -ne 'Current build mode is set to [debug].\nUse (jbuilder build @optimize) to generate optimized binaries instead.'")
-            (bash "echo -ne '()' > ${SCOPE_ROOT}/../../src/.flambda_flags")))))
+            (bash "echo -ne '(-Oclassic)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
+            (bash "echo -ne '#define LOGGING 1' > ${SCOPE_ROOT}/../../src/config.h")))))
 
 (rule
     ((targets (.flambda_flags))
@@ -31,6 +33,13 @@
      (mode fallback)
      (action
         (bash "cp ${SCOPE_ROOT}/../../src/.flambda_flags ."))))
+
+(rule
+    ((targets (config.h))
+     (deps ((alias optimize)))
+     (mode fallback)
+     (action
+        (bash "cp ${SCOPE_ROOT}/../../src/config.h ."))))
 
 (alias
     ((name clean)
@@ -41,4 +50,6 @@
     ((names (Record Infer Verify))
      (public_names (lig-record lig-infer lig-verify))
      (ocamlopt_flags (:standard (:include .flambda_flags)))
-     (libraries (core core_extended))))
+     (libraries (core core_extended))
+     (preprocessor_deps ((file config.h)))
+     (preprocess (pps (ppx_optcomp)))))

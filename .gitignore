@@ -19,6 +19,10 @@ _build/
 */.merlin
 *.install
 
+# other generated files
+src/.flambda_flags
+src/config.h
+
 # External
 _dep
 _log*
@@ -30,7 +34,6 @@ gmon.out
 *.tgz
 _tags
 _bin
-.flambda_flags
 starexec*
 
 # Editor
