@@ -56,7 +56,7 @@ RUN git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 WORKDIR $HOME/LoopInvGen
 
 
-RUN cd LoopInvGen && ./build_all.sh --make-z3 $HOME/z3-$Z3_VERSION
+RUN opam config exec -- ./build_all.sh --build-z3 $HOME/z3-$Z3_VERSION
 
 
 ENTRYPOINT [ "opam", "config", "exec", "--" ]
