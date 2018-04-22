@@ -2,7 +2,7 @@
 
 SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
-trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
+trap 'kill -TERM -$INFER_PID > /dev/null 2> /dev/null' INT
 trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 SYGUS_EXT=".sl"
@@ -114,7 +114,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
       TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
       echo "[SKIPPED] PASS @ $TESTCASE_REAL_TIME"
-      echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" > "$SUMMARY"
+      echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$SUMMARY"
       continue
     fi
   fi
@@ -122,8 +122,9 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   echo > $TESTCASE_INV ; echo > $TESTCASE_RES
 
   show_status "(@ infer)"
-  (time timeout --foreground --signal=KILL $TIMEOUT \
-                $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES
+  (time timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
+  INFER_PID=$!
+  wait $INFER_PID
 
   INFER_RESULT_CODE=$?
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
@@ -155,16 +156,17 @@ print_counts TIMEOUT
 
 echo -e "\nPASS Stats:"
 awk -F',' '{
-  if(NR == 1) { header = $3 ; next }
+  if (NR == 1) { header = $3 ; next }
+  if ($2 !~ /.*PASS.*/) { next }
 
   data[i++] = $3 ; sum += $3
-  if(min == "") {
+  if (min == "") {
     min = max = $3
     min_file = max_file = $1
   }
 
-  if($1 > max) { max = $3 ; max_file = $1 }
-  else if($1 < min) { min = $3 ; min_file = $1 }
+  if ($3 > max) { max = $3 ; max_file = $1 }
+  else if ($3 < min) { min = $3 ; min_file = $1 }
 } END {
   printf "MIN(%s) = %0.3f  [%s]\n", header, min, min_file
   printf "MED(%s) = %0.3f\n", header, data[int((i-1)/2)]

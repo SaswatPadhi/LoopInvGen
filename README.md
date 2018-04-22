@@ -31,7 +31,6 @@ Docker containers have negligible performance overhead.
 You may also limit the container's memory and/or CPU usage limits:
 ```bash
 # Create a LoopInvGen container with 4GB memory, no swap and 1 CPU
-
 $ docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
 ```
 

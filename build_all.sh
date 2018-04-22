@@ -81,6 +81,9 @@ rm -rf starexec/bin/_bin/lig-verify
 cat << "EOF" > starexec/bin/starexec_run_default
 #!/bin/bash
 
+trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
+trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
+
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 

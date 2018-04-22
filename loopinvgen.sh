@@ -12,7 +12,7 @@ Building OCaml modules ...
 " >&2 ; jbuilder build @local
 fi
 
-trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
+trap 'jobs -p | xargs kill -TERM > /dev/null 2> /dev/null' INT
 trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 INTERMEDIATES_DIR="_log"
