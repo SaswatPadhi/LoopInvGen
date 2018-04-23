@@ -143,8 +143,9 @@ let simplify (z3 : t) (q : string) : string =
                                    | Atom("false") -> Some "false"
                                    | Atom(_) -> None
                                    | l -> Some (to_string_hum l))
-          in let goalstr = String.concat ~sep:" " goals
-          in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"
+          in if List.length goals = 0 then "true"
+             else (let goalstr = String.concat ~sep:" " goals
+                   in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
      | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
 
 let model_to_string ?(rowsep = " ") ?(colsep = " ") ?(prefix = "(= ")
