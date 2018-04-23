@@ -127,7 +127,7 @@ Try `./loopinvgen.sh -h` for other options that allow more control over the infe
 
 ## Testing
 
-Execute `./test_all.sh -b benchmarks` to run LoopInvGen on all benchmarks in [benchmarks/].
+Execute `./test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].
 
 **Note:** Within `test_all.sh`,
 we trap <kbd>CTRL</kbd>+<kbd>C</kbd> (`SIGINT` signal) to kill the currently running benchmark,
@@ -164,8 +164,8 @@ Try `./test_all.sh -h` for more options.
 
 
 
-[flambda]:      https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
-[travis]:       https://travis-ci.org/SaswatPadhi/LoopInvGen
-[z3]:           https://github.com/Z3Prover/z3
-[benchmarks/]:  benchmarks/
-[SyGuSCOMP17]:  http://www.sygus.org/SyGuS-COMP2017.html
+[flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
+[travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
+[z3]:             https://github.com/Z3Prover/z3
+[benchmarks/LIA]: benchmarks/LIA
+[SyGuSCOMP17]:    http://www.sygus.org/SyGuS-COMP2017.html
