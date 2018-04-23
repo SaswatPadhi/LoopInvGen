@@ -92,12 +92,15 @@ mkdir -p "$LOGS_DIR"
 cd "`dirname "$TOOL"`"
 TOOL="./`basename "$TOOL"`"
 
-SUMMARY="$LOGS_DIR/summary.csv"
-echo "Benchmark,Verdict,Time" > "$SUMMARY"
+CSV_SUMMARY="$LOGS_DIR/summary.csv"
+TXT_SUMMARY="$LOGS_DIR/summary.txt"
+
+echo -n "" > "$TXT_SUMMARY"
+echo "Benchmark,Verdict,Time" > "$CSV_SUMMARY"
 
 COUNTER=0
 for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
-  TESTCASE_NAME=${TESTCASE#$BENCHMARKS_DIR}
+  TESTCASE_NAME=${TESTCASE#$BENCHMARKS_DIR/}
   TESTCASE_NAME=${TESTCASE_NAME%$SYGUS_EXT}
   TESTCASE_PREFIX="$LOGS_DIR/$TESTCASE_NAME.t_all"
 
@@ -107,14 +110,14 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   TESTCASE_INV="$TESTCASE_PREFIX.inv"
 
   (( COUNTER++ ))
-  printf "[%4d] $TESTCASE => " $COUNTER
+  printf "[%4d] %64s => " $COUNTER $TESTCASE_NAME
 
   if [ -z "$RERUN_CACHED" ] && [ -f "$TESTCASE_RES" ] ; then
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
     if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
       TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
       echo "[SKIPPED] PASS @ $TESTCASE_REAL_TIME"
-      echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$SUMMARY"
+      echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
       continue
     fi
   fi
@@ -137,27 +140,30 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
   echo " @ $TESTCASE_REAL_TIME"
 
-  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME" >> "$SUMMARY"
+  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
 done
 
 print_counts () {
   while (( "$#" )) ; do
-    echo -n "* $1 = "
-    grep "$1" "$SUMMARY" | wc -l
-    shift
+    echo -n "* $1 = " | tee -a "$TXT_SUMMARY"
+    grep -e ",$2," "$CSV_SUMMARY" | wc -l | tee -a "$TXT_SUMMARY"
+    shift ; shift
   done
 }
 
 echo ""
-print_counts PASS FAIL
+print_counts TOTAL_PASS ".*PASS.*" TOTAL_FAIL ".*FAIL.*"
 
-echo ""
-print_counts TIMEOUT
+echo "" | tee -a "$TXT_SUMMARY"
+print_counts PASS "PASS" "PASS (NO SOLUTION)" "PASS (NO SOLUTION)" "[TIMEOUT] PASS (NO SOLUTION)" "\\[TIMEOUT\\] PASS (NO SOLUTION)"
 
-echo -e "\nPASS Stats:"
+echo "" | tee -a "$TXT_SUMMARY"
+print_counts FAIL "FAIL {.*}" "FAIL (NO SOLUTION)" "FAIL (NO SOLUTION)" "[TIMEOUT] FAIL" "\\[TIMEOUT\\] FAIL {.*}" "[TIMEOUT] FAIL (NO SOLUTION)" "\\[TIMEOUT\\] FAIL (NO SOLUTION)"
+
+echo -e "\nPASS Stats:" | tee -a "$TXT_SUMMARY"
 awk -F',' '{
   if (NR == 1) { header = $3 ; next }
-  if ($2 !~ /.*PASS.*/) { next }
+  if ($2 !~ /^PASS$/) { next }
 
   data[i++] = $3 ; sum += $3
   if (min == "") {
@@ -173,12 +179,6 @@ awk -F',' '{
   printf "AVG(%s) = %0.3f\n", header, sum/i
   printf "MAX(%s) = %0.3f  [%s]\n", header, max, max_file
   printf "SUM(%s) = %0.3f\n", header, sum
+}' "$CSV_SUMMARY" | tee -a "$TXT_SUMMARY"
 
-  printf "\nMIN, %s, %0.3f\n", min_file, min > "/dev/stderr"
-  printf "MED, ---, %0.3f\n", data[int((i-1)/2)] > "/dev/stderr"
-  printf "AVG, ---, %0.3f\n", sum/i > "/dev/stderr"
-  printf "MAX, %s, %0.3f\n", max_file, max > "/dev/stderr"
-  printf "SUM, ---, %0.3f\n", sum > "/dev/stderr"
-}' "$SUMMARY" 2>> "$SUMMARY"
-
-echo -e "\nA CSV summary has been saved to: $SUMMARY."
+echo -e "\nA CSV summary has been saved to: $CSV_SUMMARY.\nA TXT summary has been saved to: $TXT_SUMMARY."

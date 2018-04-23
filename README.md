@@ -112,8 +112,8 @@ It gives one of the following verdicts:
 PASS                : The generated invariant successfully verifies the benchmark.
 PASS (NO SOLUTION)  : The benchmark is invalid (no invariant can verify it),
                       and no invariant was generated.
-FAIL (<vc1>,...)    : The generated invariant fails to verify the VCs: vc1, vc2 etc.
-                      where each VC is one of [pre, post, trans].
+FAIL {<vc1>;...}    : The generated invariant fails to verify the VCs: vc1, vc2 etc.
+                      where each VC is one of {pre, post, trans}.
 FAIL (NO SOLUTION)  : The benchmark is invalid (no invariant can verify it),
                       but an invariant (that is not empty/false) was generated.
 [TIMEOUT] <verdict> : Invariant inference timed out.
