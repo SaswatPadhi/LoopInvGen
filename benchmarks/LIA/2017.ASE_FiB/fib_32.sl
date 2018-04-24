@@ -15,7 +15,7 @@
 (or 
 (and (>= n (* 2 k)) (= k! k) (= b! b) (= i! i) (= j! j) (= n! n))
 (and (< n (* 2 k)) (= b 1) (= k! k) (= b! 0) (= i! (+ i 1)) (= j! j) (= n! (+ n 1)))
-(and (< n (* 2 k)) (= b 0) (= k! k) (= b! 1) (= i! i) (= j! (+ j 1)) (= n! (+ n 1)))
+(and (< n (* 2 k)) (not (= b 1)) (= k! k) (= b! 1) (= i! i) (= j! (+ j 1)) (= n! (+ n 1)))
 ))
 
 (define-fun post-f ((k Int) (b Int) (i Int) (j Int) (n Int)) Bool
