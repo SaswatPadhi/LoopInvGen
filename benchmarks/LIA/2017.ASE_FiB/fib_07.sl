@@ -11,13 +11,13 @@
 (and (= i 0) (= a 0) (= b 0) (>= n 0) ))
 
 (define-fun trans-f ((i Int) (n Int) (a Int) (b Int) (i! Int) (n! Int) (a! Int) (b! Int)) Bool
-(or (and (< i n) (= i! (+ i 1)) (= a! (+ a 1)) (= b! (+ b 2)) )
-(and (< i n) (= i! (+ i 1)) (= a! (+ a 2)) (= b! (+ b 1)) ) 
-(and (>= i n) (= i! i) (= a! a) (= b! b)
+(or (and (< i n) (= i! (+ i 1)) (= a! (+ a 1)) (= b! (+ b 2)) (= n! n))
+(and (< i n) (= i! (+ i 1)) (= a! (+ a 2)) (= b! (+ b 1)) (= n! n))
+(and (>= i n) (= i! i) (= a! a) (= b! b) (= n! n)
 )))
 
 (define-fun post-f ((i Int) (n Int) (a Int) (b Int)) Bool
-(=> (not (< i n)) (= (+ a b) (+ (+ n n) n))))
+  (=> (not (< i n)) (= (+ a b) (+ (+ n n) n))))
 
 (inv-constraint inv-f pre-f trans-f post-f)
 

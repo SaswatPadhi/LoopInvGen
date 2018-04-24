@@ -11,8 +11,9 @@
 (define-fun trans-f ((x Int) (y Int) (x! Int) (y! Int)) Bool
 (or (and (= x! (+ x 1)) (= y! (+ y 100)))
 (and (>= x 4) (= x! (+ x 1)) (= y! (+ y 1)))
-(and (< x 0) (= x! x) (= y! (- y 1))))
-)
+(and (< x 0) (= x! x) (= y! (- y 1)))
+(and (= x! x) (= y! y))
+))
 
 (define-fun post-f ((x Int) (y Int)) Bool
 (or (< x 4) (> y 2)) )
