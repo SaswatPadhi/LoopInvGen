@@ -138,8 +138,8 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   fi
 
   show_status "(@ verify)"
-  $VERIFY -i $TESTCASE_INV $TESTCASE | tee -a $TESTCASE_RES
-  echo ""
+  $VERIFY -i $TESTCASE_INV $TESTCASE >> $TESTCASE_RES
+  show_status "" ; tail -n 1 $TESTCASE_RES ; echo ""
 
   echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
 done

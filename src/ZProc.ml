@@ -119,7 +119,7 @@ let z3_result_to_values (result : string list) : model option =
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
-          ; None
+          ; (Out_channel.output_string stderr "Error parsing z3 model! ") ; (raise e)
 
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =

@@ -58,7 +58,7 @@ let exit_code_of_result res =
   | IMPOSSIBLE_FAIL -> 3
 
 let main zpath invfile logfile filename () =
-  Utils.start_logging_to ~msg:"CHECK" logfile ;
+  Utils.start_logging_to ~msg:"VERIFY" logfile ;
   let sygus = SyGuS.load ~shrink:false (Utils.get_in_channel filename) in
   let inv = read_inv_from_chan (Utils.get_in_channel invfile) ~sygus in
   let res = checkInvariant ~zpath ~sygus inv
