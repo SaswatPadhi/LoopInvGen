@@ -35,9 +35,12 @@ let value_assignment_constraint ?(negate = false) (vars : var list)
 
 let shrink_vars (s : t) : t =
   let s_vars =
-    List.(filter (dedup_and_sort ~compare:Poly.compare
-                                 (s.pre.args @ s.trans.args @ s.post.args))
-                 ~f:(fun (v, _) -> not (String.is_suffix v ~suffix:"!")))
+    List.(dedup_and_sort ~compare:Poly.compare
+      (map (dedup_and_sort ~compare:Poly.compare
+                           (s.pre.args @ s.trans.args @ s.post.args))
+          ~f:(fun (v, t) -> match String.chop_suffix v ~suffix:"!" with
+                            | Some v' -> (v', t)
+                            | _ -> (v, t))))
   in let t_vars = List.map s_vars ~f:(fun (s, t) -> (s ^ "!", t))
   in let filter_on vars = List.(filter ~f:(mem ~equal:(=) vars))
   in { s with

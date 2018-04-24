@@ -33,14 +33,16 @@ let gen_state_from_model (s : SyGuS.t) (z3 : ZProc.t) (m : ZProc.model option)
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
                : value list option Quickcheck.Generator.t =
   gen_state_from_model s z3 (
-    match ZProc.sat_model_for_asserts z3
-            ~db:[ ("(assert " ^ s.trans.expr ^ ")")
-                ; ( "(assert (and "
-                  ^ (Utils.List.to_string_map2 ~sep:" " vals s.state_vars
-                      ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
-                                          (serialize_value d) ^ ")")))
-                  ^ "))")]
-    with None -> None | Some model -> Some (filter_state ~trans:true model))
+    try begin
+      match ZProc.sat_model_for_asserts z3
+              ~db:[ ("(assert " ^ s.trans.expr ^ ")")
+                  ; ( "(assert (and "
+                    ^ (Utils.List.to_string_map2 ~sep:" " vals s.state_vars
+                        ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
+                                            (serialize_value d) ^ ")")))
+                    ^ "))")]
+      with None -> None | Some model -> Some (filter_state ~trans:true model)
+    end with _ -> None)
 
 let gen_pre_state ?(avoid = []) ?(use_trans = false) (s : SyGuS.t)
                   (z3 : ZProc.t) : value list option Quickcheck.Generator.t =
