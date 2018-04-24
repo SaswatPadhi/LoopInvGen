@@ -120,9 +120,13 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
 let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =
   let open ZProc
-  in process ~zpath (fun z3 ->
-       Simulator.setup sygus z3 ;
-       if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
-               = None) then "false"
-       else learnInvariant_internal ~conf ~states conf.max_restarts sygus
-                                    conf.base_random_seed z3)
+  in process ~zpath
+       ~random_seed:(Some (string_of_int (
+         Quickcheck.(random_value ~seed:(`Deterministic conf.base_random_seed)
+                                  (Generator.small_non_negative_int)))))
+       (fun z3 ->
+         Simulator.setup sygus z3 ;
+         if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
+                 = None) then "false"
+         else learnInvariant_internal ~conf ~states conf.max_restarts sygus
+                                      conf.base_random_seed z3)

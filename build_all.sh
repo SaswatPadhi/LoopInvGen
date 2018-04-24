@@ -70,7 +70,7 @@ if [ -n "$MAKE_Z3_AT" ] ; then
   cd "$LIG"
 fi
 
-jbuilder build @local -j "$JOBS"
+jbuilder build @local -j "$JOBS" || exit $?
 if [ -z "$MAKE_STAREXEC" ] ; then exit 0 ; fi
 
 rm -rf starexec && mkdir -p starexec/bin
@@ -87,14 +87,14 @@ trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 
-RECORD_FORKS=3
+RECORD_FORKS=4
 RECORD_TIMEOUT=0.3s
-RECORD_STATES_PER_FORK=512
+RECORD_STATES_PER_FORK=256
 
 for i in `seq 1 $RECORD_FORKS` ; do
-  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT           \
-           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK  \
-                           -r "seed$i" -o $TESTCASE_NAME.r$i $TESTCASE) >&2 &
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                      \
+           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i" \
+                           -o $TESTCASE_NAME.r$i $TESTCASE) >&2 &
 done
 wait
 

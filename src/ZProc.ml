@@ -17,7 +17,7 @@ let query_for_model ?(eval_term = "true") () =
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
-let create ?(init_options = []) (zpath : string) : t =
+let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let open Unix in
   let open Process_info in
   let pi = create_process zpath ["-in"] in
@@ -28,14 +28,23 @@ let create ?(init_options = []) (zpath : string) : t =
     stderr = in_channel_of_descr pi.stdout ;
   } in Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
      ; Out_channel.output_lines z3.stdin init_options
+     ; (match random_seed with
+        | None -> ()
+        | Some seed -> Out_channel.output_lines z3.stdin [
+                         "(set-option :auto_config false)" ;
+                         "(set-option :smt.phase_selection 5)" ;
+                         "(set-option :smt.arith.random_initial_value true)" ;
+                         "(set-option :smt.random_seed " ^ seed ^ ")"
+                       ])
      ; z3
 
 let close z3 =
   Out_channel.close z3.stdin ; ignore (Unix.waitpid z3.procid) ;
   Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
-let process ?(init_options = []) ~(zpath : string) (f : t -> 'a) : 'a =
-  let z3 = create ~init_options zpath in
+let process ?(init_options = []) ?(random_seed = None)
+            ~(zpath : string) (f : t -> 'a) : 'a =
+  let z3 = create ~init_options ~random_seed zpath in
   let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =

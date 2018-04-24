@@ -23,8 +23,8 @@ INFER_TIMEOUT=60
 MIN_INFER_TIMEOUT=5
 
 RECORD_TIMEOUT=0.3s
-RECORD_FORKS=3
-RECORD_STATES_PER_FORK=512
+RECORD_FORKS=4
+RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
 
 RECORD_LOG=""
@@ -164,8 +164,8 @@ show_status "(@ record)"
 for i in `seq 1 $RECORD_FORKS` ; do
   if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
   (timeout $RECORD_TIMEOUT \
-           $RECORD -s $RECORD_STATES_PER_FORK -r "seed$i" \
-                   -o $TESTCASE_STATE$i $LOG_PARAM        \
+           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i"  \
+                   -o $TESTCASE_STATE$i $LOG_PARAM         \
                    $RECORD_ARGS $TESTCASE) >&2 &
 done
 wait

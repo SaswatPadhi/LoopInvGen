@@ -116,7 +116,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
     if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
       TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
-      echo "[SKIPPED] PASS @ $TESTCASE_REAL_TIME"
+      printf "%07.3fs  @  [SKIPPED] $OLD_VERDICT\n" $TESTCASE_REAL_TIME
       echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
       continue
     fi
@@ -128,17 +128,18 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   (time timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
   INFER_PID=$!
   wait $INFER_PID
-
   INFER_RESULT_CODE=$?
+
+  TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
+  printf "%07.3fs  @  " $TESTCASE_REAL_TIME
+
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo -n "[TIMEOUT] " | tee -a $TESTCASE_RES
   fi
 
   show_status "(@ verify)"
   $VERIFY -i $TESTCASE_INV $TESTCASE | tee -a $TESTCASE_RES
-
-  TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
-  echo " @ $TESTCASE_REAL_TIME"
+  echo ""
 
   echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
 done
