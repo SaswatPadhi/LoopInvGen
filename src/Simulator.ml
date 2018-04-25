@@ -3,12 +3,12 @@ open Exceptions
 open SyGuS
 open Types
 
-let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
+let setup (s : SyGuS.t) (z3 : ZProc.t) (user_fs : String list) : unit =
   ignore (ZProc.run_queries ~scoped:false z3 ~db:(
     ("(set-logic " ^ s.logic ^ ")") ::
     (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^
                                  (string_of_typ t) ^ ")"))
-              (s.state_vars @ s.trans_vars))) [])
+              (s.state_vars @ s.trans_vars)))@user_fs [])
 
 let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
   if trans

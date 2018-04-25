@@ -66,8 +66,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                             (Types.string_of_typ t) ^ ")")) ^
       ") Bool " ^ inv ^ ")"
     in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
-                                           ; "(assert " ^ invf_call ^ ")" 
-                                           ; Utils.flatten_user_functions conf.user_functions ]
+                                           ; "(assert " ^ invf_call ^ ")" ; ]
      ; let pre_inv =
          VPIE.learnVPreCond
            ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 ~eval_term
@@ -79,6 +78,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                     | Ok v when v = vfalse -> true
                                     | _ -> false)
                ~pos_tests: states
+               ~features: (List.map (fun (a,b) -> Utils.build_feature a z3) conf.user_functions)
             ), invf'_call)
       in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
@@ -124,7 +124,7 @@ let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =
   let open ZProc
   in process ~zpath (fun z3 ->
-       Simulator.setup sygus z3 ;
+       Simulator.setup sygus z3 (List.map (fun (a,b) -> b) conf.user_functions);
        if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
                = None) then "false"
        else learnInvariant_internal ~conf ~states conf.max_restarts sygus

@@ -1,4 +1,6 @@
 open Core
+open ZProc
+open UserFunParser
 
 module Hashtbl = struct
   include Core.Hashtbl
@@ -49,12 +51,21 @@ let gen_user_functions userFs varList : (string*string) list =
     (match userFs with
       | [] -> acc
       | f :: restFs -> 
-          let parsedF = parse f in
+          let parsedF = UserFunParser.parse f in
           let fname = "f_" ^ (string_of_int iter) in
           let z3func = "(define-fun " ^ fname ^ " " ^ varString ^ " Bool " ^ parsedF ^ ")" in
           g_u_f restFs (iter + 1) ((z3func, fname) :: acc))
   in g_u_f userFs 0 []
 
-let flatten_user_functions user_functions : string = 
-  List.fold_right (fun uf acc -> match uf with | (z3func, _) -> acc ^ "\n" ^ z3func) user_functions ""
+let build_feature (userF : string) (z3 : t) (vals : value list) : bool = 
+  let query = "(" ^ userF ^ build_arguments vals ^ ")" in
+  let result = ZProc.run_queries t [query] in
+  match result with 
+    | ["sat"] -> true
+    | ["unsat"] -> false
+    | _ -> false
 
+let build_arguments (vals : value list) : string = 
+  match vals with 
+    | [] -> ""
+    | v :: r -> " " ^ (Types.serialize_value v) ^ (build_arguments r)
