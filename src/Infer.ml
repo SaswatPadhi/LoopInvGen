@@ -17,8 +17,9 @@ let main zpath statefile outfile logfile do_false
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let synth_logic = Types.logic_of_string sygus.logic
-     in let user_input = if (compare user_input_file "") then [] 
-                    else In_channel.read_lines user_input_file
+     in let user_input = (match filename with
+     | Some uif -> In_channel.read_lines user_input_file
+     | None -> []) 
      in let conf = {
        LoopInvGen.default_config with
        for_VPIE = {
@@ -60,6 +61,8 @@ let spec =
                                             ~doc:"number of times the inference engine may restart"
       +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
                                             ~doc:"number of states to collect after each restart"
+
+      +> flag "-i" (optional string) ~doc:"FILENAME user input file which contains user defined features"
 
       +> anon (maybe_with_default "-" ("filename" %: file))
     )

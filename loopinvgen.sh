@@ -188,7 +188,7 @@ grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
 if [ "$USER_INPUT_FILE" != "" ] ; then
-  PARSED_USER_INPUT = "$INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
+  PARSED_USER_INPUT = "-i $INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
   cut -d ',' -f2 "$USER_INPUT_FILE" > "$INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
 fi 
 
@@ -196,7 +196,7 @@ show_status "(@ infer)"
 
 (timeout --kill-after=$TIMEOUT $TIMEOUT \
          $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-                $INFER_ARGS $INFER_LOG) >&2 &
+                $INFER_ARGS $INFER_LOG $PARSED_USER_INPUT) >&2 &
 INFER_PID=$!
 wait $INFER_PID
 INFER_RESULT_CODE=$?
