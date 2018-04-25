@@ -110,13 +110,13 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   TESTCASE_INV="$TESTCASE_PREFIX.inv"
 
   (( COUNTER++ ))
-  printf "[%4d] %64s => " $COUNTER $TESTCASE_NAME
+  printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
 
   if [ -z "$RERUN_CACHED" ] && [ -f "$TESTCASE_RES" ] ; then
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
     if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
       TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
-      printf "%07.3fs  @  [SKIPPED] $OLD_VERDICT\n" $TESTCASE_REAL_TIME
+      printf "%8.3fs  @  [SKIPPED] $OLD_VERDICT\n" $TESTCASE_REAL_TIME
       echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
       continue
     fi
@@ -131,10 +131,10 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   INFER_RESULT_CODE=$?
 
   TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
-  printf "%07.3fs  @  " $TESTCASE_REAL_TIME
+  printf "%8.3fs  @  " $TESTCASE_REAL_TIME
 
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
-    echo -n "[TIMEOUT] " | tee -a $TESTCASE_RES
+    echo -n "[TIMEOUT] " >> $TESTCASE_RES
   fi
 
   show_status "(@ verify)"
