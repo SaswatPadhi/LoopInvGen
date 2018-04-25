@@ -9,6 +9,7 @@ type func = {
   name : string ;
   expr : string ;
   args : var list ;
+  return : typ ;
 }
 
 type t = {
@@ -18,6 +19,7 @@ type t = {
   state_vars : var list ;
   trans_vars : var list ;
   inv_name : string ;
+  funcs : func list ;
   pre : func ;
   trans : func ;
   post : func ;
@@ -61,6 +63,20 @@ let rec extract_args_and_consts (vars : var list) (exp : Sexp.t)
         | None -> ([], [Option.value_exn (Types.deserialize_value a)])
         | Some (_, v) -> ([v], [])
        end
+  (* FIXME: Handling let expressins needs  more work:
+     let in SyGuS format looks like (let ((<symb> <sort> <term>)+) <term>),
+     but in Z3 the syntax is (let ((<symb> <term>)+) <term>).
+
+  | List [(Atom "let") ; (List let_bindings) ; let_expr]
+    -> let (bind_vars, args_in_bind , consts_in_bind) =
+         List.fold let_bindings ~init:([],[],[])
+                   ~f:(fun[@warning "-8"] (symbs, args, consts) (List [(Atom l_symb) ; (Atom l_typ) ; l_term]) ->
+                         let (a, c) = extract_args_and_consts vars l_term
+                         in (((l_symb, (to_typ l_typ)) :: symbs), (a @ args), (c @ consts)))
+       in let (args , consts) = extract_args_and_consts (bind_vars @ vars) let_expr
+       in let args = List.(filter args ~f:(fun a -> not (mem ~equal:Poly.equal bind_vars a)))
+       in List.((dedup_and_sort ~compare:Poly.compare (args @ args_in_bind)),
+                (dedup_and_sort ~compare:Poly.compare (consts @ consts_in_bind))) *)
   | List((Atom op) :: fargs)
     -> let (args , consts) =
          List.fold fargs ~init:([],[])
@@ -77,10 +93,10 @@ let load_var_usage (sexp : Sexp.t) : var =
 
 let load_define_fun lsexp : func * value list =
   match lsexp with
-  | [Atom(name) ; List(args) ; _ ; expr]
+  | [Atom(name) ; List(args) ; Atom(r_typ) ; expr]
     -> let args = List.map ~f:load_var_usage args in
        let (args, consts) = extract_args_and_consts args expr
-       in ({ name = name ; expr = (Sexp.to_string_hum expr) ; args = args },
+       in ({ name = name ; expr = (Sexp.to_string_hum expr) ; args = args ; return = (to_typ r_typ) },
            consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: lsexp)))))
@@ -141,6 +157,7 @@ let load ?(shrink = true) chan : t =
             state_vars = !state_vars ;
             trans_vars = !trans_vars ;
             inv_name = !inv_name ;
+            funcs = !funcs ;
             pre = List.find_exn ~f:(fun f -> f.name = !pre_name) (!funcs) ;
             trans = List.find_exn ~f:(fun f -> f.name = !trans_name) (!funcs) ;
             post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;

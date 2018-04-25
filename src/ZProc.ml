@@ -57,8 +57,7 @@ let flush_and_collect (z3 : t) : string =
         in if l = last_line then ()
            else if l <> "" then (lines := l :: (!lines) ; read_line ())
        in read_line () ; lines := List.rev (!lines)
-        ; Log.debug (lazy (String.concat ("Result:" :: (!lines))
-                                         ~sep:(Log.indented_sep 4)))
+        ; Log.debug (lazy ("    " ^ (String.concat (!lines) ~sep:(Log.indented_sep 4))))
         ; String.concat ~sep:" " (!lines)
 
 let create_scope ?(db = []) (z3 : t) : unit =
@@ -85,6 +84,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
     end
   else let results = ref []
        in Out_channel.output_lines z3.stdin db
+        ; Log.debug (lazy "Results:")
         ; List.iter queries ~f:(fun q ->
             Out_channel.output_string z3.stdin q ;
             Out_channel.newline z3.stdin ;

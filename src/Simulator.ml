@@ -2,13 +2,19 @@ open Core
 open Exceptions
 open SyGuS
 open Types
+open Utils
 
 let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
-  ignore (ZProc.run_queries ~scoped:false z3 ~db:(
-    ("(set-logic " ^ s.logic ^ ")") ::
-    (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^
-                                 (string_of_typ t) ^ ")"))
-              (s.state_vars @ s.trans_vars))) [])
+  ignore (ZProc.run_queries ~scoped:false z3 ~db:((
+    ("(set-logic " ^ s.logic ^ ")")
+    :: (List.map ~f:(fun (v, t) -> "(declare-var " ^ v ^ " " ^ (string_of_typ t) ^ ")")
+                 (s.state_vars @ s.trans_vars)))
+     @ (List.map s.funcs
+                 ~f:(fun func
+                       -> "(define-fun " ^ func.name ^ " ("
+                        ^ (List.to_string_map func.args ~sep:" "
+                                              ~f:(fun (v,t) -> "(" ^ v ^ " " ^ (string_of_typ t) ^ ")"))
+                        ^ ") " ^ (string_of_typ func.return) ^ " " ^ func.expr ^ ")"))) [])
 
 let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
   if trans
