@@ -192,3 +192,17 @@ let normalize (expr : string) : string =
   in match parse expr with
      | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))
      | _ -> ""
+
+     
+let build_feature (userF : string) (z3 : t) (vals : value list) : bool = 
+  let query = "(" ^ userF ^ build_arguments vals ^ ")" in
+  let result = ZProc.run_queries t [query] in
+  match result with 
+    | ["sat"] -> true
+    | ["unsat"] -> false
+    | _ -> false
+
+let build_arguments (vals : value list) : string = 
+  match vals with 
+    | [] -> ""
+    | v :: r -> " " ^ (Types.serialize_value v) ^ (build_arguments r)

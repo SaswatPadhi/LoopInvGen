@@ -39,11 +39,6 @@ let start_logging_to ~msg logfile =
    | Some logfile -> Log.enable ~msg logfile
    | _ -> ()
 
-let parse s : string = 
-  let lexbuf = Lexing.from_string (s ^ "\n") in
-  let ast = UserFunParser.main UserFunLexer.token lexbuf in
-  ast
-
 let gen_user_functions userFs varList : (string*string) list = 
   let flattenVars = (fun (s,t) res -> "(" ^ s ^ " " ^ string_of_typ t ^ ") " ^ res) in
   let varString = "( " ^ (Core.List.fold_right varList flattenVars "") ^ ")" in
@@ -51,21 +46,8 @@ let gen_user_functions userFs varList : (string*string) list =
     (match userFs with
       | [] -> acc
       | f :: restFs -> 
-          let parsedF = UserFunParser.parse f in
           let fname = "f_" ^ (string_of_int iter) in
-          let z3func = "(define-fun " ^ fname ^ " " ^ varString ^ " Bool " ^ parsedF ^ ")" in
+          let z3func = "(define-fun " ^ fname ^ " " ^ varString ^ " Bool " ^ f ^ ")" in
           g_u_f restFs (iter + 1) ((z3func, fname) :: acc))
   in g_u_f userFs 0 []
 
-let build_feature (userF : string) (z3 : t) (vals : value list) : bool = 
-  let query = "(" ^ userF ^ build_arguments vals ^ ")" in
-  let result = ZProc.run_queries t [query] in
-  match result with 
-    | ["sat"] -> true
-    | ["unsat"] -> false
-    | _ -> false
-
-let build_arguments (vals : value list) : string = 
-  match vals with 
-    | [] -> ""
-    | v :: r -> " " ^ (Types.serialize_value v) ^ (build_arguments r)
