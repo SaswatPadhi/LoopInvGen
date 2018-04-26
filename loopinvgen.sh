@@ -29,7 +29,6 @@ TIMEOUT=60
 REC_TIMEOUT=3s
 
 USER_INPUT_FILE=""
-PARSED_USER_INPUT=""
 
 RECORD_LOG=""
 INFER_LOG=""
@@ -77,7 +76,7 @@ Arguments to Internal Programs:
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z:ui: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path:,user-input: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :R:I:V:vip:l:cs:m:t:z:u: --long Record-args:,Infer-args:,Verify-args:,verify,interactive,intermediate-path:,logging:,clean-intermediates,record-states:,max-states:,timeout:,z3-path:,user-input: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -126,9 +125,9 @@ while true ; do
          [ -f "$2" ] || usage
          Z3_PATH="$2"
          shift ; shift ;;
-    -ui | --user-input )
+    -u | --user-input )
          [ -f "$2" ] || usage
-         USER_INPUT_FILE="$2"
+         USER_INPUT_FILE="-i $2"
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -187,16 +186,11 @@ grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u | shuf \
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
-if [ "$USER_INPUT_FILE" != "" ] ; then
-  PARSED_USER_INPUT = "-i $INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
-  cut -d ',' -f2 "$USER_INPUT_FILE" > "$INTERMEDIATES_DIR/$TESTCASE_PREFIX.user-input"
-fi 
-
 show_status "(@ infer)"
 
 (timeout --kill-after=$TIMEOUT $TIMEOUT \
          $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-                $INFER_ARGS $INFER_LOG $PARSED_USER_INPUT) >&2 &
+                $INFER_ARGS $INFER_LOG $USER_INPUT_FILE) >&2 &
 INFER_PID=$!
 wait $INFER_PID
 INFER_RESULT_CODE=$?

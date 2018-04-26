@@ -1,6 +1,4 @@
 open Core
-open ZProc
-open UserFunParser
 
 module Hashtbl = struct
   include Core.Hashtbl
@@ -29,6 +27,7 @@ end
 
 let get_in_channel = function
   | "-"      -> In_channel.stdin
+  | filename -> In_channel.create filename
 
 let get_out_channel = function
   | None -> Out_channel.stdout
@@ -39,9 +38,9 @@ let start_logging_to ~msg logfile =
    | Some logfile -> Log.enable ~msg logfile
    | _ -> ()
 
-let gen_user_functions userFs varList : (string*string) list = 
-  let flattenVars = (fun (s,t) res -> "(" ^ s ^ " " ^ string_of_typ t ^ ") " ^ res) in
-  let varString = "( " ^ (Core.List.fold_right varList flattenVars "") ^ ")" in
+let gen_user_functions userFs varList : (string * string) list = 
+  let flatten_vars = (fun (s,t) res -> "(" ^ s ^ " " ^ (Types.string_of_typ t) ^ ") " ^ res) in
+  let varString = "( " ^ (Core.List.fold_right varList ~f:flatten_vars ~init:"") ^ ")" in
   let rec g_u_f userFs iter acc =
     (match userFs with
       | [] -> acc

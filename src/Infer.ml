@@ -17,8 +17,8 @@ let main zpath statefile outfile logfile do_false
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let synth_logic = Types.logic_of_string sygus.logic
-     in let user_input = (match filename with
-     | Some uif -> In_channel.read_lines user_input_file
+     in let user_input = (match user_input_file with
+     | Some uif -> In_channel.read_lines uif
      | None -> []) 
      in let conf = {
        LoopInvGen.default_config with

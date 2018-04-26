@@ -3,7 +3,7 @@ open Exceptions
 open SyGuS
 open Types
 
-let setup (s : SyGuS.t) (z3 : ZProc.t) (user_fs : String list) : unit =
+let setup (s : SyGuS.t) (z3 : ZProc.t) (user_fs : string list) : unit =
   ignore (ZProc.run_queries ~scoped:false z3 ~db:(
     ("(set-logic " ^ s.logic ^ ")") ::
     (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^
