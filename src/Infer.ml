@@ -9,9 +9,11 @@ let main zpath statefile outfile logfile do_false
          filename () =
   Utils.start_logging_to ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
-  let states = List.(map (In_channel.input_lines state_chan)
-                       ~f:(fun l -> map (Types.deserialize_values l)
-                                        ~f:(fun v -> Option.value_exn v)))
+  let states = List.(permute
+    ~random_state:(Random.State.make [| 79 ; 97 |]) 
+    (map (In_channel.input_lines state_chan)
+         ~f:(fun l -> map (Types.deserialize_values l)
+                          ~f:(fun v -> Option.value_exn v))))
   in In_channel.close state_chan
    ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
                       " program states."))
@@ -35,7 +37,7 @@ let main zpath statefile outfile logfile do_false
        }
      ; max_restarts
      ; max_steps_on_restart
-     ; user_functions = Utils.gen_user_functions user_input_unparsed sygus.state_vars ;
+     ; user_functions = Utils.gen_user_functions user_input sygus.state_vars ;
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
@@ -54,13 +56,13 @@ let spec =
       +> flag "-f" (no_arg)           ~doc:"generate `false` instead of an empty invariant, in case of failure"
 
       +> flag "-max-conflicts"              (optional_with_default 0 int)
-                                            ~doc:"max size of the conflict group (POS+NEG). 0 = auto"
+                                            ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
       +> flag "-max-strengthening-attempts" (optional_with_default (LoopInvGen.default_config.for_VPIE.max_tries) int)
-                                            ~doc:"max candidates to consider, per strengthening. 0 = unlimited"
+                                            ~doc:"NUMBER max candidates to consider, per strengthening. 0 = unlimited"
       +> flag "-max-restarts"               (optional_with_default (LoopInvGen.default_config.max_restarts) int)
-                                            ~doc:"number of times the inference engine may restart"
+                                            ~doc:"NUMBER number of times the inference engine may restart"
       +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
-                                            ~doc:"number of states to collect after each restart"
+                                            ~doc:"NUMBER number of states to collect after each restart"
 
       +> flag "-i" (optional string) ~doc:"FILENAME user input file which contains user defined features"
 

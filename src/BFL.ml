@@ -53,8 +53,8 @@ let pruneWithNegativeExamples (conj : conjunct) (costs : costAssignment)
          where c = cost of the variable and n = number of covered examples *)
       let inverted_cost (v, n) = (float n) /. (Hashtbl.find_exn costs v) in
       let (cVar, cCnt) = Option.value_exn (
-        List.max_elt counts ~cmp:(fun vn1 vn2 -> compare (inverted_cost vn1)
-                                                        (inverted_cost vn2))
+        List.max_elt counts ~compare:(fun vn1 vn2 -> compare (inverted_cost vn1)
+                                                             (inverted_cost vn2))
       ) in
       (* if no literals cover any of the remaining negative examples, then
          there is no boolean function that properly classifies all of the
@@ -99,8 +99,8 @@ let learnStrongConjunction (conj : conjunct) (costs: costAssignment)
          where c = cost of the variable and n = number of covered examples *)
       let inverted_cost (v, n) = (float n) /. (Hashtbl.find_exn costs v) in
       let (cVar, cCnt) = Option.value_exn (
-        List.max_elt counts ~cmp:(fun vn1 vn2 -> compare (inverted_cost vn1)
-                                                         (inverted_cost vn2))
+        List.max_elt counts ~compare:(fun vn1 vn2 -> compare (inverted_cost vn1)
+                                                             (inverted_cost vn2))
       ) in
       (* if no literals cover any of the remaining negative examples, then
          there is no boolean function that properly classifies all of the

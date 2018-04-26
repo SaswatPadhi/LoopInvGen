@@ -9,6 +9,7 @@ type func = {
   name : string ;
   expr : string ;
   args : var list ;
+  return : typ ;
 }
 
 type t = {
@@ -18,6 +19,7 @@ type t = {
   state_vars : var list ;
   trans_vars : var list ;
   inv_name : string ;
+  funcs : func list ;
   pre : func ;
   trans : func ;
   post : func ;
@@ -35,8 +37,12 @@ let value_assignment_constraint ?(negate = false) (vars : var list)
 
 let shrink_vars (s : t) : t =
   let s_vars =
-    List.(filter (dedup_and_sort (s.pre.args @ s.trans.args @ s.post.args))
-                 ~f:(fun (v, _) -> not (String.is_suffix v ~suffix:"!")))
+    List.(dedup_and_sort ~compare:Poly.compare
+      (map (dedup_and_sort ~compare:Poly.compare
+                           (s.pre.args @ s.trans.args @ s.post.args))
+          ~f:(fun (v, t) -> match String.chop_suffix v ~suffix:"!" with
+                            | Some v' -> (v', t)
+                            | _ -> (v, t))))
   in let t_vars = List.map s_vars ~f:(fun (s, t) -> (s ^ "!", t))
   in let filter_on vars = List.(filter ~f:(mem ~equal:(=) vars))
   in { s with
@@ -57,13 +63,28 @@ let rec extract_args_and_consts (vars : var list) (exp : Sexp.t)
         | None -> ([], [Option.value_exn (Types.deserialize_value a)])
         | Some (_, v) -> ([v], [])
        end
+  (* FIXME: Handling let expressins needs  more work:
+     let in SyGuS format looks like (let ((<symb> <sort> <term>)+) <term>),
+     but in Z3 the syntax is (let ((<symb> <term>)+) <term>).
+
+  | List [(Atom "let") ; (List let_bindings) ; let_expr]
+    -> let (bind_vars, args_in_bind , consts_in_bind) =
+         List.fold let_bindings ~init:([],[],[])
+                   ~f:(fun[@warning "-8"] (symbs, args, consts) (List [(Atom l_symb) ; (Atom l_typ) ; l_term]) ->
+                         let (a, c) = extract_args_and_consts vars l_term
+                         in (((l_symb, (to_typ l_typ)) :: symbs), (a @ args), (c @ consts)))
+       in let (args , consts) = extract_args_and_consts (bind_vars @ vars) let_expr
+       in let args = List.(filter args ~f:(fun a -> not (mem ~equal:Poly.equal bind_vars a)))
+       in List.((dedup_and_sort ~compare:Poly.compare (args @ args_in_bind)),
+                (dedup_and_sort ~compare:Poly.compare (consts @ consts_in_bind))) *)
   | List((Atom op) :: fargs)
     -> let (args , consts) =
          List.fold fargs ~init:([],[])
                    ~f:(fun (args, consts) farg ->
                          let (a, c) = extract_args_and_consts vars farg
                          in ((a @ args), (c @ consts)))
-       in List.((dedup_and_sort args) , (dedup_and_sort consts))
+       in List.((dedup_and_sort ~compare:Poly.compare args),
+                (dedup_and_sort ~compare:Poly.compare consts))
 
 let load_var_usage (sexp : Sexp.t) : var =
   match sexp with
@@ -72,10 +93,10 @@ let load_var_usage (sexp : Sexp.t) : var =
 
 let load_define_fun lsexp : func * value list =
   match lsexp with
-  | [Atom(name) ; List(args) ; _ ; expr]
+  | [Atom(name) ; List(args) ; Atom(r_typ) ; expr]
     -> let args = List.map ~f:load_var_usage args in
        let (args, consts) = extract_args_and_consts args expr
-       in ({ name = name ; expr = (Sexp.to_string_hum expr) ; args = args },
+       in ({ name = name ; expr = (Sexp.to_string_hum expr) ; args = args ; return = (to_typ r_typ) },
            consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: lsexp)))))
@@ -122,7 +143,7 @@ let load ?(shrink = true) chan : t =
          )
       (input_rev_sexps chan)
   ; let state_var_names = List.map ~f:fst (!state_vars)
-     in consts := List.dedup_and_sort (!consts)
+     in consts := List.dedup_and_sort ~compare:Poly.compare (!consts)
       ; Log.debug (lazy ("Variables in state: "
                         ^ (String.concat ~sep:", " state_var_names)))
       ; Log.debug (lazy ("Variables in invariant: "
@@ -136,6 +157,7 @@ let load ?(shrink = true) chan : t =
             state_vars = !state_vars ;
             trans_vars = !trans_vars ;
             inv_name = !inv_name ;
+            funcs = !funcs ;
             pre = List.find_exn ~f:(fun f -> f.name = !pre_name) (!funcs) ;
             trans = List.find_exn ~f:(fun f -> f.name = !trans_name) (!funcs) ;
             post = List.find_exn ~f:(fun f -> f.name = !post_name) (!funcs) ;

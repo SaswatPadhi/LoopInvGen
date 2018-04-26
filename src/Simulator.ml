@@ -2,13 +2,21 @@ open Core
 open Exceptions
 open SyGuS
 open Types
+open Utils
 
-let setup (s : SyGuS.t) (z3 : ZProc.t) (user_fs : string list) : unit =
-  ignore (ZProc.run_queries ~scoped:false z3 ~db:(
-    ("(set-logic " ^ s.logic ^ ")") ::
-    (List.map ~f:(fun (v, t) -> ("(declare-var " ^ v ^ " " ^
-                                 (string_of_typ t) ^ ")"))
-              (s.state_vars @ s.trans_vars)))@user_fs [])
+
+let setup ?(user_fs = []) (s : SyGuS.t) (z3 : ZProc.t) : unit =
+  ignore (ZProc.run_queries ~scoped:false z3 ~db:((
+    ("(set-logic " ^ s.logic ^ ")")
+    :: (List.map ~f:(fun (v, t) -> "(declare-var " ^ v ^ " " ^ (string_of_typ t) ^ ")")
+                 (s.state_vars @ s.trans_vars)))
+     @ (List.map s.funcs
+                 ~f:(fun func
+                       -> "(define-fun " ^ func.name ^ " ("
+                        ^ (List.to_string_map func.args ~sep:" "
+                                              ~f:(fun (v,t) -> "(" ^ v ^ " " ^ (string_of_typ t) ^ ")"))
+                        ^ ") " ^ (string_of_typ func.return) ^ " " ^ func.expr ^ ")"))
+     @ user_fs) [])
 
 let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
   if trans
@@ -33,24 +41,24 @@ let gen_state_from_model (s : SyGuS.t) (z3 : ZProc.t) (m : ZProc.model option)
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
                : value list option Quickcheck.Generator.t =
   gen_state_from_model s z3 (
-    match ZProc.sat_model_for_asserts z3
-            ~db:[ ("(assert " ^ s.trans.expr ^ ")")
-                ; ( "(assert (and "
-                  ^ (Utils.List.to_string_map2 ~sep:" " vals s.state_vars
-                      ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
-                                          (serialize_value d) ^ ")")))
-                  ^ "))")]
-    with None -> None | Some model -> Some (filter_state ~trans:true model))
+    try begin
+      match ZProc.sat_model_for_asserts z3
+              ~db:[ ("(assert " ^ s.trans.expr ^ ")")
+                  ; ( "(assert (and "
+                    ^ (Utils.List.to_string_map2 ~sep:" " vals s.state_vars
+                        ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
+                                            (serialize_value d) ^ ")")))
+                    ^ "))")]
+      with None -> None | Some model -> Some (filter_state ~trans:true model)
+    end with _ -> None)
 
 let gen_pre_state ?(avoid = []) ?(use_trans = false) (s : SyGuS.t)
                   (z3 : ZProc.t) : value list option Quickcheck.Generator.t =
-  let open Quickcheck.Generator in
-  match ZProc.sat_model_for_asserts z3
+  gen_state_from_model s z3
+    (ZProc.sat_model_for_asserts z3
           ~db:[ "(assert (and " ^ s.pre.expr ^ " "
               ^ (if use_trans then s.trans.expr else "true") ^ " "
-              ^ (String.concat avoid ~sep:" ") ^ "))" ]
-  with None -> singleton None
-     | model -> gen_state_from_model s z3 model
+              ^ (String.concat avoid ~sep:" ") ^ "))" ])
 
 let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : value list option)
                   : value list list Quickcheck.Generator.t =
@@ -63,8 +71,9 @@ let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : value list option)
           head :: (match size with
                   | 0 -> []
                   | n -> begin match generate (transition s z3 head) ~size rnd
-                               with None -> []
-                                  | Some next -> step_internal next (n-1)
+                               with Some next when next <> head
+                                    -> step_internal next (n-1)
+                                  | _ -> []
                         end)
         in step_internal head size
       in Log.debug (lazy ("New execution: ")) ; create (step head)
@@ -74,9 +83,9 @@ let build_avoid_constraints sygus head =
                    ~f:(fun head -> Some (SyGuS.value_assignment_constraint
                                            sygus.state_vars head ~negate:true))
 
-let record_states ?(avoid = []) ~size ~seeds ~state_chan ~(zpath : string)
-                  (s : SyGuS.t) : unit =
-  let record_and_update avoid head size seed z3 : (string list * int) =
+let record_states ?(avoid = []) ?(z3_randomness = false) ~size ~seed
+                  ~state_chan ~(zpath : string) (s : SyGuS.t) : unit =
+  let record_and_update avoid head size z3 : (string list * int) =
     match head with
     | None -> (avoid, 0)
     | _ -> let states = Quickcheck.random_value ~size ~seed
@@ -89,21 +98,20 @@ let record_states ?(avoid = []) ~size ~seeds ~state_chan ~(zpath : string)
                                    ; newline state_chan)
             ; flush state_chan
             ; ((head :: avoid), (List.length states))
-  in ZProc.process ~zpath ~init_options: [
-        (* "(set-option :smt.arith.random_initial_value true)" *)
-     ] (fun z3 ->
-       setup s z3 ;
-       List.iter seeds ~f:(fun seed ->
-         let rec helper avoid size =
-           let open Quickcheck in
-           let sz = size / 2 in
-           let head_1 = random_value (gen_pre_state ~avoid s z3) ~seed ~size in
-           let (avoid, added_1) = record_and_update avoid head_1 sz seed z3 in
-           let head_2 = random_value (gen_pre_state ~avoid ~use_trans:true s z3)
-                                     ~seed ~size in
-           let (avoid, added_2) = record_and_update avoid head_2 sz seed z3
+  in ZProc.process ~zpath
+       ~random_seed:(Some (string_of_int (Quickcheck.(
+                       random_value ~seed (Generator.small_non_negative_int)))))
+       (fun z3 -> setup s z3 ;
+          let rec helper avoid size =
+            let open Quickcheck in
+            let sz = size / 2 in
+            let head_1 = random_value (gen_pre_state ~avoid s z3) ~seed in
+            let (avoid, added_1) = record_and_update avoid head_1 sz z3 in
+            let head_2 = random_value (gen_pre_state ~avoid ~use_trans:true s z3)
+                                      ~seed in
+            let (avoid, added_2) = record_and_update avoid head_2 sz z3
             in (if added_1 = 0 && added_2 = 0 then ()
                 else let remaining_size = size - (added_1 + added_2)
                       in if remaining_size > 0 then helper avoid remaining_size
                                                else ())
-          in helper avoid size))
+          in helper avoid size)

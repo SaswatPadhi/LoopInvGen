@@ -1,6 +1,7 @@
 open Core
 open Exceptions
 open Sexplib
+open Types
 
 type t = {
   procid : Pid.t ;
@@ -17,7 +18,7 @@ let query_for_model ?(eval_term = "true") () =
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
-let create ?(init_options = []) (zpath : string) : t =
+let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let open Unix in
   let open Process_info in
   let pi = create_process zpath ["-in"] in
@@ -28,14 +29,23 @@ let create ?(init_options = []) (zpath : string) : t =
     stderr = in_channel_of_descr pi.stdout ;
   } in Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
      ; Out_channel.output_lines z3.stdin init_options
+     ; (match random_seed with
+        | None -> ()
+        | Some seed -> Out_channel.output_lines z3.stdin [
+                         "(set-option :auto_config false)" ;
+                         "(set-option :smt.phase_selection 5)" ;
+                         "(set-option :smt.arith.random_initial_value true)" ;
+                         "(set-option :smt.random_seed " ^ seed ^ ")"
+                       ])
      ; z3
 
 let close z3 =
   Out_channel.close z3.stdin ; ignore (Unix.waitpid z3.procid) ;
   Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
-let process ?(init_options = []) ~(zpath : string) (f : t -> 'a) : 'a =
-  let z3 = create ~init_options zpath in
+let process ?(init_options = []) ?(random_seed = None)
+            ~(zpath : string) (f : t -> 'a) : 'a =
+  let z3 = create ~init_options ~random_seed zpath in
   let result = (f z3) in (close z3) ; result
 
 let flush_and_collect (z3 : t) : string =
@@ -48,8 +58,7 @@ let flush_and_collect (z3 : t) : string =
         in if l = last_line then ()
            else if l <> "" then (lines := l :: (!lines) ; read_line ())
        in read_line () ; lines := List.rev (!lines)
-        ; Log.debug (lazy (String.concat ("Result:" :: (!lines))
-                                         ~sep:(Log.indented_sep 4)))
+        ; Log.debug (lazy ("    " ^ (String.concat (!lines) ~sep:(Log.indented_sep 4))))
         ; String.concat ~sep:" " (!lines)
 
 let create_scope ?(db = []) (z3 : t) : unit =
@@ -76,6 +85,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
     end
   else let results = ref []
        in Out_channel.output_lines z3.stdin db
+        ; Log.debug (lazy "Results:")
         ; List.iter queries ~f:(fun q ->
             Out_channel.output_string z3.stdin q ;
             Out_channel.newline z3.stdin ;
@@ -110,7 +120,7 @@ let z3_result_to_values (result : string list) : model option =
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
-          ; None
+          ; raise e
 
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =
@@ -134,9 +144,8 @@ let simplify (z3 : t) (q : string) : string =
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
                   ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
     with [ goal ] -> goal
-       | goals -> raise (Internal_Exn ("Unexpected goals:\n"
+       | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n"
                                       ^ (String.concat ~sep:"\n" goals)))
-  in let unexpected_exn = Internal_Exn ("Unexpected z3 goals: " ^ goal)
   in match Sexp.parse goal with
      | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)
        -> let goals = List.filter_map goalexpr
@@ -144,9 +153,10 @@ let simplify (z3 : t) (q : string) : string =
                                    | Atom("false") -> Some "false"
                                    | Atom(_) -> None
                                    | l -> Some (to_string_hum l))
-          in let goalstr = String.concat ~sep:" " goals
-          in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")"
-     | _ -> raise unexpected_exn
+          in if List.length goals = 0 then "true"
+             else (let goalstr = String.concat ~sep:" " goals
+                   in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
+     | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
 
 let model_to_string ?(rowsep = " ") ?(colsep = " ") ?(prefix = "(= ")
                     ?(postfix = ")") (model : model option) : string =
@@ -193,16 +203,17 @@ let normalize (expr : string) : string =
      | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))
      | _ -> ""
 
-     
-let build_feature (userF : string) (z3 : t) (vals : value list) : bool = 
-  let query = "(" ^ userF ^ build_arguments vals ^ ")" in
-  let result = ZProc.run_queries t [query] in
-  match result with 
-    | ["sat"] -> true
-    | ["unsat"] -> false
-    | _ -> false
-
-let build_arguments (vals : value list) : string = 
+let rec build_arguments (vals : value list) : string = 
   match vals with 
     | [] -> ""
     | v :: r -> " " ^ (Types.serialize_value v) ^ (build_arguments r)
+
+let build_feature (name : string) (z3 : t) (vals : value list) : bool =
+    let result = run_queries z3 [
+      "(assert (= true (" ^ name ^ build_arguments vals ^ "))" ;
+      "(check-sat)"
+    ] in
+    match result with
+      | ["sat"] -> true
+      | ["unsat"] -> false
+      | _ -> raise (Internal_Exn "z3 could not verify the query.")

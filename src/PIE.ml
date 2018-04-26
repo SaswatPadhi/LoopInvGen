@@ -76,7 +76,8 @@ let create_pos_job ~f ~args ~post ?(features = []) ~pos_tests ()
    Our jobs deal with Types.value to enable feature synthesis with Escher. *)
 let create_job ~f ~args ~post ?(features = []) ~tests ()
                : (value list, value) job =
-  let (pos, neg) = split_tests (List.dedup_and_sort tests) ~f ~post
+  let (pos, neg) = split_tests (List.dedup_and_sort ~compare:(List.compare value_compare) tests)
+                               ~f ~post
   in let compute_fvec = compute_feature_vector features
   in { (create_pos_job () ~f ~args ~post ~features ~pos_tests:pos) with
          neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_fvec t)))
@@ -117,7 +118,8 @@ let add_neg_test ~(job : (value list, 'b) job) (test : value list) : (value list
                     }
 
 let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
-  let (pos, neg) = split_tests (List.dedup_and_sort tests) ~f:job.f ~post:job.post
+  let (pos, neg) = split_tests (List.dedup_and_sort ~compare:(List.compare value_compare) tests)
+                               ~f:job.f ~post:job.post
   in let pos = List.(filter pos ~f:(fun t -> not (exists job.pos_tests
                                                     ~f:(fun (p, _) -> p = t))))
   in let neg = List.(filter neg ~f:(fun t -> not (exists job.neg_tests
@@ -274,8 +276,8 @@ let learnPreCond ?(conf = default_config) ?(consts = []) (job : ('a, 'b) job)
                   ^ " NEG tests")) ;
   try let job = augmentFeatures ~conf ~consts job
       in let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec)
-      in let (pos_vecs, neg_vecs) = List.(dedup_and_sort (make_f_vecs job.pos_tests),
-                                          dedup_and_sort (make_f_vecs job.neg_tests))
+      in let (pos_vecs, neg_vecs) = List.(dedup_and_sort ~compare:(List.compare Bool.compare) (make_f_vecs job.pos_tests),
+                                          dedup_and_sort ~compare:(List.compare Bool.compare) (make_f_vecs job.neg_tests))
       in try let cnf = learnCNF pos_vecs neg_vecs ~n:(List.length job.features)
                                 ~conf:conf.for_BFL
              in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i-1)))

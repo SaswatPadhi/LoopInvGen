@@ -11,32 +11,45 @@
 
 (alias
     ((name optimize)
+     (deps ((universe)))
      (action
         (progn
-            (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly longer!\nUse (jbuilder build -f @fast-compile) to switch to [fast-compile] mode.'")
-            (bash "echo -ne '(-linkall -O3 -rounds 13)' > ${SCOPE_ROOT}/../../src/flambda_flags")))))
+            (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly (2x) longer!\nUse (jbuilder build @debug) to switch to [debug] mode instead.'")
+            (bash "echo -ne '(-O3 -rounds 5)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
+            (bash "echo -ne '#define LOGGING 0' > ${SCOPE_ROOT}/../../src/config.h")))))
 
 (alias
-    ((name fast-compile)
+    ((name debug)
+     (deps ((universe)))
      (action
         (progn
-            (bash "echo -ne 'Current build mode is set to [fast-compile].\nUse (jbuilder build -f @optimize) to generate highly optimized binaries.'")
-            (bash "echo -ne '()' > ${SCOPE_ROOT}/../../src/flambda_flags")))))
+            (bash "echo -ne 'Current build mode is set to [debug].\nUse (jbuilder build @optimize) to generate optimized binaries instead.'")
+            (bash "echo -ne '(-Oclassic)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
+            (bash "echo -ne '#define LOGGING 1' > ${SCOPE_ROOT}/../../src/config.h")))))
 
 (rule
-    ((targets (flambda_flags))
-     (deps ((alias fast)))
+    ((targets (.flambda_flags))
+     (deps ((alias optimize)))
      (mode fallback)
      (action
-        (bash "cp ${SCOPE_ROOT}/../../src/flambda_flags ."))))
+        (bash "cp ${SCOPE_ROOT}/../../src/.flambda_flags ."))))
+
+(rule
+    ((targets (config.h))
+     (deps ((alias optimize)))
+     (mode fallback)
+     (action
+        (bash "cp ${SCOPE_ROOT}/../../src/config.h ."))))
 
 (alias
     ((name clean)
      (action
-        (bash "rm -rf ${SCOPE_ROOT}/../../src/flambda_flags ${SCOPE_ROOT}/../../_bin"))))
+        (bash "rm -rf ${SCOPE_ROOT}/../../src/.flambda_flags ${SCOPE_ROOT}/../../_bin"))))
 
 (executables
     ((names (Record Infer Verify))
      (public_names (lig-record lig-infer lig-verify))
-     (ocamlopt_flags (:standard (:include flambda_flags)))
-     (libraries (core core_extended))))
+     (ocamlopt_flags (:standard (:include .flambda_flags)))
+     (libraries (core core_extended))
+     (preprocessor_deps ((file config.h)))
+     (preprocess (pps (ppx_optcomp)))))

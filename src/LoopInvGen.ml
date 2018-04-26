@@ -11,7 +11,7 @@ type 'a config = {
   max_restarts : int ;
   max_steps_on_restart : int ;
   model_completion_mode : [ `RandomGeneration | `UsingZ3 ] ;
-  user_functions: string list ;
+  user_functions: (string * string) list ;
 }
 
 let default_config = {
@@ -59,7 +59,9 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
     Log.debug (lazy ("IND >> Strengthening for inductiveness:"
                     ^ (Log.indented_sep 4) ^ inv)) ;
     if inv = "false" then inv else
-    let inv_def =
+    let all_state_vars =
+      "(" ^ (List.to_string_map sygus.state_vars ~sep:" " ~f:(fun (s, _) -> s)) ^ ")"
+    in let inv_def =
       "(define-fun invf (" ^
       (List.to_string_map sygus.inv_vars ~sep:" "
                           ~f:(fun (s, t) -> "(" ^ s ^ " " ^
@@ -78,7 +80,10 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                     | Ok v when v = vfalse -> true
                                     | _ -> false)
                ~pos_tests: states
-               ~features: (List.map (fun (a,b) -> Utils.build_feature a z3) conf.user_functions)
+               ~features: (List.map ~f:(fun (name, _)
+                                          -> ((ZProc.build_feature name z3),
+                                              ("(" ^ name ^ " " ^ all_state_vars ^ ")")))
+                                    conf.user_functions)
             ), invf'_call)
       in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
@@ -109,7 +114,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                      ^ "/" ^ (string_of_int conf.max_restarts) ^".")) ;
       let open Quickcheck
       in learnInvariant_internal
-          ~states:(List.dedup_and_sort (
+          ~states:(List.dedup_and_sort ~compare:(List.compare value_compare) (
               states @ (random_value ~size:conf.max_steps_on_restart
                                      ~seed:(`Deterministic seed)
                                      (Simulator.simulate_from sygus z3 model))))
@@ -123,9 +128,13 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
 let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =
   let open ZProc
-  in process ~zpath (fun z3 ->
-       Simulator.setup sygus z3 (List.map (fun (a,b) -> b) conf.user_functions);
-       if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
-               = None) then "false"
-       else learnInvariant_internal ~conf ~states conf.max_restarts sygus
-                                    conf.base_random_seed z3)
+  in process ~zpath
+       ~random_seed:(Some (string_of_int (
+         Quickcheck.(random_value ~seed:(`Deterministic conf.base_random_seed)
+                                  (Generator.small_non_negative_int)))))
+       (fun z3 ->
+         Simulator.setup sygus z3 ~user_fs:(List.map ~f:(fun (_, b) -> b) conf.user_functions) ;
+         if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
+                 = None) then "false"
+         else learnInvariant_internal ~conf ~states conf.max_restarts sygus
+                                      conf.base_random_seed z3)

@@ -1,3 +1,5 @@
+; From: https://github.com/sosy-lab/sv-benchmarks/blob/master/c/loop-lit/cggmp2005_variant_true-unreach-call_true-termination.c
+
 (set-logic LIA)
 
 (synth-inv inv-f ((lo Int) (mid Int) (hi Int)))
@@ -11,9 +13,10 @@
 
 (define-fun trans-f ((lo Int) (mid Int) (hi Int)
                      (lo! Int) (mid! Int) (hi! Int)) Bool
-  (and (> mid 0) (and (= lo! (+ lo 1))
-                 (and (= hi! (- hi 1))
-                      (= mid! (- mid 1))))))
+  (and (> mid 0)
+       (= lo! (+ lo 1))
+       (= hi! (- hi 1))
+       (= mid! (- mid 1))))
 
 (define-fun post-f ((lo Int) (mid Int) (hi Int)) Bool
   (or (> mid 0) (= lo hi)))

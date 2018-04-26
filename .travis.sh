@@ -38,14 +38,14 @@ if [ $RC -ne 0 ]; then
     opam install LoopInvGen --deps-only
 fi
 
-jbuilder build -f @fast-compile
+jbuilder build -f @debug
 
 BUILD_FLAGS=($BUILD_FLAGS)
 for flag in $BUILD_FLAGS ; do
     if [ "$flag" = "-optimize" ]; then
         jbuilder build -f @optimize
-    elif [ "$flag" = "-fast-compile" ]; then
-        jbuilder build -f @fast-compile
+    elif [ "$flag" = "-debug" ]; then
+        jbuilder build -f @debug
     fi
 done
 
