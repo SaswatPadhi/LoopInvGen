@@ -210,9 +210,9 @@ let rec build_arguments (vals : value list) : string =
 
 let build_feature (name : string) (z3 : t) (vals : value list) : bool =
     let result = run_queries z3 [
-      "(assert (= true (" ^ name ^ build_arguments vals ^ "))" ;
+      "(assert (" ^ name ^ build_arguments vals ^ "))" ;
       "(check-sat)"
-    ] in
+    ] in 
     match result with
       | ["sat"] -> true
       | ["unsat"] -> false
