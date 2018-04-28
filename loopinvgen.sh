@@ -65,7 +65,7 @@ Configuration:
     [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
-    [--user-input, -ui <path>]        ($USER_INPUT_FILE)
+    [--user-input, -u <path>]        ($USER_INPUT_FILE)
 
 Arguments to Internal Programs:
     [--Record-args, -R \"<args>\"]    for ${RECORD}
