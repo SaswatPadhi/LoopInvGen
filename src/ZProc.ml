@@ -107,8 +107,8 @@ let z3_result_to_values (result : string list) : model option =
   let open Sexp in
   try [@warning "-8"]
   match result with
-  | "unsat" :: _ -> None
-  | [ "sat" ; _ ; result ]
+  | [_;"unsat"]| "unsat" :: _ -> None
+  | [_; "sat"; _ ; result] | [ "sat" ; _ ; result ]
     -> begin match Sexp.parse result with
         | Done (List((Atom model) :: varexps), _)
           -> let open List in
@@ -214,6 +214,6 @@ let build_feature (name : string) (z3 : t) (vals : value list) : bool =
       "(check-sat)"
     ] in 
     match result with
-      | ["sat"] -> true
-      | ["unsat"] -> false
+      | ["sat"] | [_;"sat"] -> true
+      | ["unsat"] | [_;"unsat"] -> (Log.debug (lazy "successful false"); false)
       | _ -> raise (Internal_Exn "z3 could not verify the query.")

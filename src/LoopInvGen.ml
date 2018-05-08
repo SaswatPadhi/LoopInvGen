@@ -60,7 +60,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                     ^ (Log.indented_sep 4) ^ inv)) ;
     if inv = "false" then inv else
     let all_state_vars =
-      "(" ^ (List.to_string_map sygus.state_vars ~sep:" " ~f:(fun (s, _) -> s)) ^ ")"
+      (List.to_string_map sygus.state_vars ~sep:" " ~f:(fun (s, _) -> s))
     in let inv_def =
       "(define-fun invf (" ^
       (List.to_string_map sygus.inv_vars ~sep:" "
@@ -80,7 +80,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                     | Ok v when v = vfalse -> true
                                     | _ -> false)
                ~pos_tests: states
-               ~features: (List.map ~f:(fun (name, _)
+               ~features: (List.map ~f:(fun (_, name)
                                           -> ((ZProc.build_feature name z3),
                                               ("(" ^ name ^ " " ^ all_state_vars ^ ")")))
                                     conf.user_functions)
@@ -133,7 +133,7 @@ let learnInvariant ?(conf = default_config) ~(states : value list list)
          Quickcheck.(random_value ~seed:(`Deterministic conf.base_random_seed)
                                   (Generator.small_non_negative_int)))))
        (fun z3 ->
-         Simulator.setup sygus z3 ~user_fs:(List.map ~f:(fun (_, b) -> b) conf.user_functions) ;
+         Simulator.setup sygus z3 ~user_fs:(List.map ~f:(fun (a, b) -> a) conf.user_functions) ;
          if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
                  = None) then "false"
          else learnInvariant_internal ~conf ~states conf.max_restarts sygus
