@@ -8,7 +8,7 @@ let pos_div x y = (x - (pos_mod x y)) / y
 
 let new_components = [
   {
-    name = "nia-div";
+    name = "int-div";
     codomain = TInt;
     domain = [TInt;TInt];
     check = (function
@@ -22,7 +22,7 @@ let new_components = [
     dump = (fun [@warning "-8"] [a ; b] -> "(div " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "nia-mod";
+    name = "int-mod";
     codomain = TInt;
     domain = [TInt;TInt];
     check = (function
@@ -36,7 +36,7 @@ let new_components = [
     dump = (fun [@warning "-8"] [a ; b] -> "(mod " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "nia-mult";
+    name = "nonlin-int-mult";
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
@@ -52,5 +52,5 @@ let new_components = [
 ]
 
 let all_components =
-  (List.filter Th_LIA.all_components ~f:(fun c -> c.name <> "lia-mult"))
+  (List.filter Th_LIA.all_components ~f:(fun c -> c.name <> "lin-int-mult"))
   @ new_components

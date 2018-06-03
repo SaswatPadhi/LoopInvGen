@@ -7,12 +7,12 @@ let vone = VInt 1
 
 let new_components = [
   {
-    name = "lia-add";
+    name = "int-add";
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
-             | [(Const c1) ; (FCall ("lia-sub", [_ ; (Const c2)]))] -> c1 <> c2
-             | [(FCall ("lia-sub", [_ ; (Const c1)])) ; (Const c2)] -> c1 <> c2
+             | [x ; (FCall ("int-sub", [_ ; y]))] -> x <> y
+             | [(FCall ("int-sub", [_ ; x])) ; y] -> x <> y
              | [(Const c) ; _] -> c <> vzero
              | [_ ; (Const c)] -> c <> vzero
              | [_ ; _] -> true
@@ -23,7 +23,7 @@ let new_components = [
     dump = (fun [@warning "-8"] [a ; b] -> "(+ " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-sub";
+    name = "int-sub";
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
@@ -37,7 +37,7 @@ let new_components = [
     dump = (fun[@warning "-8"] [a ; b] -> "(- " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-mult";
+    name = "lin-int-mult";
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
@@ -50,7 +50,7 @@ let new_components = [
     dump = (fun[@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-leq";
+    name = "int-leq";
     codomain = TBool;
     domain = [TInt;TInt];
     check = (function
@@ -62,7 +62,7 @@ let new_components = [
     dump = (fun[@warning "-8"] [a ; b] -> "(<= " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-geq";
+    name = "int-geq";
     codomain = TBool;
     domain = [TInt;TInt];
     check = (function
@@ -74,7 +74,7 @@ let new_components = [
     dump = (fun[@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-lt";
+    name = "int-lt";
     codomain = TBool;
     domain = [TInt;TInt];
     check = (function
@@ -86,7 +86,7 @@ let new_components = [
     dump = (fun[@warning "-8"] [a ; b] -> "(< " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-gt";
+    name = "int-gt";
     codomain = TBool;
     domain = [TInt;TInt];
     check = (function
@@ -98,7 +98,7 @@ let new_components = [
     dump = (fun[@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")")
   } ;
   {
-    name = "lia-eq";
+    name = "int-eq";
     codomain = TBool;
     domain = [TInt;TInt];
     check = (function
