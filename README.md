@@ -17,7 +17,7 @@ A loop invariant generator.
 
 ### Using `Dockerfile` (recommended)
 
-_**Note:** The docker image consumes ~ 4GB of disk space._
+_**Note:** The docker image consumes ~4GB of disk space._
 
 We recommend running LoopInvGen within a docker container,
 as opposed to installing it within your host OS.
