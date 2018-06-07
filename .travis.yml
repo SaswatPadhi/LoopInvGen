@@ -1,4 +1,4 @@
-language: c
+language: generic
 sudo: false
 
 addons:
@@ -25,8 +25,8 @@ env:
   - OCAML_VERSION=4.06.0          BUILD_FLAGS="-optimize"
   - OCAML_VERSION=4.06.0+flambda  BUILD_FLAGS="-optimize"
 
-matrix:
-  fast_finish: true
+#matrix:
+#  fast_finish: true
 #  allow_failures:
 #    - env: OCAML_VERSION=4.05.0
 #    - env: OCAML_VERSION=4.05.0+flambda

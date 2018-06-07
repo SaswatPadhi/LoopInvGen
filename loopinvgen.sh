@@ -1,6 +1,8 @@
 #!/bin/bash
 
-BIN_DIR="_bin"
+SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
+BIN_DIR="$SELF_DIR/_bin"
 
 RECORD="$BIN_DIR/lig-record"
 INFER="$BIN_DIR/lig-infer"
@@ -15,14 +17,14 @@ fi
 trap 'jobs -p | xargs kill -TERM > /dev/null 2> /dev/null' INT
 trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
-INTERMEDIATES_DIR="_log"
+INTERMEDIATES_DIR="$SELF_DIR/_log"
 SYGUS_EXT=".sl"
-Z3_PATH="_dep/z3"
+Z3_PATH="$SELF_DIR/_dep/z3"
 
 INFER_TIMEOUT=60
 MIN_INFER_TIMEOUT=5
 
-RECORD_TIMEOUT=0.3s
+RECORD_TIMEOUT=0.25s
 RECORD_FORKS=4
 RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
