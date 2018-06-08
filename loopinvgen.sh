@@ -9,7 +9,7 @@ VERIFY="$BIN_DIR/lig-verify"
 if [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
   echo -en "
 Building OCaml modules ...
-" >&2 ; jbuilder build @local
+" >&2 ; jbuilder build @localbin
 fi
 
 trap 'jobs -p | xargs kill -TERM > /dev/null 2> /dev/null' INT

@@ -46,7 +46,8 @@ let default_config = {
    ; ZProc.simplify z3 ("(and " ^ pre_inv ^ " " ^ inv ^ ")")*)
 
 let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
-                 ~(states : value list list) (inv : PIE.desc) : PIE.desc =
+                 ~(states : value list list) (inv : PIE.desc)
+                 : (PIE.desc * ZProc.model option) =
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_vars ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
@@ -58,7 +59,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   begin
     Log.debug (lazy ("IND >> Strengthening for inductiveness:"
                     ^ (Log.indented_sep 4) ^ inv)) ;
-    if inv = "false" then inv else
+    if inv = "false" then ("false", None)else
     let all_state_vars =
       (List.to_string_map sygus.state_vars ~sep:" " ~f:(fun (s, _) -> s))
     in let inv_def =
@@ -87,23 +88,22 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
             ), invf'_call)
       in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
-       ; if pre_inv = "true" then inv
-         else helper ("(and " ^ pre_inv ^ " " ^ inv ^ ")")
+       ; if pre_inv = "true" then (inv, None)
+         else begin
+           let new_inv = "(and " ^ pre_inv ^ " " ^ inv ^ ")"
+            in Log.debug (lazy ("PRE >> Checking if the following candidate is weaker than precond:"
+                         ^ (Log.indented_sep 4) ^ new_inv)) ;
+               let ce = (ZProc.implication_counter_example z3 sygus.pre.expr new_inv)
+               in if ce = None then helper new_inv else (new_inv, ce)
+         end
   end in helper inv
-
-let counterPre ?(seed = default_config.base_random_seed) ~(sygus : SyGuS.t)
-               ~(z3 : ZProc.t) (inv : PIE.desc) : value list option =
-  Log.debug (lazy ("PRE >> Checking if weaker than precond:"
-                  ^ (Log.indented_sep 4) ^ inv)) ;
-  let open Quickcheck in
-  random_value ~size:1 ~seed:(`Deterministic seed)
-    (Simulator.gen_state_from_model sygus z3
-       (ZProc.implication_counter_example z3 sygus.pre.expr inv))
 
 let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                                 ~(states : value list list) (sygus : SyGuS.t)
-                                (seed : string) (z3 : ZProc.t) : PIE.desc =
-  let restart_with_counter model =
+                                (seed_string : string) (z3 : ZProc.t) : PIE.desc =
+  let open Quickcheck in
+  let open Simulator in
+  let restart_with_new_states head =
     if restarts_left < 1
     then (Log.error (lazy ("Reached MAX (" ^ (string_of_int conf.max_restarts)
                           ^ ") restarts. Giving up ..."))
@@ -112,18 +112,27 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
       Log.warn (lazy ("Restarting inference engine. Attempt "
                      ^ (string_of_int (1 + conf.max_restarts - restarts_left))
                      ^ "/" ^ (string_of_int conf.max_restarts) ^".")) ;
-      let open Quickcheck
-      in learnInvariant_internal
-          ~states:(List.dedup_and_sort ~compare:(List.compare value_compare) (
-              states @ (random_value ~size:conf.max_steps_on_restart
-                                     ~seed:(`Deterministic seed)
-                                     (Simulator.simulate_from sygus z3 model))))
-          ~conf (restarts_left - 1) sygus (seed ^ "#") z3
+      learnInvariant_internal
+        ~states:List.(dedup_and_sort ~compare:(compare value_compare) (
+          states @ (random_value ~size:conf.max_steps_on_restart ~seed:(`Deterministic seed_string)
+                                 (simulate_from sygus z3 head))))
+        ~conf (restarts_left - 1) sygus (seed_string ^ "#") z3
     end
+<<<<<<< HEAD
   in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
   in match counterPre ~seed ~sygus ~z3 inv with
      | (Some _) as model -> restart_with_counter model
      | None -> if conf.for_VPIE.simplify then ZProc.simplify z3 inv else inv
+=======
+  in match satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr) with
+     | inv, None
+       -> if inv <> "false" then ZProc.simplify z3 inv
+          else restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
+                                                     (gen_pre_state ~use_trans:true sygus z3))
+     | inv, (Some ce_model)
+       -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
+                                                (gen_state_from_model sygus z3 (Some ce_model)))
+>>>>>>> origin/master
 
 let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =

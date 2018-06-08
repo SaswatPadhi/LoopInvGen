@@ -4,8 +4,36 @@ open Types
 
 
 let new_components = [
-    {
-    name = "nia-mult";
+  {
+    name = "int-div";
+    codomain = TInt;
+    domain = [TInt;TInt];
+    check = (function
+             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
+             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
+             | [x ; y] -> (x <> y)
+             | _ -> false);
+    apply = (function
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_div x y)
+             | _ -> VError);
+    dump = (fun [@warning "-8"] [a ; b] -> "(div " ^ a ^ " " ^ b ^ ")")
+  } ;
+  {
+    name = "int-mod";
+    codomain = TInt;
+    domain = [TInt;TInt];
+    check = (function
+             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
+             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
+             | [x ; y] -> x <> y
+             | _ -> false);
+    apply = (function
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_mod x y)
+             | _ -> VError);
+    dump = (fun [@warning "-8"] [a ; b] -> "(mod " ^ a ^ " " ^ b ^ ")")
+  } ;
+  {
+    name = "nonlin-int-mult";
     codomain = TInt;
     domain = [TInt; TInt];
     check = (function
@@ -21,5 +49,5 @@ let new_components = [
 ]
 
 let all_components =
-  (List.filter Th_LIA.all_components ~f:(fun c -> c.name <> "lia-mult"))
+  (List.filter Th_LIA.all_components ~f:(fun c -> c.name <> "lin-int-mult"))
   @ new_components

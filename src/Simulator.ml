@@ -30,13 +30,12 @@ let gen_state_from_model (s : SyGuS.t) (z3 : ZProc.t) (m : ZProc.model option)
                          : value list option Quickcheck.Generator.t =
   let open Quickcheck.Generator in
   match m with None -> singleton None
-  | Some m
-    -> create (fun ~size rnd -> Some (
-            List.map s.state_vars
-                    ~f:(fun (v, t) ->
-                          match List.Assoc.find m v ~equal:(=)
-                          with None -> generate (GenTests.typ_gen t) ~size rnd
-                             | Some d -> d)))
+  | Some m -> create (fun ~size rnd -> Some (
+                List.map s.state_vars
+                         ~f:(fun (v, t) ->
+                               match List.Assoc.find m v ~equal:(=)
+                               with Some d -> d
+                                  | None -> generate (GenTests.typ_gen t) ~size rnd)))
 
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
                : value list option Quickcheck.Generator.t =

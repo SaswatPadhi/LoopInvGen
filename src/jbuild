@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (alias
-    ((name local)
+    ((name localbin)
      (action
         (progn
             (bash "mkdir -p ${SCOPE_ROOT}/../../_bin")
