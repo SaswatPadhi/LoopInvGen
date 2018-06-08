@@ -1,0 +1,11 @@
+(jbuild_version 1)
+
+(ocamllex (UserFunLexer))
+(ocamlyacc (UserFunParser))
+
+(executables
+    ((names (Main))
+     (public_names (lig-tools-sorin-parser))
+     (libraries (core core_extended))
+     (preprocess (pps (ppx_jane)))
+     (preprocessor_deps (UserFunLexer.ml UserFunParser.ml))))

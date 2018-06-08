@@ -1,0 +1,124 @@
+user14,y>x-600
+user14,z+z>x-y-n
+user14,z>y-660
+user14,n*x-y>=z-166
+user14,z % 2 = 0
+user14,z % 2 < n+1
+user14,x+x+z>n
+user1,z>=0
+user1,y>=0
+user1,x>=0
+user1,n!=9
+user2,x>=n
+user2,(z/y)!=x
+user2,(y-x)<=z
+user2,(x+y)!=z
+user9,y*z>n
+user9,y*z>x
+user9,y+z>n
+user9,y+x>n
+user12,n>=0
+user12,x>=0
+user12,x<=216
+user12,y>=1
+user12,z>=6
+user12,z<=42
+user12,y<=127
+user5,z%y>=n
+user5,z/(n+y)!=x
+user5,y%z!=x
+user5,x/(n+z)<=y
+user13,n+1<z
+user13,y+1>n
+user13,x+1>n
+user13,z*z>x
+user14,x+x>z-25
+user14,x+2>y-55
+user14,z+z>x-512
+user14,z+y<905
+user14,x*z>-2
+user5,y/(x+z)!=n
+user5,z%(n+y)<=42
+user5,x-y!=n
+user5,(x+y)/(z+n)>=0
+user14,x!=5
+user1,y<=200
+user1,n<=200
+user1,z<=200
+user16,x=n*n*n
+user16,x>=0
+user16,y>=1
+user16,z>=6
+user16,z<=42
+user16,y<=127
+user16,x<=216
+user16,n>=0
+user16,n<=6
+user16,x=n*n*n
+user16,z=(n+1)*6
+user6,y<=n+z+x
+user3,z * y > x
+user3,y - x * n < z
+user3,y * z * n / 84 >= x
+user3,n * x / y < z
+user9,y*z>n
+user9,y*z>x
+user9,y+z>n
+user9,y+z>n-x
+user9,y*z>=z
+user9,y*z>=y
+user9,y+n>=y
+user8,n>x-10000
+user8,n<=x
+user8,z+y>n
+user8,n-z<x+z
+user11,n < (y + x)
+user11,n <= 1 || n > (z + x) / y
+user9,y*z*y>=z
+user7,y>0
+user9,y+z+y>n
+user9,z*y*z>x
+user9,z*y*z>n+x
+user10,y+n+z+x<=391
+user10,n<z
+user10,x<=216
+user10,z<=42
+user10,y<=127
+user10,y+n<z+x
+user14,x+z>5
+user14,y+n<=653
+user14,z+z<664
+user14,y+n+x<613
+user14,x*x>=z-36
+user14,y*z>3
+user14,x+y<z+543
+user14,n*y>-2
+user14,z+z>x+y-555
+user14,y+x+n<512
+user14,n+x+y+z>0
+user14,z-y<6
+user14,x-n<864
+user14,y>n && x<z+542
+user14,y>n && z<=y+z
+user14,x+x>n-5 && z>x-462
+user14,z+n >4 && x>-4
+user9,z*y*x>=n
+user9,z*y*z>y+n
+user9,z*y+x>x-n-z+y
+user3,n*x < y*z
+user3,z*n >= x
+user15,n>=0
+user15,y>n
+user15,n+z<50
+user15,y>0
+user15,n<7
+user15,x<217
+user15,n+x<225
+user15,n+z>5
+user15,x>=0
+user15,x=n*n*n
+user15,z%6=0
+user4,x>=n
+user4,z>=n
+user4,y>=n
+user4,x=n*n*n

@@ -123,7 +123,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
   in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
   in match counterPre ~seed ~sygus ~z3 inv with
      | (Some _) as model -> restart_with_counter model
-     | None -> ZProc.simplify z3 inv
+     | None -> if conf.for_VPIE.simplify then ZProc.simplify z3 inv else inv
 
 let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =

@@ -21,7 +21,7 @@ expr:
     INT                  { $1 }
   | VAR                  { $1 }
   | LPAREN expr RPAREN   { $2 }
-  | MINUS expr          { "-" ^ $2}
+  | MINUS expr          { "(- 0 " ^ $2 ^ ")" }
   | expr PLUS expr       { "(+ " ^ $1 ^ " " ^ $3 ^ ")" }
   | expr MINUS expr      { "(- " ^ $1 ^ " " ^ $3 ^ ")" }
   | expr TIMES expr      { "(* " ^ $1 ^ " " ^ $3 ^ ")" }
