@@ -118,12 +118,6 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                                  (simulate_from sygus z3 head))))
         ~conf (restarts_left - 1) sygus (seed_string ^ "#") z3
     end
-<<<<<<< HEAD
-  in let inv = satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr)
-  in match counterPre ~seed ~sygus ~z3 inv with
-     | (Some _) as model -> restart_with_counter model
-     | None -> if conf.for_VPIE.simplify then ZProc.simplify z3 inv else inv
-=======
   in match satisfyTrans ~conf ~sygus ~states ~z3 (sygus.post.expr) with
      | inv, None
        -> if inv <> "false" then ZProc.simplify z3 inv
@@ -132,7 +126,6 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
      | inv, (Some ce_model)
        -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
                                                 (gen_state_from_model sygus z3 (Some ce_model)))
->>>>>>> origin/master
 
 let learnInvariant ?(conf = default_config) ~(states : value list list)
                    ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =

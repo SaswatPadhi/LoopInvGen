@@ -2,6 +2,9 @@ open Core
 open Components
 open Types
 
+let pos_mod x y = ((x mod y) + (abs y)) mod y
+
+let pos_div x y = (x - (pos_mod x y)) / y
 
 let new_components = [
   {
