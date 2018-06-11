@@ -1,0 +1,466 @@
+user38,a<n
+user38,t<n
+user38,a+t<=n
+user38,a+t<=su
+user44,a>=0
+user44,n%4=0
+user44,a+t<=su
+user44,a*a<=n
+user44,n%2<t
+user44,a+su>=t
+user30,a<t
+user30,t>0
+user30,su>0
+user30,n>0
+user31,a+t<n
+user31,n*n>su
+user31,su+t+n>n
+user31,a+t<=su
+user10,a-t<su
+user10,a+t<n
+user10,su/n!=0
+user10,a*t>=0
+user1,a+t-su*4<=0 && n!=15
+user1,n*a/4<=16
+user1,a>=0
+user1,t>=0
+user30,a<5
+user30,a*0<=a*1
+user30,t*1>a
+user30,n%n*su<=su+su
+user30,su*n-t>n%t
+user16,n=46
+user16,a<t
+user16,n>a+t
+user16,n!=su
+user15,a<t
+user1,n!=47 && su>=0 && t<=13 && a+1>=1 && su % 3<=1
+user15,a<n
+user1,a+t>=0
+user15,n>t
+user1,n-su+(a*t)>=-5
+user1,n<=46
+user22,a<=6
+user22,t<=13
+user22,su<=49
+user22,n=46
+user22,a+t<=su
+user22,su-a<n
+user16,a+su<t*n
+user16,a<su
+user16,t<n
+user16,n=16
+user5,a/3<=t
+user5,su*t*a>=0
+user5,su/n<=2
+user5,(a+su) < t*n
+user39,n=16
+user39,(a+1)*(a+1)=su
+user39,(t-a) * (t-a) = su
+user39,n >= t
+user14,su/(t-a)<=n
+user14,su%t+1>=a
+user14,(t%(a+1))=a
+user14,t>a
+user14,n+t>=su
+user23,(a+1)*(a+1)=su
+user23,1+2*a=t
+user1,n!=45 && n!=47
+user1,n<=46
+user1,n/t/su/(a+1)>=0
+user1,a>=0
+user33,n>=a
+user33,n>=t/1
+user33,n*3>=t
+user33,su>a
+user33,t<n+a/3
+user33,46+10>a
+user10,a*su/n<=7
+user10,n%2<=a
+user10,su/t*a<=n
+user10,a%3<n-t
+user28,a*2+1=t
+user28,(a+1)*(a+1)=su
+user40,t<n*2
+user40,t*2<n+1
+user27,(n/t)*n>su
+user27,(a+su+t+n)/2<su*n
+user27,((n+t+su+a)/2)>t
+user27,su+1>t+a
+user45,a-su-t<0
+user45,a*su+t>0
+user45,a+su<t+n
+user45,a+su+t+n>0
+user30,n>t
+user30,n%2+1*1<=su
+user30,su>=t
+user30,t%2<n
+user10,n/su!=a
+user10,a*t>=0
+user10,su-t<=n
+user10,n%3<=t
+user9,n=92/2
+user30,t<n-a
+user30,t+1<n
+user30,t*2<n
+user30,n%2=0
+user1,n!=47 && n!=45
+user1,n>=46
+user1,t%2=1
+user1,a*t>=0
+user33,a+1>=t-5
+user33,su/5>=t-15
+user33,su+n>4
+user33,a<n
+user33,t<10
+user31,su+t>a
+user31,n+t>a
+user31,a*a<su
+user31,a*a<=n
+user33,n>a+t
+user33,46 % 2 < su
+user33,su + a > n-46
+user33,t*su>-2
+user3,(a+1)*(a+1)=su
+user3,a+t<n
+user3,su-t<n
+user3,(su-t-a)<n
+user26,a<t
+user26,(su+t+a)>a
+user26,(su/t)>=1
+user26,(n/(su/t))>=10
+user26,(n+su-t-a)/2<n
+user21,a%t<su
+user21,a-t<su
+user21,a<13
+user21,a<=t
+user29,n%t+su>0
+user29,a*su<t*n
+user41,n/a>=su/t
+user41,n*t/su>a
+user41,t-a<n
+user41,su*a<su*t
+user34,n>a
+user34,n>t
+user34,t>a
+user34,su>=t
+user36,a>=0
+user36,n=16
+user36,t>0
+user36,su>=1
+user36,t<10
+user7,a + su < t * n
+user7,a < su
+user7,t / su < n / a
+user7,su + t + n - a > a / n
+user10,n/su!=t
+user10,n-su<=15
+user10,(a+1)<=t
+user10,t%2!=n
+user1,n!=17
+user1,t>=1
+user1,a<=6
+user1,su>=0
+user4,((a / su) * t) + 50 > n
+user19,a < n
+user19,t<n
+user19,n=46
+user19,t>0
+user19,su>0
+user19,a>-1
+user6,n=46
+user6,a +t >=t
+user6,t+n>a+su
+user6,(a+1)*(a+1)=su
+user6,su /(a+1) = a+1
+user33,n>t
+user33,su+t <n +25
+user33,n % 2=0
+user33,t+t<su+15
+user33,n = 46
+user33,n>a+t
+user10,su/t<=n
+user10,n/(su+t)<=23
+user10,t%su>=a
+user10,n!=a+t
+user1,n!=47
+user1,a>=0
+user1,su>=0
+user1,t>=0
+user35,a*4<n
+user35,su-a<n
+user35,a+t<n
+user35,n>t-a
+user19,n>t
+user19,a<n
+user19,a+t<n
+user19,7>a
+user19,14>t
+user19,50>su
+user19,a+t<100
+user18,a+su>=t
+user18,su-a>=t
+user18,a*su<=t*n
+user18,n+su>a+t
+user13,t+a<su+n
+user13,n*a+2>su
+user13,n/t<=46
+user13,t*a/n<2
+user1,t+a+su-25<=n
+user10,n%(a+su)!=t
+user10,t%n>=a
+user33,su*2>-2
+user33,n>a+su-15
+user33,su>n-t-a-50
+user33,a+t+su<n+104
+user33,a*8+3<n+6
+user30,n+1>a
+user30,t+1>a
+user30,a-1<su
+user30,n+su>a
+user33,n+5>su
+user37,n=46
+user37,a>=0
+user37,t>=1
+user37,t<14
+user37,su<=49
+user37,su>0
+user10,n/(a+t)!=su
+user10,n/(su*t)!=a
+user10,su-t>=a
+user10,t-a<=su
+user37,su=(a+1)*(a+1)
+user37,a>=0
+user37,a<=6
+user37,su>=1
+user7,a * 2 + 1 = t
+user42,n > a
+user42,n+t > a
+user42,n + su > a
+user42,n + su - a > a
+user7,(a + su + t) * 0 + 46 = n
+user7,t *su / n + 8 > a
+user7,su * n / t > a
+user18,n+a>t
+user18,t+su>a
+user18,n*t>a
+user18,n*t>=su
+user18,n*su>t
+user18,n*su>a
+user18,su*t>a
+user18,su*t>=su
+user18,n>a+t
+user18,n*su*t>t+a
+user18,t*n*su*t>su
+user24,a<n
+user24,a<su
+user24,a<t
+user24,t<=su
+user24,t+a<n
+user24,t+a<=su
+user24,n=46
+user33,n = 46
+user33,su>-2
+user33,su + t<575
+user33,su+n>-6
+user33,a*a<su
+user33,t*t<n+543
+user33,su + su>n-61
+user33,a*a<t*t
+user33,n-su<55
+user33,t-su<5
+user33,a-n<5
+user33,a-t<63
+user33,n-t<365
+user33,n-a>su-t
+user36,n=46
+user36,su>0
+user36,t>0
+user36,(a+t)>0
+user36,t=(a*2)+1
+user36,(a+t)<n
+user18,n*t*su>a*t
+user18,n*su+t>t-a-su
+user7,n + su / t > n
+user7,su / t * a < n
+user7,a * n + 1 >= su
+user7,n - su + t * a + 2 > n
+user10,n%su!=t
+user10,n/su<=37
+user10,n/(t+a)!=su
+user10,su-t>=a
+user33,su*su<4326
+user33,t+a<42
+user33,n*n>42
+user33,n+t>8
+user33,a<=7
+user33,n*a>t-2
+user33,n = 37
+user33,t*n>su
+user33,a*n>=t*a
+user33,t != 6
+user33,su !=6
+user33,su!= 64
+user33,a*n<su+a+646
+user33,t*su>a
+user33,su>=t
+user33,n >=6 && t<42
+user33,a+a>-5-su
+user33,t+t<n-a
+user33,n-su>-n
+user33,t*n>su-t
+user33,a*su<n-su+554
+user33,a-n != 6
+user33,su + t != a
+user33,a != n
+user33,su != a
+user33,su != n-t
+user33,su - n != 6
+user33,a != t
+user33,t<=15 || a >54
+user33,t-su>-5 || su>= 6
+user33,a * su >  -2 || t - n >3
+user33,n - a >= su /2
+user33,a - su != t / n
+user33,t - a != n /2
+user33,a - t != n
+user33,n - su != 5
+user33,n - 5 != a /2
+user33,t-a != su /42
+user33,a-su != n -a
+user33,a * n != t * su
+user33,t * a != su - n
+user33,t * a != t /4
+user33,a * n != su - t + 2
+user10,n/su!=t
+user10,a*su/n<=t
+user10,t-a<=su
+user10,a%su<=t
+user1,su>=1
+user1,a>=0
+user1,t>=0
+user1,n!=38
+user33,a - su != n - t
+user33,t * a != su / t
+user33,n * su != 6 / a
+user33,a - t != n - a
+user33,t * n >= su - a
+user33,t - 53 < n / a
+user33,n / su < 64
+user33,su * a > n - 75
+user33,a < n / t + su
+user33,n * su > t / 3
+user33,su + t != n / a - t
+user1,a+su+t/n>=0
+user1,n>=37
+user24,a<n
+user24,t<n
+user24,a<t
+user24,a+t<n
+user24,n=37
+user24,a+t<=su
+user36,a>=0
+user36,n=37
+user36,su>0
+user36,t>0
+user36,a+n<44
+user36,su+t<63
+user36,a+t<=su
+user36,su>=t
+user36,a+t<20
+user36,su+t>1
+user8,n=37
+user8,a>=0
+user8,su=t+a*a
+user8,su=(a+1)*(a+1)
+user7,n - t > a / su
+user7,su - t < n
+user7,n%5 * a * t + 2 > su
+user7,n * su > a * t
+user11,a+n>su-t
+user11,a-n<su+t
+user1,su*t*a/su>=0
+user7,(n - t - a) * 3 > su
+user1,n>=37 && su>=0
+user7,n%5 * (t + a) + t%15 > su
+user7,su - t - a < n
+user7,n*2 - t - a > su
+user7,a* t + n > su
+user20,n=37
+user20,t<=su
+user20,a<t
+user20,a<n
+user10,a+t<=n
+user17,n>a
+user17,t<n
+user17,t<=su
+user17,t+a<n
+user2,su>=1
+user2,a>=0
+user2,t>=1
+user2,n<=37
+user36,su+t>a
+user44,a+t<=su
+user44,n+t-1>=n
+user44,n+t>su
+user44,a<=su+t
+user36,a+t<n
+user36,su>=a
+user36,su<50
+user36,a<7
+user36,su*t>0
+user36,a<t
+user36,a<su
+user36,a>=0
+user36,n=37
+user36,su>0
+user36,t>=1
+user36,a+t<n
+user36,a+t+su<70
+user36,a+t/su>0
+user25,su+a<=55
+user25,n=37
+user25,su-t<=36
+user43,n>a
+user8,n=37
+user43,n*t>su
+user43,su*t>a
+user8,t>a
+user43,n=37
+user8,(a+1)*(a+1)=su
+user8,t+a*a=su
+user36,su<50
+user36,a+n>t
+user36,n/t>1
+user12,n+su>a
+user12,n*t>a
+user12,a % su < n
+user12,n+1=38
+user12,n%1+100>su
+user36,su>=t
+user1,su>=0
+user1,t>=0
+user1,n>=0
+user1,a>=0
+user1,su+a>=0
+user1,su-a-t-n<=-1
+user1,n!=38
+user1,n-37>=00
+user32,t=2*a+1
+user32,a<t
+user32,su=(a+1)*(a+1)
+user1,-37+n<=0
+user1,-su+n+a>=-7
+user1,n-t*su>=-1000
+user1,a*a-n*n<=-1
+user1,n!=36 && n!=38
+user1,su*su-n*n<=2000
+user1,su+su*a+a>=0
+user1,a+a*t+t>=0
+user1,n/n+su/su!=3
+user1,t/t+su/su<=3
+user1,su*a-a>=0
+user1,n/n-a+a-t<=0
+user1,a-a*t+n-su<=50
+user1,n/su>=0
+user1,su*su-a-t*n*n<=0

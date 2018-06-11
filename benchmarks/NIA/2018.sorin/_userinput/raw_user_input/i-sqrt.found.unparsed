@@ -1,0 +1,466 @@
+a<n
+t<n
+a+t<=n
+a+t<=su
+a>=0
+n%4=0
+a+t<=su
+a*a<=n
+n%2<t
+a+su>=t
+a<t
+t>0
+su>0
+n>0
+a+t<n
+n*n>su
+su+t+n>n
+a+t<=su
+a-t<su
+a+t<n
+su/n!=0
+a*t>=0
+a+t-su*4<=0 && n!=15
+n*a/4<=16
+a>=0
+t>=0
+a<5
+a*0<=a*1
+t*1>a
+n%n*su<=su+su
+su*n-t>n%t
+n=46
+a<t
+n>a+t
+n!=su
+a<t
+n!=47 && su>=0 && t<=13 && a+1>=1 && su % 3<=1
+a<n
+a+t>=0
+n>t
+n-su+(a*t)>=-5
+n<=46
+a<=6
+t<=13
+su<=49
+n=46
+a+t<=su
+su-a<n
+a+su<t*n
+a<su
+t<n
+n=16
+a/3<=t
+su*t*a>=0
+su/n<=2
+(a+su) < t*n
+n=16
+(a+1)*(a+1)=su
+(t-a) * (t-a) = su
+n >= t
+su/(t-a)<=n
+su%t+1>=a
+(t%(a+1))=a
+t>a
+n+t>=su
+(a+1)*(a+1)=su
+1+2*a=t
+n!=45 && n!=47
+n<=46
+n/t/su/(a+1)>=0
+a>=0
+n>=a
+n>=t/1
+n*3>=t
+su>a
+t<n+a/3
+46+10>a
+a*su/n<=7
+n%2<=a
+su/t*a<=n
+a%3<n-t
+a*2+1=t
+(a+1)*(a+1)=su
+t<n*2
+t*2<n+1
+(n/t)*n>su
+(a+su+t+n)/2<su*n
+((n+t+su+a)/2)>t
+su+1>t+a
+a-su-t<0
+a*su+t>0
+a+su<t+n
+a+su+t+n>0
+n>t
+n%2+1*1<=su
+su>=t
+t%2<n
+n/su!=a
+a*t>=0
+su-t<=n
+n%3<=t
+n=92/2
+t<n-a
+t+1<n
+t*2<n
+n%2=0
+n!=47 && n!=45
+n>=46
+t%2=1
+a*t>=0
+a+1>=t-5
+su/5>=t-15
+su+n>4
+a<n
+t<10
+su+t>a
+n+t>a
+a*a<su
+a*a<=n
+n>a+t
+46 % 2 < su
+su + a > n-46
+t*su>-2
+(a+1)*(a+1)=su
+a+t<n
+su-t<n
+(su-t-a)<n
+a<t
+(su+t+a)>a
+(su/t)>=1
+(n/(su/t))>=10
+(n+su-t-a)/2<n
+a%t<su
+a-t<su
+a<13
+a<=t
+n%t+su>0
+a*su<t*n
+n/a>=su/t
+n*t/su>a
+t-a<n
+su*a<su*t
+n>a
+n>t
+t>a
+su>=t
+a>=0
+n=16
+t>0
+su>=1
+t<10
+a + su < t * n
+a < su
+t / su < n / a
+su + t + n - a > a / n
+n/su!=t
+n-su<=15
+(a+1)<=t
+t%2!=n
+n!=17
+t>=1
+a<=6
+su>=0
+((a / su) * t) + 50 > n
+a < n
+t<n
+n=46
+t>0
+su>0
+a>-1
+n=46
+a +t >=t
+t+n>a+su
+(a+1)*(a+1)=su
+su /(a+1) = a+1
+n>t
+su+t <n +25
+n % 2=0
+t+t<su+15
+n = 46
+n>a+t
+su/t<=n
+n/(su+t)<=23
+t%su>=a
+n!=a+t
+n!=47
+a>=0
+su>=0
+t>=0
+a*4<n
+su-a<n
+a+t<n
+n>t-a
+n>t
+a<n
+a+t<n
+7>a
+14>t
+50>su
+a+t<100
+a+su>=t
+su-a>=t
+a*su<=t*n
+n+su>a+t
+t+a<su+n
+n*a+2>su
+n/t<=46
+t*a/n<2
+t+a+su-25<=n
+n%(a+su)!=t
+t%n>=a
+su*2>-2
+n>a+su-15
+su>n-t-a-50
+a+t+su<n+104
+a*8+3<n+6
+n+1>a
+t+1>a
+a-1<su
+n+su>a
+n+5>su
+n=46
+a>=0
+t>=1
+t<14
+su<=49
+su>0
+n/(a+t)!=su
+n/(su*t)!=a
+su-t>=a
+t-a<=su
+su=(a+1)*(a+1)
+a>=0
+a<=6
+su>=1
+a * 2 + 1 = t
+n > a
+n+t > a
+n + su > a
+n + su - a > a
+(a + su + t) * 0 + 46 = n
+t *su / n + 8 > a
+su * n / t > a
+n+a>t
+t+su>a
+n*t>a
+n*t>=su
+n*su>t
+n*su>a
+su*t>a
+su*t>=su
+n>a+t
+n*su*t>t+a
+t*n*su*t>su
+a<n
+a<su
+a<t
+t<=su
+t+a<n
+t+a<=su
+n=46
+n = 46
+su>-2
+su + t<575
+su+n>-6
+a*a<su
+t*t<n+543
+su + su>n-61
+a*a<t*t
+n-su<55
+t-su<5
+a-n<5
+a-t<63
+n-t<365
+n-a>su-t
+n=46
+su>0
+t>0
+(a+t)>0
+t=(a*2)+1
+(a+t)<n
+n*t*su>a*t
+n*su+t>t-a-su
+n + su / t > n
+su / t * a < n
+a * n + 1 >= su
+n - su + t * a + 2 > n
+n%su!=t
+n/su<=37
+n/(t+a)!=su
+su-t>=a
+su*su<4326
+t+a<42
+n*n>42
+n+t>8
+a<=7
+n*a>t-2
+n = 37
+t*n>su
+a*n>=t*a
+t != 6
+su !=6
+su!= 64
+a*n<su+a+646
+t*su>a
+su>=t
+n >=6 && t<42
+a+a>-5-su
+t+t<n-a
+n-su>-n
+t*n>su-t
+a*su<n-su+554
+a-n != 6
+su + t != a
+a != n
+su != a
+su != n-t
+su - n != 6
+a != t
+t<=15 || a >54
+t-su>-5 || su>= 6
+a * su >  -2 || t - n >3
+n - a >= su /2
+a - su != t / n
+t - a != n /2
+a - t != n
+n - su != 5
+n - 5 != a /2
+t-a != su /42
+a-su != n -a
+a * n != t * su
+t * a != su - n
+t * a != t /4
+a * n != su - t + 2
+n/su!=t
+a*su/n<=t
+t-a<=su
+a%su<=t
+su>=1
+a>=0
+t>=0
+n!=38
+a - su != n - t
+t * a != su / t
+n * su != 6 / a
+a - t != n - a
+t * n >= su - a
+t - 53 < n / a
+n / su < 64
+su * a > n - 75
+a < n / t + su
+n * su > t / 3
+su + t != n / a - t
+a+su+t/n>=0
+n>=37
+a<n
+t<n
+a<t
+a+t<n
+n=37
+a+t<=su
+a>=0
+n=37
+su>0
+t>0
+a+n<44
+su+t<63
+a+t<=su
+su>=t
+a+t<20
+su+t>1
+n=37
+a>=0
+su=t+a*a
+su=(a+1)*(a+1)
+n - t > a / su
+su - t < n
+n%5 * a * t + 2 > su
+n * su > a * t
+a+n>su-t
+a-n<su+t
+su*t*a/su>=0
+(n - t - a) * 3 > su
+n>=37 && su>=0
+n%5 * (t + a) + t%15 > su
+su - t - a < n
+n*2 - t - a > su
+a* t + n > su
+n=37
+t<=su
+a<t
+a<n
+a+t<=n
+n>a
+t<n
+t<=su
+t+a<n
+su>=1
+a>=0
+t>=1
+n<=37
+su+t>a
+a+t<=su
+n+t-1>=n
+n+t>su
+a<=su+t
+a+t<n
+su>=a
+su<50
+a<7
+su*t>0
+a<t
+a<su
+a>=0
+n=37
+su>0
+t>=1
+a+t<n
+a+t+su<70
+a+t/su>0
+su+a<=55
+n=37
+su-t<=36
+n>a
+n=37
+n*t>su
+su*t>a
+t>a
+n=37
+(a+1)*(a+1)=su
+t+a*a=su
+su<50
+a+n>t
+n/t>1
+n+su>a
+n*t>a
+a % su < n
+n+1=38
+n%1+100>su
+su>=t
+su>=0
+t>=0
+n>=0
+a>=0
+su+a>=0
+su-a-t-n<=-1
+n!=38
+n-37>=00
+t=2*a+1
+a<t
+su=(a+1)*(a+1)
+-37+n<=0
+-su+n+a>=-7
+n-t*su>=-1000
+a*a-n*n<=-1
+n!=36 && n!=38
+su*su-n*n<=2000
+su+su*a+a>=0
+a+a*t+t>=0
+n/n+su/su!=3
+t/t+su/su<=3
+su*a-a>=0
+n/n-a+a-t<=0
+a-a*t+n-su<=50
+n/su>=0
+su*su-a-t*n*n<=0

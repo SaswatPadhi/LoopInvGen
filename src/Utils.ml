@@ -37,3 +37,16 @@ let start_logging_to ~msg logfile =
   match logfile with
    | Some logfile -> Log.enable ~msg logfile
    | _ -> ()
+
+let gen_user_functions userFs varList : (string * string) list = 
+  let flatten_vars = (fun (s,t) res -> "(" ^ s ^ " " ^ (Types.string_of_typ t) ^ ") " ^ res) in
+  let varString = "( " ^ (Core.List.fold_right varList ~f:flatten_vars ~init:"") ^ ")" in
+  let rec g_u_f userFs iter acc =
+    (match userFs with
+      | [] -> acc
+      | f :: restFs -> 
+          let fname = "f_" ^ (string_of_int iter) in
+          let z3func = "(define-fun " ^ fname ^ " " ^ varString ^ " Bool " ^ f ^ ")" in
+          g_u_f restFs (iter + 1) ((z3func, fname) :: acc))
+  in g_u_f userFs 0 []
+

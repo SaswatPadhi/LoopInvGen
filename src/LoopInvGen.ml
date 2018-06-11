@@ -11,6 +11,7 @@ type 'a config = {
   max_restarts : int ;
   max_steps_on_restart : int ;
   model_completion_mode : [ `RandomGeneration | `UsingZ3 ] ;
+  user_functions: (string * string) list ;
 }
 
 let default_config = {
@@ -22,6 +23,7 @@ let default_config = {
   max_restarts = 64 ;
   max_steps_on_restart = 256 ;
   model_completion_mode = `RandomGeneration ;
+  user_functions = [] ;
 }
 
 (*let satisfyPost ?(conf = default_config) ~(states : value list list)
@@ -57,15 +59,17 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   begin
     Log.debug (lazy ("IND >> Strengthening for inductiveness:"
                     ^ (Log.indented_sep 4) ^ inv)) ;
-    if inv = "false" then ("false", None) else
-    let inv_def =
+    if inv = "false" then ("false", None)else
+    let all_state_vars =
+      (List.to_string_map sygus.state_vars ~sep:" " ~f:(fun (s, _) -> s))
+    in let inv_def =
       "(define-fun invf (" ^
       (List.to_string_map sygus.inv_vars ~sep:" "
                           ~f:(fun (s, t) -> "(" ^ s ^ " " ^
                                             (Types.string_of_typ t) ^ ")")) ^
       ") Bool " ^ inv ^ ")"
     in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans.expr ^ ")"
-                                           ; "(assert " ^ invf_call ^ ")" ]
+                                           ; "(assert " ^ invf_call ^ ")" ; ]
      ; let pre_inv =
          VPIE.learnVPreCond
            ~conf:conf.for_VPIE ~consts:sygus.consts ~z3 ~eval_term
@@ -77,6 +81,10 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                     | Ok v when v = vfalse -> true
                                     | _ -> false)
                ~pos_tests: states
+               ~features: (List.map ~f:(fun (_, name)
+                                          -> ((ZProc.build_feature name z3),
+                                              ("(" ^ name ^ " " ^ all_state_vars ^ ")")))
+                                    conf.user_functions)
             ), invf'_call)
       in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
@@ -127,7 +135,7 @@ let learnInvariant ?(conf = default_config) ~(states : value list list)
          Quickcheck.(random_value ~seed:(`Deterministic conf.base_random_seed)
                                   (Generator.small_non_negative_int)))))
        (fun z3 ->
-         Simulator.setup sygus z3 ;
+         Simulator.setup sygus z3 ~user_fs:(List.map ~f:(fun (a, b) -> a) conf.user_functions) ;
          if not ((implication_counter_example z3 sygus.pre.expr sygus.post.expr)
                  = None) then "false"
          else learnInvariant_internal ~conf ~states conf.max_restarts sygus

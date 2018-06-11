@@ -1,0 +1,122 @@
+user12,b>=y
+user12,b>z-2
+user12,b % 2 = 0
+user12,z+z>x-55
+user12,b * a = 8
+user12,b+z+x>y
+user12,b+z>x+a-5
+user1,y>=0
+user1,a!=2
+user1,a>=1
+user1,b>=8
+user2,(z+x)!=y
+user2,(y-b)<=z
+user2,x>=z
+user2,(x*y)<=b
+user7,x*b>a
+user7,b+y>a
+user7,x*a>=z
+user7,y/b<=x
+user10,a=1
+user10,z>=0
+user10,x>=1
+user10,x<=8
+user10,b=8
+user10,y<=8
+user5,a/(y+x)<=b
+user5,y%b!=x
+user5,y/b!=z
+user5,y*z!=a
+user8,a<b
+user1,z+y*x-b<=a
+user5,a%b<=x
+user5,y%(z+x)<=b
+user5,b/x>=y
+user12,y>=b-50
+user12,b>=z
+user12,a*15>b
+user12,y+a>b-15
+user11,z-1<b
+user11,a-1<=z
+user11,a-1<x
+user11,b+y>a
+user12,56/b=7
+user12,b=8
+user15,a=1
+user15,b=8
+user15,z<=8
+user15,y!=x
+user15,a=1
+user9,y+z<10
+user9,a=1
+user9,b=8
+user9,a+b=9
+user9,a+x<10
+user9,a+y<10
+user16,x <= b
+user16,x/b <= 1
+user16,y+1 >= a
+user16,x+b > y
+user7,a+b>z
+user7,a+b>x
+user7,a*b>=x
+user7,a*b>=z
+user7,a*b>=a
+user7,a*b>=b
+user7,a+b>=a
+user7,a+b>=b
+user7,a+y>y
+user7,a+b>z+y
+user14,a <2
+user14,y <=8
+user14,b = 8
+user14,z <=8
+user14,a = 1
+user7,y+b*a>=z
+user7,a*b*x>z+a
+user6,b>=y
+user6,b>=z
+user6,b>a
+user6,b>=x
+user15,b=8
+user15,(b!=y*x)|| (y>0)
+user15,z<=8
+user12,a= 1
+user12,b = 8
+user12,a+y>-4
+user12,x+y<50
+user12,z*a>-2
+user12,b+x<50
+user12,a*x<55
+user12,x-b<6
+user12,z-b>-65
+user12,y-z<36
+user12,a-y<5
+user12,x-a<64
+user12,x-z<63
+user12,b-z<53
+user12,b>a && z<y+64
+user5,y*x!=z
+user5,b/x>=y
+user5,y%b!=x
+user5,z%a<=y
+user3,a * z + y * x = b
+user3,z + y / b * x + y * x - a <= b
+user3,y / x + a * z * b <= z*x + y
+user3,b * y / x + 8 >= b
+user7,y*b*a+x+b>y+z+a
+user7,y*b*a>a-b-y
+user13,z>=0
+user13,a=1
+user13,x<=b
+user13,z+y<=b
+user13,b=(a+7)
+user13,a*y<=b
+user13,z+y>0
+user13,(y+z)/x>0
+user13,a<=x
+user4,z<=b
+user4,z<=x
+user13,x>0
+user4,a*b=b
+user4,x>=a

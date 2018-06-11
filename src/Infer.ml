@@ -5,7 +5,7 @@ open Utils
 
 let main zpath statefile outfile logfile do_false
          max_conflicts max_strengthening_attempts
-         max_restarts max_steps_on_restart
+         max_restarts max_steps_on_restart user_input_file
          filename () =
   Utils.start_logging_to ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
@@ -19,6 +19,9 @@ let main zpath statefile outfile logfile do_false
                       " program states."))
    ; let sygus = SyGuS.load (Utils.get_in_channel filename)
      in let synth_logic = Types.logic_of_string sygus.logic
+     in let user_input = (match user_input_file with
+     | Some uif -> In_channel.read_lines uif
+     | None -> []) 
      in let conf = {
        LoopInvGen.default_config with
        for_VPIE = {
@@ -30,10 +33,11 @@ let main zpath statefile outfile logfile do_false
                                       else ((PIE.conflict_group_size_multiplier_for_logic synth_logic)
                                             * PIE.base_max_conflict_group_size)) ;
          }
-       ; max_tries = max_strengthening_attempts
+       ; max_tries = max_strengthening_attempts ;
        }
      ; max_restarts
      ; max_steps_on_restart
+     ; user_functions = Utils.gen_user_functions user_input sygus.state_vars ;
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
@@ -59,6 +63,8 @@ let spec =
                                             ~doc:"NUMBER number of times the inference engine may restart"
       +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
                                             ~doc:"NUMBER number of states to collect after each restart"
+
+      +> flag "-i" (optional string) ~doc:"FILENAME user input file which contains user defined features"
 
       +> anon (maybe_with_default "-" ("filename" %: file))
     )

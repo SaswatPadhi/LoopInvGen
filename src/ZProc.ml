@@ -1,6 +1,7 @@
 open Core
 open Exceptions
 open Sexplib
+open Types
 
 type t = {
   procid : Pid.t ;
@@ -106,8 +107,8 @@ let z3_result_to_values (result : string list) : model option =
   let open Sexp in
   try [@warning "-8"]
   match result with
-  | "unsat" :: _ -> None
-  | [ "sat" ; _ ; result ]
+  | [_;"unsat"]| "unsat" :: _ -> None
+  | [_; "sat"; _ ; result] | [ "sat" ; _ ; result ]
     -> begin match Sexp.parse result with
         | Done (List((Atom model) :: varexps), _)
           -> let open List in
@@ -201,3 +202,18 @@ let normalize (expr : string) : string =
   in match parse expr with
      | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))
      | _ -> ""
+
+let rec build_arguments (vals : value list) : string = 
+  match vals with 
+    | [] -> ""
+    | v :: r -> " " ^ (Types.serialize_value v) ^ (build_arguments r)
+
+let build_feature (name : string) (z3 : t) (vals : value list) : bool =
+    let result = run_queries z3 [
+      "(assert (" ^ name ^ build_arguments vals ^ "))" ;
+      "(check-sat)"
+    ] in 
+    match result with
+      | ["sat"] | [_;"sat"] -> true
+      | ["unsat"] | [_;"unsat"] -> (Log.debug (lazy "successful false"); false)
+      | _ -> raise (Internal_Exn "z3 could not verify the query.")

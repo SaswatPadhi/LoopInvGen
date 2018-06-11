@@ -111,11 +111,12 @@ let add_neg_test ~(job : (value list, 'b) job) (test : value list) : (value list
             -> raise (Ambiguous_Test ("Test (" ^ (String.concat ~sep:"," job.farg_names)
                                      ^ ") = (" ^ (serialize_values ~sep:"," test)
                                      ^ "), does not belong in POS!"))
-          | Exit -> {
+          | Exit -> (List.map ~f:(fun (_, name) -> (Log.debug (lazy name))) job.features; 
+                   {
                        job with
                        neg_tests = (test, lazy (compute_feature_vector job.features test))
                                 :: job.neg_tests
-                    }
+                    })
 
 let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
   let (pos, neg) = split_tests (List.dedup_and_sort ~compare:(List.compare value_compare) tests)
@@ -151,6 +152,7 @@ let update_feature_vecs (features : 'a feature with_desc list)
    of the truth value of the given postcondition). Hence the user needs to
    provide new features that can separate these examples. *)
 let conflictingTests (job : ('a, 'b) job) : 'a conflict list =
+  List.map ~f:(fun (_, name) -> (Log.debug (lazy name))) job.features;
   let make_f_vecs = List.map ~f:(fun (t, fvec) -> (t, Lazy.force fvec)) in
   let make_groups tests =
     List.group tests ~break:(fun (_, fv1) (_, fv2) -> fv1 <> fv2)

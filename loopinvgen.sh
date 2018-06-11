@@ -27,6 +27,8 @@ RECORD_FORKS=4
 RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
 
+USER_INPUT_FILE=""
+
 RECORD_LOG=""
 INFER_LOG=""
 VERIFY_LOG=""
@@ -63,6 +65,7 @@ Configuration:
     [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
+    [--user-input, -u <path>]        ($USER_INPUT_FILE)
 
 Arguments to Internal Programs:
     [--Record-args, -R \"<args>\"]    for ${RECORD}
@@ -71,7 +74,8 @@ Arguments to Internal Programs:
 " >&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:icvl:p:s:t:z: --long Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,logging:,intermediates-dir:,record-states:,infer-timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :R:I:V:icvl:p:s:t:z:u: --long Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,logging:,intermediates-dir:,record-states:,infer-timeout:,z3-path:,user-input: -- "$@"`
+
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -114,6 +118,10 @@ while true ; do
     -z | --z3-path )
          [ -f "$2" ] || usage "Z3 [$2] not found."
          Z3_PATH="$2"
+         shift ; shift ;;
+    -u | --user-input )
+         [ -f "$2" ] || usage
+         USER_INPUT_FILE="-i $2"
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -174,12 +182,12 @@ grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STAT
 
 if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
 
-
 show_status "(@ infer)"
 
 timeout --foreground $INFER_TIMEOUT \
         $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-               $INFER_ARGS $INFER_LOG >&2
+               $INFER_ARGS $INFER_LOG $USER_INPUT_FILE >&2
+
 INFER_RESULT_CODE=$?
 
 
