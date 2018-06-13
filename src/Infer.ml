@@ -3,7 +3,7 @@ open Core.Out_channel
 open SyGuS
 open Utils
 
-let main zpath statefile outfile logfile do_false
+let main zpath statefile outfile logfile false_on_failure
          max_conflicts max_strengthening_attempts
          max_restarts max_steps_on_restart
          filename () =
@@ -37,7 +37,7 @@ let main zpath statefile outfile logfile do_false
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
-     in if (not do_false) && inv = "false" then ()
+     in if (not false_on_failure) && inv = "false" then ()
         else output_string out_chan (build_inv_func (ZProc.normalize inv) ~sygus)
       ; Out_channel.close out_chan
       ; exit (if inv = "false" then 1 else 0)

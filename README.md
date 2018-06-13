@@ -97,6 +97,16 @@ $ ./loopinvgen.sh benchmarks/2016/array.sl
 We trap <kbd>CTRL</kbd>+<kbd>C</kbd> (`SIGINT` signal) to break out of the current stage,
 and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill LoopInvGen and with its child processes.
 
+#### Inference Timeout
+
+The `-t` flag allows users to run LoopInvGen with a maximum limit
+on the number of _seconds_ (wall-clock time) for which the inference algorithm may run.
+```bash
+$ ./loopinvgen.sh -t 8 benchmarks/2016/array.sl
+```
+
+For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulimit.html).
+
 <details>
 
 #### Verifying Generated Invariants

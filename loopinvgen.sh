@@ -66,10 +66,10 @@ Configuration:
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
 
-Arguments to Internal Programs:
-    [--Record-args, -R \"<args>\"]    for ${RECORD}
-    [--Infer-args, -I \"<args>\"]     for ${INFER}
-    [--Verify-args, -V \"<args>\"]    for ${VERIFY}
+Arguments to Internal Programs @ (`dirname $RECORD`):
+    [--Record-args, -R \"<args>\"]    see \``basename "$RECORD"` -h\` for details
+    [--Infer-args, -I \"<args>\"]     see \``basename "$INFER"` -h\` for details
+    [--Verify-args, -V \"<args>\"]    see \``basename "$VERIFY"` -h\` for details
 " >&2 ; exit -1
 }
 
