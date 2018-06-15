@@ -20,7 +20,7 @@ let query_for_model ?(eval_term = "true") () =
 let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let open Unix in
   let open Process_info in
-  let pi = create_process zpath ["-in"] in
+  let pi = create_process zpath ["-in";"-smt2"] in
   let z3 = {
     procid = pi.pid ;
     stdin  = out_channel_of_descr pi.stdin ;

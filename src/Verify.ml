@@ -74,12 +74,7 @@ let spec =
     +> anon (maybe_with_default "-" ("filename" %: file))
   )
 
-let cmd =
-  Command.basic_spec spec main
-    ~summary: "Check sufficiency of a generated invariant for proving correctness."
-
 let () =
   Command.run
-    ~version:"0.6b"
-    ~build_info:("padhi @ " ^ (Core_extended.Logger.timestamp ()))
-    cmd
+    (Command.basic_spec spec main
+       ~summary: "Check sufficiency of a generated invariant for proving correctness.")

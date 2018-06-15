@@ -5,7 +5,6 @@ open Utils
 
 type conjunct = int list
 
-type costAssignment = (int, float) Hashtbl.t
 type truthAssignment = (int, bool) Hashtbl.t
 
 type config = {
@@ -36,7 +35,7 @@ let pruneWithAPositiveExample (conj : conjunct) (example : truthAssignment)
    that cover all of the negative examples in example
    (i.e., that conjunction of literals suffices to falsify all
    of the provided negative examples). *)
-let pruneWithNegativeExamples (conj : conjunct) (costs : costAssignment)
+let pruneWithNegativeExamples (conj : conjunct)
                               (example : truthAssignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remaining accum =
@@ -49,12 +48,9 @@ let pruneWithNegativeExamples (conj : conjunct) (costs : costAssignment)
         ~f:(fun v -> (v, List.count remaining
                                     ~f:(fun ex -> not (find_or_true ex v)))) in
 
-      (* find the variable with the largest inverted cost, computed as n/c
-         where c = cost of the variable and n = number of covered examples *)
-      let inverted_cost (v, n) = (float n) /. (Hashtbl.find_exn costs v) in
+      (* find the variable with the largest number of covered examples *)
       let (cVar, cCnt) = Option.value_exn (
-        List.max_elt counts ~compare:(fun vn1 vn2 -> compare (inverted_cost vn1)
-                                                             (inverted_cost vn2))
+        List.max_elt counts ~compare:(fun vn1 vn2 -> compare (snd vn1) (snd vn2))
       ) in
       (* if no literals cover any of the remaining negative examples, then
          there is no boolean function that properly classifies all of the
@@ -81,8 +77,7 @@ let pruneWithNegativeExamples (conj : conjunct) (costs : costAssignment)
 
 (* learn a simple conjunction that falsifies all negative examples
    but may not satisfy all positive examples *)
-let learnStrongConjunction (conj : conjunct) (costs: costAssignment)
-                           (pos : truthAssignment list)
+let learnStrongConjunction (conj : conjunct) (pos : truthAssignment list)
                            (neg : truthAssignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remainingNeg accum =
@@ -95,12 +90,9 @@ let learnStrongConjunction (conj : conjunct) (costs: costAssignment)
         ~f:(fun v -> (v, List.count remainingNeg
                                     ~f:(fun ex -> not (find_or_true ex v)))) in
 
-      (* find the variable with the largest inverted cost, computed as n/c
-         where c = cost of the variable and n = number of covered examples *)
-      let inverted_cost (v, n) = (float n) /. (Hashtbl.find_exn costs v) in
+      (* find the variable with the largest number of covered examples *)
       let (cVar, cCnt) = Option.value_exn (
-        List.max_elt counts ~compare:(fun vn1 vn2 -> compare (inverted_cost vn1)
-                                                             (inverted_cost vn2))
+        List.max_elt counts ~compare:(fun vn1 vn2 -> compare (snd vn1) (snd vn2))
       ) in
       (* if no literals cover any of the remaining negative examples, then
          there is no boolean function that properly classifies all of the
@@ -150,13 +142,13 @@ let learnStrongConjunction (conj : conjunct) (costs: costAssignment)
    costs is a map from variables to an integer cost, which is used as
    part of the greedy heuristic for learning from negative examples. *)
 let learnConjunction ?(strengthen = false) (vars : conjunct)
-                     (costs: costAssignment) (pos : truthAssignment list)
-                     (neg : truthAssignment list) : conjunct =
+                     (pos : truthAssignment list) (neg : truthAssignment list)
+                     : conjunct =
   (* the initial conjunction is the AND of all variables *)
   let conj = vars in
-  if strengthen then learnStrongConjunction conj costs pos neg
+  if strengthen then learnStrongConjunction conj pos neg
   else let conj = List.fold pos ~init:conj ~f:pruneWithAPositiveExample
-       in pruneWithNegativeExamples conj costs neg
+       in pruneWithNegativeExamples conj neg
 
 (* produce all k-tuples (considered as sets) of numbers from 1 to n *)
 let allKTuples (k : int) (n : int) : conjunct list =
@@ -210,8 +202,6 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
     Log.debug (lazy ("Attempting BFL with K = " ^ (string_of_int k))) ;
     (* create one variable per possible k-clause over the given variables *)
     let varEncoding = cnfVarsToClauseVars k n in
-    let costs = Hashtbl.Poly.of_alist_exn
-                  (List.map varEncoding ~f:(fun (i, tuple) -> (i, 1.0))) in
     let augmentExamples =
           List.(map ~f:(foldi ~init:[]
                               ~f:(fun i curr b -> (i+1, b) :: (i + n + 1, not b)
@@ -228,7 +218,7 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
     (* learn a conjunction on the new variables *)
     in let vars = List.map ~f:fst varEncoding
     in try
-         let learnedConjunct = learnConjunction vars costs pos neg
+         let learnedConjunct = learnConjunction vars pos neg
                                                 ~strengthen:conf.strengthen
          in let decodeClause i =
               let rec aux n = match (i lsr n) land 0x3ff with
