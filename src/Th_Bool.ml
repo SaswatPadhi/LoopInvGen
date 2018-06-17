@@ -1,11 +1,12 @@
-open Core
+open Base
+
 open Components
 open Types
 
 let vtrue = VBool true
 let vfalse = VBool false
 
-let new_components = [
+let new_components = let open Polymorphic_compare in [
   {
     name = "not";
     codomain = TBool;

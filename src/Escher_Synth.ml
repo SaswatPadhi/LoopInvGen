@@ -1,4 +1,5 @@
-open Core
+open Base
+
 open Components
 open Escher_Core
 open Exceptions
@@ -75,8 +76,8 @@ let short_goal_string goal = match goal.status with
   | Closed v -> "<closed> " ^ (Vector.string v)
 
 let rec print_goal indent goal =
-  if String.length indent > 10 then print_endline (indent ^ "...")
-  else print_endline (indent ^ "goal: " ^ (varray_string goal.varray))
+  if String.length indent > 10 then Stdio.print_endline (indent ^ "...")
+  else Stdio.print_endline (indent ^ "goal: " ^ (varray_string goal.varray))
 
 let solve_impl ?ast:(ast=false) task consts =
   let vector_size = Array.length (snd (List.hd_exn task.inputs)) in
@@ -89,8 +90,8 @@ let solve_impl ?ast:(ast=false) task consts =
 
   let close_goal vector goal =
     if !noisy then begin
-      print_endline ("Closed goal " ^ (varray_string goal.varray));
-      print_endline ("       with " ^ (Vector.string vector));
+      Stdio.print_endline ("Closed goal " ^ (varray_string goal.varray));
+      Stdio.print_endline ("       with " ^ (Vector.string vector));
       end else ();
     goal.status <- Closed vector;
     match final_goal.status with
@@ -106,15 +107,15 @@ let solve_impl ?ast:(ast=false) task consts =
     (* Close all matching goals *)
     let (v_closes, _) = partition_map (varray_matches ~typeonly:ast (snd v)) (!goals)
     in if !noisy then begin
-         print_endline "--- new vector --------------------------------------";
-         print_endline ((string_of_int (hvalue v)) ^ ": " ^ (Vector.string v));
+         Stdio.print_endline "--- new vector --------------------------------------";
+         Stdio.print_endline ((Int.to_string (hvalue v)) ^ ": " ^ (Vector.string v));
        end else ();
        synth_candidates := 1 + (!synth_candidates);
        List.iter ~f:(close_goal v) v_closes; true
   in
 
-  let int_components = List.filter ~f:(fun c -> c.codomain = TInt) components in
-  let bool_components = List.filter ~f:(fun c -> c.codomain = TBool) components in
+  let int_components = List.filter ~f:(fun c -> Poly.equal c.codomain TInt) components in
+  let bool_components = List.filter ~f:(fun c -> Poly.equal c.codomain TBool) components in
 
   let apply_comp f types i =
     let rec apply_cells types acc locations = match types, locations with
@@ -136,7 +137,7 @@ let solve_impl ?ast:(ast=false) task consts =
       let has_err = Array.fold ~f:(fun p x -> match x with VError -> true | _ -> p) ~init:false (snd vector) in
       if (h_value < !max_h && (not has_err))
       then ((if not (!noisy) then ()
-            else print_endline (string_of_int h_value ^ ">>" ^ (Vector.string vector)));
+            else Stdio.print_endline (Int.to_string h_value ^ ">>" ^ (Vector.string vector)));
             array.(h_value) <- VSet.add vector (array.(h_value)))
     in apply_comp f c.domain i
   in
@@ -155,13 +156,13 @@ let solve_impl ?ast:(ast=false) task consts =
   let bone = let vone = Th_LIA.vone
              in ((("1", (fun ars -> vone)), Const vone), Array.create ~len:vector_size vone) in
   if !quiet then () else (
-    print_endline ("Inputs: ");
-    List.iter ~f:(fun v -> print_endline ("   " ^ (Vector.string v))) task.inputs;
-    print_endline ("Goal: " ^ (varray_string final_goal.varray)));
+    Stdio.print_endline ("Inputs: ");
+    List.iter ~f:(fun v -> Stdio.print_endline ("   " ^ (Vector.string v))) task.inputs;
+    Stdio.print_endline ("Goal: " ^ (varray_string final_goal.varray)));
     (*TODO: Only handles string and int constants, extend for others*)
   int_array.(1)
     <- List.fold ~f:(fun p i -> let vi = VInt i
-                                in VSet.add ((((string_of_int i), (fun ars -> vi)), Const vi),
+                                in VSet.add ((((Int.to_string i), (fun ars -> vi)), Const vi),
                                              Array.create ~len:vector_size vi) p)
                  ~init:(VSet.add bone (VSet.singleton bzero))
                  (List.dedup_and_sort ~compare (List.filter_map consts ~f:(function VInt x -> Some (abs x)
@@ -183,8 +184,8 @@ let solve_impl ?ast:(ast=false) task consts =
       | Open -> () end;
     (*(if !quiet then prerr_string else print_endline) (" @" ^ (string_of_int i)); flush_all();*)
     if !noisy then begin
-      let print_goal k _ = print_endline (" * " ^ (varray_string k)) in
-        print_endline ("Goals: ");
+      let print_goal k _ = Stdio.print_endline (" * " ^ (varray_string k)) in
+        Stdio.print_endline ("Goals: ");
         VArrayMap.iter print_goal (!goals);
     end else ();
     expand i;
@@ -194,8 +195,8 @@ let solve ?(ast = false) task consts =
   all_solutions := [] ; synth_candidates := 0;
   (try solve_impl ~ast:ast task consts with Success -> ());
   if not (!quiet) then (
-    print_endline "Synthesis Result: ";
-    List.iter ~f:(fun v -> print_endline (Vector.string v)) all_solutions.contents
+    Stdio.print_endline "Synthesis Result: ";
+    List.iter ~f:(fun v -> Stdio.print_endline (Vector.string v)) all_solutions.contents
   ) ; List.rev_map all_solutions.contents
                    ~f:(fun (((dump, func), program), outputs) -> (dump, func))
 

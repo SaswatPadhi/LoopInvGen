@@ -15,7 +15,7 @@ Z3_PATH="$SELF_DIR/_dep/z3"
 
 TIMEOUT="60"
 TOOL="$SELF_DIR/loopinvgen.sh"
-VERIFY="$SELF_DIR/_bin/lig-verify"
+VERIFY="$SELF_DIR/_build/install/default/bin/lig-verify"
 
 show_status() {
   MSG="$1                " ; MSG_LEN=${#MSG}
@@ -34,13 +34,13 @@ Flags:
 Configuration:
     --benchmarks, -b <path>
     [--logs-dir, -l <path>]           ($LOGS_DIR)
-    [--time-out, -m <seconds>]        ($TIMEOUT)
-    [--tool, -t <path>]               ($TOOL)
+    [--time-out, -t <seconds>]        ($TIMEOUT)
+    [--tool, -T <path>]               ($TOOL)
     [--z3-path, -z <path>]            ($Z3_PATH)
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:l:m:rt:z: --long benchmarks:,logs-dir:,time-out:,rerun-cached,tool:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :b:l:t:rT:z: --long benchmarks:,logs-dir:,time-out:,rerun-cached,tool:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -54,13 +54,13 @@ while true ; do
     -l | --logs-dir )
          LOGS_DIR="`realpath "$2"`"
          shift ; shift ;;
-    -m | --time-out )
+    -t | --time-out )
          TIMEOUT="$2"
          shift ; shift ;;
     -r | --rerun-cached )
          RERUN_CACHED="YES"
          shift ;;
-    -t | --tool )
+    -T | --tool )
          [ -f "$2" ] || usage "Tool [$2] not found."
          TOOL="$2"
          shift ; shift ;;

@@ -1,22 +1,13 @@
 (jbuild_version 1)
 
 (alias
-    ((name localbin)
-     (action
-        (progn
-            (bash "mkdir -p ${SCOPE_ROOT}/../../_bin")
-            (bash "ln -srf ${bin:lig-record} ${SCOPE_ROOT}/../../_bin/lig-record")
-            (bash "ln -srf ${bin:lig-infer} ${SCOPE_ROOT}/../../_bin/lig-infer")
-            (bash "ln -srf ${bin:lig-verify} ${SCOPE_ROOT}/../../_bin/lig-verify")))))
-
-(alias
     ((name optimize)
      (deps ((universe)))
      (action
         (progn
             (bash "echo -ne 'Current build mode is set to [optimize].\nNote that build may take significantly (2x) longer!\nUse (jbuilder build @debug) to switch to [debug] mode instead.'")
-            (bash "echo -ne '(-O3 -rounds 5)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
-            (bash "echo -ne '#define LOGGING 0' > ${SCOPE_ROOT}/../../src/config.h")))))
+            (bash "echo -ne '; AUTO-GENERATED. Any changes to this file would be OVERWRITTEN.\n\n(-O3 -rounds 5)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
+            (bash "echo -ne '// AUTO-GENERATED. Any changes to this file would be OVERWRITTEN.\n\n#define LOGGING 0' > ${SCOPE_ROOT}/../../src/config.h")))))
 
 (alias
     ((name debug)
@@ -24,8 +15,8 @@
      (action
         (progn
             (bash "echo -ne 'Current build mode is set to [debug].\nUse (jbuilder build @optimize) to generate optimized binaries instead.'")
-            (bash "echo -ne '(-Oclassic)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
-            (bash "echo -ne '#define LOGGING 1' > ${SCOPE_ROOT}/../../src/config.h")))))
+            (bash "echo -ne '; AUTO-GENERATED. Any changes to this file would be OVERWRITTEN.\n\n(-Oclassic)' > ${SCOPE_ROOT}/../../src/.flambda_flags")
+            (bash "echo -ne '// AUTO-GENERATED. Any changes to this file would be OVERWRITTEN.\n\n#define LOGGING 1' > ${SCOPE_ROOT}/../../src/config.h")))))
 
 (rule
     ((targets (.flambda_flags))
@@ -44,11 +35,11 @@
 (alias
     ((name clean)
      (action
-        (bash "rm -rf ${SCOPE_ROOT}/../../src/.flambda_flags ${SCOPE_ROOT}/../../_bin"))))
+        (bash "rm -rf ${SCOPE_ROOT}/../../src/.flambda_flags ${SCOPE_ROOT}/../../src/config.h"))))
 
 (executables
-    ((names (Record Infer Verify))
-     (public_names (lig-record lig-infer lig-verify))
+    ((names (Process Record Infer Verify))
+     (public_names (lig-process lig-record lig-infer lig-verify))
      (ocamlopt_flags (:standard (:include .flambda_flags)))
      (libraries (core core_extended))
      (preprocessor_deps ((file config.h)))

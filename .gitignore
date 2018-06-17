@@ -33,7 +33,6 @@ ocamlprof.dump
 gmon.out
 *.tgz
 _tags
-_bin
 starexec*
 
 # Editor

@@ -1,11 +1,12 @@
-open Core
+open Base
+
 open Components
 open Types
 
 let vzero = VInt 0
 let vone = VInt 1
 
-let new_components = [
+let new_components = let open Polymorphic_compare in [
   {
     name = "int-add";
     codomain = TInt;

@@ -1,3 +1,5 @@
+(* FIXME: Not maintained; needs updates. *)
+
 open Core
 open Types
 open VPIE

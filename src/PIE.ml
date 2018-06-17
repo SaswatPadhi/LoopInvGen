@@ -1,6 +1,7 @@
+open Core_kernel
+
 open BFL
 open CNF
-open Core
 open Exceptions
 open Types
 open Utils
@@ -106,16 +107,16 @@ let add_neg_test ~(job : (value list, 'b) job) (test : value list) : (value list
                              ^ "), already exists in NEG set!"))
   else try if job.post test (Result.try_with (fun () -> job.f test))
            then raise IgnoreTest
-           else raise Exit
+           else raise Caml.Exit
        with IgnoreTest
             -> raise (Ambiguous_Test ("Test (" ^ (String.concat ~sep:"," job.farg_names)
                                      ^ ") = (" ^ (serialize_values ~sep:"," test)
                                      ^ "), does not belong in POS!"))
-          | Exit -> {
-                       job with
-                       neg_tests = (test, lazy (compute_feature_vector job.features test))
-                                :: job.neg_tests
-                    }
+          | Caml.Exit -> {
+              job with
+              neg_tests = (test, lazy (compute_feature_vector job.features test))
+                      :: job.neg_tests
+          }
 
 let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
   let (pos, neg) = split_tests (List.dedup_and_sort ~compare:(List.compare value_compare) tests)
@@ -215,10 +216,10 @@ let resolveAConflict ?(conf = default_config) ?(consts = [])
                       ^ (Log.indented_sep 0) ^ "Conflict group ("
                       ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
                            ~f:(fun n t -> n ^ " :" ^ (string_of_typ t))) ^ "):" ^ (Log.indented_sep 2)
-          ^ "POS (" ^ (string_of_int (List.length conflict_group.pos)) ^ "):" ^ (Log.indented_sep 4)
+          ^ "POS (" ^ (Int.to_string (List.length conflict_group.pos)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map conflict_group.pos ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")")) ^ (Log.indented_sep 2)
-          ^ "NEG (" ^ (string_of_int (List.length conflict_group.neg)) ^ "):" ^ (Log.indented_sep 4)
+          ^ "NEG (" ^ (Int.to_string (List.length conflict_group.neg)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map conflict_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (serialize_values vl ~sep:" , ") ^ ")"))))
    ; let new_features = synthFeatures conflict_group conf.synth_logic ~consts ~job
@@ -270,9 +271,9 @@ let rec augmentFeatures ?(conf = default_config) ?(consts = [])
 let learnPreCond ?(conf = default_config) ?(consts = []) (job : ('a, 'b) job)
                  : ('a feature with_desc) CNF.t option =
   Log.debug (lazy ("New PI task with "
-                  ^ (string_of_int (List.length job.pos_tests))
+                  ^ (Int.to_string (List.length job.pos_tests))
                   ^ " POS + "
-                  ^ (string_of_int (List.length job.neg_tests))
+                  ^ (Int.to_string (List.length job.neg_tests))
                   ^ " NEG tests")) ;
   try let job = augmentFeatures ~conf ~consts job
       in let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec)

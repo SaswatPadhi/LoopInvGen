@@ -1,12 +1,11 @@
-open Core
+open Base
+
 open Components
 open Types
 
-let pos_mod x y = ((x mod y) + (abs y)) mod y
+let pos_div x y = (x - (x % y)) / y
 
-let pos_div x y = (x - (pos_mod x y)) / y
-
-let new_components = [
+let new_components = let open Polymorphic_compare in [
   {
     name = "int-div";
     codomain = TInt;
@@ -31,7 +30,7 @@ let new_components = [
              | [x ; y] -> x <> y
              | _ -> false);
     apply = (function
-             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_mod x y)
+             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (x % y)
              | _ -> VError);
     dump = (fun [@warning "-8"] [a ; b] -> "(mod " ^ a ^ " " ^ b ^ ")")
   } ;
@@ -52,5 +51,5 @@ let new_components = [
 ]
 
 let all_components =
-  (List.filter Th_LIA.all_components ~f:(fun c -> c.name <> "lin-int-mult"))
+  (List.filter Th_LIA.all_components ~f:(fun c -> not (String.equal c.name "lin-int-mult")))
   @ new_components

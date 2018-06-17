@@ -1,4 +1,5 @@
-open Core
+open Base
+
 open Exceptions
 
 type logic =
@@ -70,19 +71,19 @@ let from_int = function | VInt(i) -> i | _ -> raise (Internal_Exn "")
 let from_bool = function | VBool(b) -> b | _ -> raise (Internal_Exn "")
 
 let deserialize_value_to ~(t : typ) (s : string) : value option =
-  if t = TInt then
-    try Some (VInt (int_of_string s)) with _ -> None
-  else if t = TBool then
-    try Some (VBool (bool_of_string s)) with _ -> None
+  if Poly.equal t TInt then
+    try Some (VInt (Int.of_string s)) with _ -> None
+  else if Poly.equal t TBool then
+    try Some (VBool (Bool.of_string s)) with _ -> None
   else None
 
 let deserialize_value (s : string) : value option =
-  if s = "-<ERROR>-" then Some VError
-  else if s = "-<UNKNOWN>-" then Some VDontCare
+  if String.equal s "-<ERROR>-" then Some VError
+  else if String.equal s "-<UNKNOWN>-" then Some VDontCare
   else try
-    Some (VBool (bool_of_string s))
+    Some (VBool (Bool.of_string s))
   with Invalid_argument _ -> try
-    Some (VInt (int_of_string s))
+    Some (VInt (Int.of_string s))
   with Failure _ ->
     None
 
@@ -91,13 +92,13 @@ let deserialize_values ?(sep = '\t') (s : string) : value option list =
 
 let serialize_value (v : value) : string =
   match v with
-  | VInt(i)      -> string_of_int i
-  | VBool(b)     -> string_of_bool b
+  | VInt(i)      -> Int.to_string i
+  | VBool(b)     -> Bool.to_string b
   | VError       -> "-<ERROR>-"
   | VDontCare    -> "-<UNKNOWN>-"
 
 let serialize_values ?(sep = "\t") (vs : value list) : string =
   String.concat ~sep (List.map vs ~f:serialize_value)
 
-let rec print_data chan (data : value) : unit =
-  Out_channel.output_string chan (serialize_value data)
+let print_data chan (data : value) : unit =
+  Stdio.Out_channel.output_string chan (serialize_value data)

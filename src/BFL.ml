@@ -1,5 +1,6 @@
+open Base
+
 open CNF
-open Core
 open Exceptions
 open Utils
 
@@ -20,11 +21,10 @@ let default_config = {
 }
 
 let truthAssignment_to_string (ta : truthAssignment) : string =
-  "[" ^
-  (Hashtbl.fold ta ~init:""
-                ~f:(fun ~key ~data s -> s ^ "(" ^ (string_of_int key) ^
-                                        "," ^ (string_of_bool data) ^ ") ; ")) ^
-  "]"
+  "[" ^ (Hashtbl.fold ta ~init:""
+                      ~f:(fun ~key ~data s -> s ^ "(" ^ (Int.to_string key) ^ ","
+                                            ^ (Bool.to_string data) ^ ") ; "))
+ ^ "]"
 
 (* remove literals from conj that are inconsistent with the given example *)
 let pruneWithAPositiveExample (conj : conjunct) (example : truthAssignment)
@@ -39,8 +39,8 @@ let pruneWithNegativeExamples (conj : conjunct)
                               (example : truthAssignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remaining accum =
-    if remaining = [] then accum
-    else if conj = [] then raise NoSuchFunction
+    if List.equal ~equal:Poly.equal remaining [] then accum
+    else if List.equal ~equal:Int.equal conj [] then raise NoSuchFunction
     else begin
       (* for each variable in conj, count the negative examples it covers
         (i.e, on how many of the examples it has the truth value false) *)
@@ -81,8 +81,8 @@ let learnStrongConjunction (conj : conjunct) (pos : truthAssignment list)
                            (neg : truthAssignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remainingNeg accum =
-    if remainingNeg = [] then accum
-    else if conj = [] then raise NoSuchFunction
+    if List.equal ~equal:Poly.equal remainingNeg [] then accum
+    else if List.equal ~equal:Int.equal conj [] then raise NoSuchFunction
     else begin
       (* for each variable in conj, count the negative examples it covers
          (i.e, on how many of the examples it has the truth value false) *)
@@ -181,7 +181,7 @@ let cnfVarsToClauseVars k n : (int * conjunct) list =
       - 64-bit architecture
       - k <= 6
       - n*2 < 2^10 *)
-  if Sys.word_size <> 64 || k > 6 || n > 500 then raise ClauseEncodingError
+  if Sys.word_size_in_bits <> 64 || k > 6 || n > 500 then raise ClauseEncodingError
   else List.(map (allKTuples k n)
                  ~f:(fun t -> let (enc, _) = fold t ~init:(0,0)
                                   ~f:(fun (enc,b) x -> (enc lor (x lsl b), b+10))
@@ -199,7 +199,7 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
              (neg : bool list list) : int CNF.t =
   let rec helper k =
   begin
-    Log.debug (lazy ("Attempting BFL with K = " ^ (string_of_int k))) ;
+    Log.debug (lazy ("Attempting BFL with K = " ^ (Int.to_string k))) ;
     (* create one variable per possible k-clause over the given variables *)
     let varEncoding = cnfVarsToClauseVars k n in
     let augmentExamples =

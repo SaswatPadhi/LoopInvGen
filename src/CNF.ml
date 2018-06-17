@@ -1,4 +1,3 @@
-open Core
 open Utils
 
 (* a type for cnf formulas, parameterized by the type used for literals *)

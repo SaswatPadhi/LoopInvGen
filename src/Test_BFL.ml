@@ -1,3 +1,5 @@
+(* FIXME: Not maintained; needs updates. *)
+
 open BFL
 open Core
 open Exceptions

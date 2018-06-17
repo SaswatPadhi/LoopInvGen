@@ -1,3 +1,5 @@
+(* FIXME: Not maintained; needs updates. *)
+
 let () =
   Alcotest.run ~argv:[| "zpath" |] "LoopInvGen"
     (let zpath = Sys.argv.(1) in [

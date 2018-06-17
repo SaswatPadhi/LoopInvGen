@@ -1,4 +1,4 @@
-let indented_sep (indent : int) = "\n" ^ (Core.String.make (42 + indent) ' ')
+let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
 
 [%%import "config.h"]
 
@@ -10,8 +10,8 @@ let indented_sep (indent : int) = "\n" ^ (Core.String.make (42 + indent) ' ')
   let debug _ = ()
 
   let disable () = ()
-
-  let enable ?(msg = "") ?(level = 5) (file : string) = ()
+  
+  let enable ?(msg = "") ?(level = 5) (file : string option) = ()
 [%%else]
   open Core_extended.Logger
 
@@ -27,10 +27,12 @@ let indented_sep (indent : int) = "\n" ^ (Core.String.make (42 + indent) ' ')
 
   let disable () = enabled := 0
 
-  let enable ?(msg = "") ?(level = 5) (file : string) =
-    logger := create_default file ;
-    clear_filter (!logger) ;
-    enabled := level ;
-    info (lazy "") ;
-    info (lazy (msg ^ "========================================"))
+  let enable ?(msg = "") ?(level = 5) (file : string option) =
+    match file with
+    | None -> ()
+    | Some file -> logger := create_default file
+                 ; clear_filter (!logger)
+                 ; enabled := level
+                 ; info (lazy "")
+                 ; info (lazy (msg ^ String.(make (80 - (length msg)) '=')))
 [%%endif]

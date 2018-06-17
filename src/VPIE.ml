@@ -1,4 +1,5 @@
-open Core
+open Core_kernel
+
 open PIE
 open Types
 open Utils
@@ -26,13 +27,13 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
   let rec helper tries_left (job, post_desc) =
     if conf.max_tries > 0 && tries_left < 1
     then (Log.error (lazy ("VPIE Reached MAX attempts ("
-                          ^ (string_of_int conf.max_tries)
+                          ^ (Int.to_string conf.max_tries)
                           ^ "). Giving up ..."))
          ; conf.describe None)
     else begin
       Log.info (lazy ("VPIE Attempt "
-                      ^ (string_of_int (1 + conf.max_tries - tries_left))
-                      ^ "/" ^ (string_of_int conf.max_tries) ^ ".")) ;
+                      ^ (Int.to_string (1 + conf.max_tries - tries_left))
+                      ^ "/" ^ (Int.to_string conf.max_tries) ^ ".")) ;
       match learnPreCond ~conf:conf.for_PIE ~consts job with
       | None | Some [[]] -> conf.describe None
       | precond

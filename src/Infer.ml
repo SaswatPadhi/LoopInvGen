@@ -1,23 +1,20 @@
 open Core
-open Core.Out_channel
-open SyGuS
-open Utils
 
 let main zpath statefile outfile logfile false_on_failure
          max_conflicts max_strengthening_attempts
          max_restarts max_steps_on_restart
          filename () =
-  Utils.start_logging_to ~msg:"INFER" logfile ;
+  Log.enable ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
   let states = List.(permute
-    ~random_state:(Random.State.make [| 79 ; 97 |]) 
-    (map (In_channel.input_lines state_chan)
+    ~random_state:(Random.State.make [| 79 ; 97 |])
+    (map (Stdio.In_channel.input_lines state_chan)
          ~f:(fun l -> map (Types.deserialize_values l)
                           ~f:(fun v -> Option.value_exn v))))
-  in In_channel.close state_chan
-   ; Log.debug (lazy ("Loaded " ^ (string_of_int (List.length states)) ^
+  in Stdio.In_channel.close state_chan
+   ; Log.debug (lazy ("Loaded " ^ (Int.to_string (List.length states)) ^
                       " program states."))
-   ; let sygus = SyGuS.load (Utils.get_in_channel filename)
+   ; let sygus = SyGuS.read_from filename
      in let synth_logic = Types.logic_of_string sygus.logic
      in let conf = {
        LoopInvGen.default_config with
@@ -37,10 +34,11 @@ let main zpath statefile outfile logfile false_on_failure
      }
      in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
-     in if (not false_on_failure) && inv = "false" then ()
-        else output_string out_chan (build_inv_func (ZProc.normalize inv) ~sygus)
-      ; Out_channel.close out_chan
-      ; exit (if inv = "false" then 1 else 0)
+     in if (not false_on_failure) && (String.equal inv "false") then ()
+        else Stdio.Out_channel.output_string out_chan
+               SyGuS.(func_definition {sygus.inv_func with expr=(translate_smtlib_expr inv)})
+      ; Stdio.Out_channel.close out_chan
+      ; Caml.exit (if String.equal inv "false" then 1 else 0)
 
 let spec =
   let open Command.Spec in (
@@ -60,7 +58,7 @@ let spec =
       +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
                                             ~doc:"NUMBER number of states to collect after each restart"
 
-      +> anon (maybe_with_default "-" ("filename" %: file))
+      +> anon ("filename" %: file)
     )
 
 let () =

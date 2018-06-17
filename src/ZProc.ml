@@ -1,4 +1,5 @@
 open Core
+
 open Exceptions
 open Sexplib
 
@@ -157,15 +158,6 @@ let simplify (z3 : t) (q : string) : string =
                    in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
      | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
 
-let model_to_string ?(rowsep = " ") ?(colsep = " ") ?(prefix = "(= ")
-                    ?(postfix = ")") (model : model option) : string =
-  match model with
-  | None -> "false"
-  | Some [] -> "true"
-  | Some m -> Utils.List.to_string_map m ~sep:rowsep
-                ~f:(fun (n, v) -> prefix ^ n ^ colsep
-                                ^ (Types.serialize_value v) ^ postfix)
-
 let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
                             : (Types.value list -> Types.value) =
   let open Types in
@@ -179,25 +171,3 @@ let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
     with [ "sat" ]   -> vtrue
        | [ "unsat" ] -> vfalse
        | _ -> raise (Internal_Exn "z3 could not verify the query.")
-
-let normalize (expr : string) : string =
-  if expr = "true" || expr = "false" then expr else
-  let open Sexp in
-  let rec replace name expr body =
-    match body with
-    | Atom a when a = name -> expr
-    | List(l) -> List(List.map l ~f:(replace name expr))
-    | _ -> body
-  in let rec helper sexp =
-    match sexp with
-    | List([Atom("-") ; Atom(num)]) when (String.for_all num ~f:Char.is_digit)
-      -> Atom("-" ^ num)
-    | List([Atom("-") ; name])
-      -> List([Atom("-") ; Atom("0") ; name])
-    | List([Atom("let") ; List([List([Atom(name) ; expr])]) ; body])
-      -> helper (replace name expr body)
-    | List(l) -> List(List.map l ~f:helper)
-    | _ -> sexp
-  in match parse expr with
-     | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))
-     | _ -> ""

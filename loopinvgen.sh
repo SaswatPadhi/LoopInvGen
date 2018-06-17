@@ -1,17 +1,24 @@
 #!/bin/bash
 
+if (( ${BASH_VERSION%%.*} < 4 )) ; then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+
+EXIT_CODE_USAGE_ERROR=-2
+EXIT_CODE_BUILD_ERROR=-3
+EXIT_CODE_PROCESS_ERROR=1
+
 SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
-BIN_DIR="$SELF_DIR/_bin"
+BIN_DIR="$SELF_DIR/_build/install/default/bin"
 
+PROCESS="$BIN_DIR/lig-process"
 RECORD="$BIN_DIR/lig-record"
 INFER="$BIN_DIR/lig-infer"
 VERIFY="$BIN_DIR/lig-verify"
 
-if [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
+if [ ! -f $PROCESS ] || [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
   echo -en "
-Building OCaml modules ...
-" >&2 ; jbuilder build @localbin
+One or more dependencies not found. Building OCaml modules ...
+" >&2 ; jbuilder build || exit $EXIT_CODE_BUILD_ERROR
 fi
 
 trap 'jobs -p | xargs kill -TERM > /dev/null 2> /dev/null' INT
@@ -29,15 +36,18 @@ RECORD_FORKS=4
 RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
 
+PROCESS_LOG=""
 RECORD_LOG=""
 INFER_LOG=""
 VERIFY_LOG=""
 
+PROCESS_ARGS=""
 RECORD_ARGS=""
 INFER_ARGS=""
 VERIFY_ARGS=""
 
-DO_LOG="no"
+declare -A DO_LOG
+
 DO_CLEAN="no"
 DO_VERIFY="no"
 
@@ -61,25 +71,29 @@ Flags:
 
 Configuration:
     [--intermediates-dir, -p <path>]  (_log)
-    [--logging, -l <mode>]            (none)\t{none|rec|inf|all}
+    [--log, -l [<src_1>[,<src_2>...]] ()\tsrc <- {process|record|infer|verify}
     [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
 
 Arguments to Internal Programs @ (`dirname $RECORD`):
+    [--Process-args, -P \"<args>\"]   see \``basename "$PROCESS"` -h\` for details
     [--Record-args, -R \"<args>\"]    see \``basename "$RECORD"` -h\` for details
     [--Infer-args, -I \"<args>\"]     see \``basename "$INFER"` -h\` for details
     [--Verify-args, -V \"<args>\"]    see \``basename "$VERIFY"` -h\` for details
-" >&2 ; exit -1
+" >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
-OPTS=`getopt -n 'parse-options' -o :R:I:V:icvl:p:s:t:z: --long Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,logging:,intermediates-dir:,record-states:,infer-timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :P:R:I:V:icvl:p:s:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,log:,intermediates-dir:,record-states:,infer-timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 while true ; do
   case "$1" in
+    -P | --Process-args )
+         PROCESS_ARGS="$2"
+         shift ; shift ;;
     -R | --Record-args )
          RECORD_ARGS="$2"
          shift ; shift ;;
@@ -97,10 +111,13 @@ while true ; do
     -v | --verify )
          DO_VERIFY="yes" ; shift ;;
 
-    -l | --logging )
-         [ "$2" == "none" ] || [ "$2" == "rec" ] || \
-         [ "$2" == "inf" ] || [ "$2" == "all" ] || usage "Unknown source [$2] for logging."
-         DO_LOG="$2"
+    -l | --log )
+         for LOG_SRC in `echo "$2" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
+           case "$LOG_SRC" in
+             process | record | infer | verify ) DO_LOG[$LOG_SRC]="yes" ;;
+             * ) usage "Unknown source [$LOG_SRC] for logging."
+           esac
+         done
          shift ; shift ;;
     -p | --intermediates-dir )
          INTERMEDIATES_DIR="$2"
@@ -130,6 +147,8 @@ TESTCASE="$1"
 
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
+
+TESTCASE_PROCESSED="$TESTCASE_PREFIX.pro"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
 TESTCASE_LOG="$TESTCASE_PREFIX.log"
@@ -146,42 +165,40 @@ VERIFY="$VERIFY -z $Z3_PATH"
 
 INFER_TIMEOUT="${INFER_TIMEOUT}s"
 
-if [ "$DO_LOG" == "all" ] ; then
-  RECORD_LOG="-l $TESTCASE_REC_LOG"
-  INFER_LOG="-l $TESTCASE_LOG"
-  VERIFY_LOG="-l $TESTCASE_LOG"
-elif [ "$DO_LOG" == "rec" ] ; then
-  RECORD_LOG="-l $TESTCASE_REC_LOG"
-elif [ "$DO_LOG" == "inf" ] ; then
-  INFER_LOG="-l $TESTCASE_LOG"
-fi
+[ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l $TESTCASE_LOG"
+[ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l $TESTCASE_REC_LOG"
+[ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_LOG"
+[ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_LOG"
 
 rm -rf $TESTCASE_INVARIANT $TESTCASE_STATE_PATTERN $TESTCASE_ALL_STATES
+echo -en '' > "$TESTCASE_LOG"
 
-if [ "$DO_LOG" != "none" ] ; then echo -en '' > "$TESTCASE_LOG" ; fi
+show_status "(@ process)"
 
+$PROCESS -o $TESTCASE_PROCESSED $TESTCASE ${DO_LOG[process]} $PROCESS_ARGS >&2
+[ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
 
 show_status "(@ record)"
 
 for i in `seq 1 $RECORD_FORKS` ; do
-  if [ -n "$RECORD_LOG" ] ; then LOG_PARAM="$RECORD_LOG$i" ; else LOG_PARAM="" ; fi
+  [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
   (timeout $RECORD_TIMEOUT \
-           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i"  \
-                   -o $TESTCASE_STATE$i $LOG_PARAM         \
-                   $RECORD_ARGS $TESTCASE) >&2 &
+           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i"       \
+                   -o $TESTCASE_STATE$i $LOG_PARAM $RECORD_ARGS \
+                   $TESTCASE_PROCESSED) >&2 &
 done
 wait
 
 grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STATES
 
-if [ -n "$RECORD_LOG" ] ; then cat $TESTCASE_REC_LOG_PATTERN > $TESTCASE_LOG ; fi
+[ -z "${DO_LOG[record]}" ] || cat $TESTCASE_REC_LOG_PATTERN >> $TESTCASE_LOG
 
 
 show_status "(@ infer)"
 
 timeout --foreground $INFER_TIMEOUT \
-        $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT $TESTCASE \
-               $INFER_ARGS $INFER_LOG >&2
+        $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT \
+               ${DO_LOG[infer]} $INFER_ARGS $TESTCASE_PROCESSED >&2
 INFER_RESULT_CODE=$?
 
 
@@ -193,7 +210,7 @@ if [ "$DO_VERIFY" = "yes" ] ; then
   show_status "(@ verify)"
 
   touch $TESTCASE_INVARIANT
-  $VERIFY -i $TESTCASE_INVARIANT $VERIFY_LOG $VERIFY_ARGS $TESTCASE > "$TESTCASE_PREFIX.result"
+  $VERIFY -i $TESTCASE_INVARIANT ${DO_LOG[verify]} $VERIFY_ARGS $TESTCASE > "$TESTCASE_PREFIX.result"
   RESULT_CODE=$?
 
   show_status "" ; cat "$TESTCASE_PREFIX.result"
@@ -205,8 +222,8 @@ fi
 
 if [ "$DO_CLEAN" == "yes" ] ; then
   rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
-  if [ $INFER_RESULT_CODE == 0 ] || [ $INFER_RESULT_CODE == 2 ] ; then
-    rm -rf $TESTCASE_ALL_STATES
+  if [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ; then
+    rm -rf $TESTCASE_PROCESSED $TESTCASE_ALL_STATES
   fi
 fi
 

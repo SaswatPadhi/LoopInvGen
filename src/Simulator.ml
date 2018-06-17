@@ -1,4 +1,5 @@
-open Core
+open Core_kernel
+
 open Exceptions
 open SyGuS
 open Types
@@ -7,14 +8,8 @@ open Utils
 let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
   ignore (ZProc.run_queries ~scoped:false z3 ~db:((
     ("(set-logic " ^ s.logic ^ ")")
-    :: (List.map ~f:(fun (v, t) -> "(declare-var " ^ v ^ " " ^ (string_of_typ t) ^ ")")
-                 (s.state_vars @ s.trans_vars)))
-     @ (List.map s.funcs
-                 ~f:(fun func
-                       -> "(define-fun " ^ func.name ^ " ("
-                        ^ (List.to_string_map func.args ~sep:" "
-                                              ~f:(fun (v,t) -> "(" ^ v ^ " " ^ (string_of_typ t) ^ ")"))
-                        ^ ") " ^ (string_of_typ func.return) ^ " " ^ func.expr ^ ")"))) [])
+    :: (List.map ~f:var_declaration s.variables))
+     @ (List.map ~f:func_definition s.functions)) [])
 
 let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
   if trans
@@ -24,12 +19,21 @@ let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
                                          | Some n -> Some (n, v))
   else List.filter model ~f:(fun (n, _) -> not (String.is_suffix n ~suffix:"!"))
 
+let value_assignment_constraint ?(negate = false) (vars : var list)
+                                (vals : value list) : string =
+  (if negate then "(not (and " else "(and ")
+ ^ (List.to_string_map2 vars vals ~sep:" "
+                        ~f:(fun (name, _) value ->
+                              ("(= " ^ name ^ " "
+                              ^ (serialize_value value) ^ ")")))
+ ^ (if negate then "))" else ")")
+
 let gen_state_from_model (s : SyGuS.t) (z3 : ZProc.t) (m : ZProc.model option)
                          : value list option Quickcheck.Generator.t =
   let open Quickcheck.Generator in
   match m with None -> singleton None
   | Some m -> create (fun ~size rnd -> Some (
-                List.map s.state_vars
+                List.map s.synth_variables
                          ~f:(fun (v, t) ->
                                match List.Assoc.find m v ~equal:(=)
                                with Some d -> d
@@ -40,9 +44,9 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : value list)
   gen_state_from_model s z3 (
     try begin
       match ZProc.sat_model_for_asserts z3
-              ~db:[ ("(assert " ^ s.trans.expr ^ ")")
+              ~db:[ ("(assert " ^ s.trans_func.expr ^ ")")
                   ; ( "(assert (and "
-                    ^ (Utils.List.to_string_map2 ~sep:" " vals s.state_vars
+                    ^ (Utils.List.to_string_map2 ~sep:" " vals s.synth_variables
                         ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
                                             (serialize_value d) ^ ")")))
                     ^ "))")]
@@ -53,8 +57,8 @@ let gen_pre_state ?(avoid = []) ?(use_trans = false) (s : SyGuS.t)
                   (z3 : ZProc.t) : value list option Quickcheck.Generator.t =
   gen_state_from_model s z3
     (ZProc.sat_model_for_asserts z3
-          ~db:[ "(assert (and " ^ s.pre.expr ^ " "
-              ^ (if use_trans then s.trans.expr else "true") ^ " "
+          ~db:[ "(assert (and " ^ s.pre_func.expr ^ " "
+              ^ (if use_trans then s.trans_func.expr else "true") ^ " "
               ^ (String.concat avoid ~sep:" ") ^ "))" ])
 
 let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : value list option)
@@ -76,9 +80,7 @@ let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : value list option)
       in Log.debug (lazy ("New execution: ")) ; create (step head)
 
 let build_avoid_constraints sygus head =
-  Option.value_map head ~default:None
-                   ~f:(fun head -> Some (SyGuS.value_assignment_constraint
-                                           sygus.state_vars head ~negate:true))
+  Option.map head ~f:(value_assignment_constraint sygus.synth_variables ~negate:true)
 
 let record_states ?(avoid = []) ?(z3_randomness = false) ~size ~seed
                   ~state_chan ~(zpath : string) (s : SyGuS.t) : unit =

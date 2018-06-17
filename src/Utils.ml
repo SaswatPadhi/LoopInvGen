@@ -1,14 +1,14 @@
-open Core
+open Base
 
 module Hashtbl = struct
-  include Core.Hashtbl
+  include Hashtbl
 
   let find_default (tbl : ('a, 'b) Hashtbl.t) (key : 'a) ~(default : 'b) : 'b =
     Option.value (Hashtbl.find tbl key) ~default
 end
 
 module List = struct
-  include Core.List
+  include List
 
   let cons_opt_value (o : 'a option) (l : 'a list) : 'a list =
     match o with None -> l | Some v -> v :: l
@@ -26,14 +26,9 @@ module List = struct
 end
 
 let get_in_channel = function
-  | "-"      -> In_channel.stdin
-  | filename -> In_channel.create filename
+  | "-"      -> Stdio.In_channel.stdin
+  | filename -> Stdio.In_channel.create filename
 
 let get_out_channel = function
-  | None -> Out_channel.stdout
-  | Some filename -> Out_channel.create filename
-
-let start_logging_to ~msg logfile =
-  match logfile with
-   | Some logfile -> Log.enable ~msg logfile
-   | _ -> ()
+  | None -> Stdio.Out_channel.stdout
+  | Some filename -> Stdio.Out_channel.create filename

@@ -166,7 +166,7 @@ This may be disabled by:
 `test_all.sh` is a generic benchmarking script that may run any invariant inference tool.
 which accepts the SyGuS format. This makes it easier for us to compare various tools easily.  
 To use an invariant inference tool other than LoopInvGen, invoke it as:
-`test_all.sh -b <path/to/benchmarks> -t <path/to/tool> [-- -tool -specific -options]`
+`test_all.sh -b <path/to/benchmarks> -T <path/to/tool> [-- -tool -specific -options]`
 
 Try `./test_all.sh -h` for more options.
 
