@@ -1,0 +1,118 @@
+\graphicspath{include/imgs/}
+\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+\interdisplaylinepenalty=2500
+
+\newlist{inlist}{enumerate*}{1}
+\setlist*[inlist]{label=\textbf{(\arabic*)}}
+\newlist{andlist}{enumerate*}{1}
+\setlist*[andlist]{label=\textbf{(\arabic*)},itemjoin={{, }}, itemjoin*={{, and }}}
+\newlist{orlist}{enumerate*}{1}
+\setlist*[orlist]{label=\textbf{(\arabic*)},itemjoin={{, }}, itemjoin*={{, or }}}
+
+\colorlet{success}{green!42!black}
+\colorlet{failure}{red!64!black}
+\colorlet{bgcolor}{white!88!black}
+\colorlet{bordercolor}{white!72!black}
+\colorlet{darkbordercolor}{white!64!black}
+\colorlet{fgcolor}{white!48!black}
+
+\arrayrulecolor{bordercolor}
+
+\renewcommand{\footnoterule}{%
+  \kern -2.5pt
+  \hrule width 0.32\textwidth height 0.5pt
+  \kern 1.5pt
+}
+
+\DeclareNewFootnote{Num}[arabic]
+\setlength{\skip\footinsNum}{1pt}
+\DeclareNewFootnote{Sym}[fnsymbol]
+\setlength{\skip\footinsSym}{1pt}
+\setlength{\footnotemargin}{2.25mm}
+
+\newcommand{\resize}[3]{
+  \resizebox{#1\linewidth}{!}{
+    \begin{subfigure}[t]{#2\linewidth}
+      #3
+    \end{subfigure}
+  }
+}
+
+\fxusetheme{color}
+\newcommand{\fix}[1]{\noindent\fxfatal{#1}}
+\newcommand{\note}[1]{\noindent\fxnote{[#1]}}
+
+\let\oldReturn\Return
+\renewcommand{\Return}{\State\oldReturn}
+\newcommand{\Break}{\State \textbf{break}}
+\newcommand{\Continue}{\State \textbf{continue}}
+
+\algnewcommand{\LeftComment}[1]{\Statex \vspace*{2pt}\hspace*{-14pt}{\color{blue!42!black} $\blacktriangleright$ \:{\small #1}}}
+
+\algnewcommand{\IfThenElse}[3]{% \IfThenElse{<if>}{<then>}{<else>}
+  \State \algorithmicif\ #1\ \algorithmicthen\ #2\ \algorithmicelse\ #3}
+\algnewcommand{\IfThen}[2]{% \IfThen{<if>}{<then>}
+  \State \algorithmicif\ #1\ \algorithmicthen\ #2}
+
+\algrenewcommand\alglinenumber[1]{\color{darkbordercolor} \small \texttt{#1\:}}
+
+\newenvironment{algfunction}[3]
+    {\begingroup\textbf{func} \textsc{#1}($#2$)
+     \par\leavevmode\hangindent=4em\hangafter=1\indent\leavevmode\hangindent=4em\hangafter=1\indent
+     \textbf{Result:} #3
+     \vspace*{1pt}
+     \begin{algorithmic}[1]
+     \algrenewcommand\algorithmicindent{1.25em}}
+    {\end{algorithmic}\endgroup}
+
+\newcommand{\resized}[3]{
+  \resizebox{#1\linewidth}{!}{
+    \begin{subfigure}[t]{#2\linewidth}
+      #3
+    \end{subfigure}
+  }}
+\newcommand{\algobox}[2]{
+  \begin{tcolorbox}
+        [boxrule=0.5pt,arc=2pt,boxsep=0pt,
+         left=0.5pt,right=-10pt,top=3pt,bottom=3pt,
+         colback=white,colframe=darkbordercolor]
+  \resized{0.965}{#1}{#2}\end{tcolorbox}}
+
+\lstset{
+  basicstyle=\ttfamily\fontsize{7.6pt}{8.5}\selectfont, % Global Code Style
+  captionpos=b, % Position of the Caption (t for top, b for bottom)
+  extendedchars=true, % Allows 256 instead of 128 ASCII characters
+  tabsize=2, % number of spaces indented when discovering a tab 
+  columns=fixed, % make all characters equal width
+  keepspaces=true, % does not ignore spaces to fit width, convert tabs to spaces
+  showstringspaces=false, % lets spaces in strings appear as real spaces
+  breaklines=true, % wrap lines if they don't fit
+  commentstyle=\color{gray}, % style of comments
+  stringstyle=\color{Mahogany}, % style of strings
+  keywordstyle=[1]\color{teal!96!white}, % style of keywords
+  keywordstyle=[2]\color{blue!72!black}, % style of keywords
+  keywordstyle=[3]\color{orange!72!black}, % style of keywords
+  keywordstyle=[4]\color{red!64!black}, % style of keywords
+  keywordstyle=[5]\color{green!48!black}, % style of keywords
+  keywordstyle=[6]\color{magenta!64!black}, % style of keywords
+  sensitive=true,
+  escapeinside={(*@}{@*)},
+  numbers=left,
+  numberblanklines=false,
+  numbersep=6pt,
+  numberstyle=\ttfamily\fontsize{7.6pt}{8.5}\selectfont\color{darkbordercolor},
+  xleftmargin=2.25em,
+}
+
+\lstdefinelanguage{SyGuS}{
+  alsoletter={-,+,=,>,<},
+  texcl=true, % latex in comments
+  morecomment=[l]{//},
+  morestring=[b]",
+  keywords=[1]{LIA, Int, Bool},
+  keywords=[2]{set-logic, define-fun, check-synth},
+  keywords=[3]{pre-f, post-f, trans-f},
+  keywords=[4]{inv-f},
+  keywords=[5]{synth-inv, inv-constraint, declare-primed-var},
+  keywords=[6]{and, or, not, +, -, =, >, >=, <, <=}
+}

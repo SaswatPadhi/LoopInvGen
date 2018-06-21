@@ -1,3 +1,11 @@
+*.tgz
+starexec*
+
+# - - -
+# OCaml
+# - - -
+
+# Compiler-generated intermediates
 *.annot
 *.cmo
 *.cma
@@ -16,7 +24,7 @@ _build/
 *.native
 
 # jbuilder generated files
-*/.merlin
+.merlin
 *.install
 
 # other generated files
@@ -31,9 +39,12 @@ _comp
 # Temporaries
 ocamlprof.dump
 gmon.out
-*.tgz
 _tags
-starexec*
 
-# Editor
+
+
+# - - -
+# Editor/IDE
+# - - -
+
 .vscode

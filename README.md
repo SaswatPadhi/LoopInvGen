@@ -1,6 +1,8 @@
 # LoopInvGen [![Build Status](https://travis-ci.org/SaswatPadhi/LoopInvGen.svg?branch=master)][travis]
 
-A loop invariant generator.
+A data-driven tool that uses automatic feature synthesis to generate provably-sufficient loop invariants for program verification.
+
+<p align="center"><img src="docs/architecture.png" width="400"/></p>
 
 #### :page_with_curl: Papers and Presentations
 
@@ -28,7 +30,7 @@ Docker containers have negligible performance overhead.
 1. Build our docker image: `docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen`.
 2. Run a container over the image: `docker run -it loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
 
-You may also limit the container's memory and/or CPU usage limits:
+You may also limit the container's memory and/or CPU usage:
 ```bash
 # Create a LoopInvGen container with 4GB memory, no swap and 1 CPU
 $ docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
