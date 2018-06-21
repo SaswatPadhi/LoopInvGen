@@ -9,6 +9,8 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 #### :page_with_curl: Papers and Presentations
 
+- [SyGuS-COMP 2018][SyGuSCOMP18] (a satellite event of FLoC, CAV and SYNT 2018) -
+  Solver Presentation (_TODO!_) and [Description](docs/2018_SyGuS-COMP-Description.pdf)
 - [SyGuS-COMP 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) -
   Solver [Presentation](docs/2017_SyGuS-COMP-Presentation.pdf) and [Description](docs/2017_SyGuS-COMP-Description.pdf)
 - [PLDI 2016](http://conf.researchr.org/home/pldi-2016) -
@@ -47,7 +49,11 @@ for more details on applying resource constraints.
 
 </details>
 
-<a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally: `docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen`
+<a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
+
+```bash
+docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen
+```
 
 ### Manual Installation
 
@@ -187,7 +193,9 @@ Try `./test_all.sh -h` for more options.
 [flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
 [z3]:             https://github.com/Z3Prover/z3
 [benchmarks/LIA]: benchmarks/LIA
+
 [SyGuSCOMP17]:    http://www.sygus.org/SyGuS-COMP2017.html
+[SyGuSCOMP18]:    http://www.sygus.org/SyGuS-COMP2018.html
 
 [travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
 [dockerhub]:      https://hub.docker.com/r/padhi/loopinvgen
