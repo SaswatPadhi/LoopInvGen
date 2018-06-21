@@ -1,6 +1,9 @@
-# LoopInvGen [![Build Status](https://travis-ci.org/SaswatPadhi/LoopInvGen.svg?branch=master)][travis]
+LoopInvGen
+  [![Build Status](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?label=Travis+build)][travis]
+  [![Docker Build](https://img.shields.io/docker/build/padhi/loopinvgen.svg?label=Docker+image)][dockerhub]
+==========
 
-A data-driven tool that uses automatic feature synthesis to generate provably-sufficient loop invariants for program verification.
+A data-driven tool that generates provably-sufficient loop invariants for program verification.
 
 <p align="center"><img src="docs/architecture.png" width="400"/></p>
 
@@ -27,10 +30,13 @@ Docker containers have negligible performance overhead.
 (See [this report](http://domino.research.ibm.com/library/cyberdig.nsf/papers/0929052195DD819C85257D2300681E7B/$File/rc25482.pdf))
 
 0. [Get `docker` for your OS](https://docs.docker.com/install).
-1. Build our docker image: `docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen`.
+1. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
 2. Run a container over the image: `docker run -it loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
 
-You may also limit the container's memory and/or CPU usage:
+<details>
+
+<summary> Docker also allows you to easily limit the container's memory and/or CPU usage.</summary>
+
 ```bash
 # Create a LoopInvGen container with 4GB memory, no swap and 1 CPU
 $ docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
@@ -39,7 +45,9 @@ $ docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
 See [the official Docker guide](https://docs.docker.com/config/containers/resource_constraints)
 for more details on applying resource constraints.
 
+</details>
 
+<a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally: `docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen`
 
 ### Manual Installation
 
@@ -177,7 +185,9 @@ Try `./test_all.sh -h` for more options.
 
 
 [flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
-[travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
 [z3]:             https://github.com/Z3Prover/z3
 [benchmarks/LIA]: benchmarks/LIA
 [SyGuSCOMP17]:    http://www.sygus.org/SyGuS-COMP2017.html
+
+[travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
+[dockerhub]:      https://hub.docker.com/r/padhi/loopinvgen
