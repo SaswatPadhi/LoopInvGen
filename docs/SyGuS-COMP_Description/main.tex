@@ -118,7 +118,7 @@ and $y$ may be arbitrarily updated at each iteration.
 The goal is to verify that $(x \geqslant 1)$ always holds after the loop.
 The SyGuS-INV format~\cite{Alur2016SyGuSComp2R} used in \cref{code:sygus},
 allows encoding the semantics of the program along with a desired functional specification.
-For the remainder of the paper, we use the triplet \SyGuSINVTriplet to denote an arbitrary SyGuS-INV problem ---
+For the remainder of the paper, we use the triplet \SyGuSINVQuadruplet to denote an arbitrary SyGuS-INV problem ---
 $P$ being the precondition, $Q$ the postcondition, $T$ the state transition relation, and $\Delta$ the remaining facts, if any.
 
 \begin{figure}[!t]
@@ -145,7 +145,7 @@ and serializes it to a binary format that can be directly deserialized,
 eliminating the need to re-parse the specification within the subsequent components.
 
 Currently, the \Process component only performs an
-\emph{unused variable elimination} over a given SyGuS-INV problem \SyGuSINVTriplet.
+\emph{unused variable elimination} over a given SyGuS-INV problem \SyGuSINVQuadruplet.
 For this analysis, we define ``use'' of a variable $v$ as its presence within either the specification ($P$ or $Q$),
 or the state transition relation ($v$ or $v'$ in $T$), upon inlining all other relations from $\Delta$.
 This analysis reduces the variables that we consider during invariant synthesis later --
@@ -179,7 +179,7 @@ we use a constraint solver as an execution engine\footnoteNum{
     and collected program states during execution of the program.}.
 We present an outline of the \Record algorithm in \cref{algo:record},
 which invokes a constraint solver within the \GetModel procedure.
-The algorithm accepts a SyGuS-INV problem \SyGuSINVTriplet,
+The algorithm accepts a SyGuS-INV problem \SyGuSINVQuadruplet,
 the set $V$ of variables to track, the desired number $n$ of program states,
 and returns the set \States of the states of the variables in $V$.
 
@@ -190,23 +190,32 @@ and returns the set \States of the states of the variables in $V$.
     \algobox{1.1}{
     \begin{algfunction}
       {\Record}
-      {\SyGuSINVTriplet\colon \TSyGuS, V\colon \TString[\,], n\colon \TInt}
+      {\SyGuSINVQuadruplet\colon \TSyGuS, V\colon \TString[\,], n\colon \TInt}
       {A collection of program states $\States\colon \TState[\,]$.}
         \State $\States \gets \{\}$
         \While{\TRUE}
-            \LeftComment{\hspace*{1.125em} Start with an \emph{unseen} model of the precondition.}
-            \State{$m \gets \Call{GetModel}{\Delta \wedge P(m) \wedge (\bigwedge_{s \, \in \, \States} m \neq s), \; V}$}
-            \IfThenElse{$m = \NONE$}{\textbf{break}}{$\States \gets \States \cup \{m\}$}
-            \While{$|\States| < n$}
-                \LeftComment{\hspace*{2.5em} Make a transition, i.e. execute a single iteration of the loop.}
-                \State{$m \gets \Call{GetModel}{\Delta \wedge T(m, m'), \; \{v' \mid v \in V\}}$}
-                \IfThenElse{$m = \NONE$}{\textbf{break}}{$\States \gets \States \cup \{m\}$}
-            \EndWhile
+            \LeftComment{\hspace*{1.125em} Start with a \emph{previously unseen} model of the precondition.}
+            \State{$m \gets \Call{GetModel}{\Delta \wedge P(m) \wedge (\bigwedge_{s \, \in \, \States} m \neq s), V}$}
+            \IfThen{$m = \NONE$}{\textbf{break}}
+            \State{$\States \gets \States \cup \Call{\RecordStatesFrom}{m, n}$}
             \IfThen{$|\States| = n$}{\textbf{break}}
         \EndWhile
         \Return{\States}
-    \end{algfunction}}
-    \caption{An outline of the \Record component of \LoopInvGen.}
+    \end{algfunction}
+    \vspace*{4pt}
+    \begin{algfunction}
+        {\RecordStatesFrom}
+        {m\colon \TState, k\colon \TInt}
+        {A sequence $\{m, m_1, m_2, \cdots, m_l\}$ of states, where $l \leqslant k$.}
+          \State $\States \gets \{m\}$
+          \While{$|\States| < n$}
+              \LeftComment{\hspace*{1.125em} Make a transition, i.e. execute a single iteration of the loop.}
+              \State{$m \gets \Call{GetModel}{\Delta \wedge T(m, m'), \; \{v' \mid v \in V\}}$}
+              \IfThenElse{$m = \NONE$}{\textbf{break}}{$\States \gets \States \cup \{m\}$}
+          \EndWhile
+          \Return{\States}
+      \end{algfunction}}
+      \caption{An outline of the \Record component of \LoopInvGen.}
     \label{algo:record}
 \end{figure}
 
@@ -243,15 +252,16 @@ we start with an \emph{unseen} state (which is not already in the set \States).
 
 \noindent
 This component uses the program states collected by \Record to infer a loop invariant that is sufficient
-for proving correctness of a given SyGuS-INV problem \SyGuSINVTriplet.
-We outline our \Infer algorithm in \cref{algo:infer}, which given a SyGuS-INV problem \SyGuSINVTriplet,
-and a set \States of reachable states, returns a provably sufficient loop invariant \Inv.
+for proving correctness of a given SyGuS-INV problem \SyGuSINVQuadruplet.
+We outline our \Infer algorithm in \cref{algo:infer}, which given a SyGuS-INV problem \SyGuSINVQuadruplet,
+a set \States of reachable states, and a set $\Theta$ of configuration parameters,
+returns an invariant \Inv.
 
 \begin{figure}[!t]
     \algobox{1.1}{
     \begin{algfunction}
       {\Infer}
-      {\SyGuSINVTriplet\colon \TSyGuS, \mathcal{Z}\colon \TState[\,]}
+      {\SyGuSINVQuadruplet\colon \TSyGuS, \mathcal{Z}\colon \TState[\,], \Theta\colon \TConfig}
       {A sufficient loop invariant $\Inv\colon \TPred{\TState}$.}
         \LeftComment{Start with the weakest invariant that satisfies $\forall s\colon \Inv(s) \Rightarrow Q(s)$.}
         \State $\Inv \gets Q$
@@ -259,17 +269,17 @@ and a set \States of reachable states, returns a provably sufficient loop invari
         \While{\TRUE}
             \State{$B \gets \{\}$}
             \While{\TRUE}
-                \State{$\delta \gets \Call{\PIE}{\mathcal{Z}, B}$}
-                \State{$c \gets \Call{\Checker}{\forall p,q\colon \Delta(p) \; \Rightarrow \; \Inv(p) \wedge T(p,q)\!\Rightarrow\!\Inv(q)}$}
+                \State{$\rho \gets \Call{\PIE}{\mathcal{Z}, B, \Theta}$}
+                \State{$c \gets \Call{\Checker}{\forall s,t\colon \rho(s) \; \Rightarrow \; \Inv(s) \wedge T(s,t)\!\Rightarrow\!\Inv(t)}$}
                 \IfThenElse{$c = \NONE$}{\textbf{break}}{$B \gets B \cup \{c\}$}
             \EndWhile
-            \State{$\Inv \gets \Inv \wedge \delta$}
+            \State{$\Inv \gets \Inv \wedge \rho$}
             \LeftComment{\hspace*{1.35em}Weaken \Inv using counterexamples, if it is stronger than $P$.}
             \State $c \gets \Call{\Checker}{\forall s\colon P(s) \Rightarrow \Inv(s)}$
             \If{$c \neq \NONE$}
-                \State{$\mathcal{S} \gets \Call{RecordStatesFrom}{C,\: {\color{gray} k}}$}
-                \Return{$\Call{\Infer}{\SyGuSINVTriplet, \mathcal{Z} \cup \mathcal{S}}$}
-            \ElsIf{$\delta = \TRUE$} \textbf{break}
+                \State{$\mathcal{S} \gets \Call{RecordStatesFrom}{c, \Theta[\textsf{\small NumStepsOnRestart}]}$}
+                \Return{$\Call{\Infer}{\SyGuSINVQuadruplet, \mathcal{Z} \cup \mathcal{S}}$}
+            \ElsIf{$\rho = \TRUE$} \textbf{break}
             \EndIf
         \EndWhile
         \Return{\Inv}
@@ -282,7 +292,7 @@ and a set \States of reachable states, returns a provably sufficient loop invari
 A \emph{sufficient} loop invariant \Inv must satisfy three conditions:
 \begin{itemize}[leftmargin=1.25em]
     \item Weaker than precondition: \hspace*{4.5pt} $\forall s\colon P(s) \Rightarrow \Inv(s)$
-    \item Inductive over loop body: \hspace*{7.75pt} $\forall p,q\colon \Inv(p) \wedge T(p,q) \Rightarrow \Inv(q)$
+    \item Inductive over loop body: \hspace*{7.75pt} $\forall s,t\colon \Inv(s) \wedge T(s,t) \Rightarrow \Inv(t)$
     \item Stronger than postcondition: $\forall s\colon \Inv(s) \Rightarrow Q(s)$
 \end{itemize}
 As shown in \cref{fig:overview}, \Infer relies on an off-the-shelf theorem prover \Checker for verifying these conditions,
@@ -300,12 +310,12 @@ The state $(x \mapsto 0 \wedge y \mapsto 1)$ satisfies \Inv,
 but it may transition to state $(x \mapsto 0 \wedge y \mapsto 0)$, which violates \Inv.
 In lines 2\,--\,13, \Infer employs a \emph{strengthening} loop (inspired by \tool{HOLA}~\cite{Dillig2013InductiveIG}),
 to ensure inductiveness of the candidate.
-At the $i^\text{th}$ iteration, it learns a precondition $\delta_i$
+At the $i^\text{th}$ iteration, it learns a precondition $\rho_i$
 under which the candidate invariant is preserved after a single transition.
-For our running example, $\delta_1 = (x \geqslant 1)$, for instance,
+For our running example, $\rho_1 = (x \geqslant 1)$, for instance,
 would ensure that our candidate invariant $\Inv_0 = ((x < y) \vee (x \geqslant 1))$ is preserved.
 In line 8, we strengthen the candidate invariant by conjoining it with the learned precondition.
-For our running example, the new candidate $\Inv_1 = \Inv_0 \wedge \delta_1 = (x \geqslant 1)$ is indeed inductive.
+For our running example, the new candidate $\Inv_1 = \Inv_0 \wedge \rho_1 = (x \geqslant 1)$ is indeed inductive.
 
 The reduction to a precondition inference problem allows us to leverage our prior work, \PIE,
 on learning preconditions with automatic synthesis of appropriate features\footnoteNum{
@@ -316,24 +326,27 @@ on learning preconditions with automatic synthesis of appropriate features\footn
     \end{andlist}
     The details are presented in our full paper~\cite{Padhi2016DatadrivenPI}.}.
 In line 5, \PIE accepts a set \States of states which lead to satisfaction of a desired property,
-a set $B$ of states which do not, and learns a \emph{likely} precondition $\delta$ for the desired property.
+a set $B$ of states which do not, the set $\Theta$ of configuration parameters
+(such as \emph{conflict group size}~\cite{Padhi2016DatadrivenPI}),
+and learns a \emph{likely} precondition $\rho$ for the desired property.
 Since the precondition is only a likely one, in line 6, \Infer checks the likely precondition using \Checker for sufficiency,
 and provides counterexamples to \PIE iteratively, in lines 4\,--\,7, till a provably sufficient precondition is learned.
 
-Conjoining the current candidate invariant \Inv with the precondition which preserves it for at least one iteration,
-might however result in the next candidate $\Inv \wedge \delta$ being too strong,
+Conjoining the current candidate invariant \Inv with the precondition $\rho$,
+might however result in the next candidate $\Inv \wedge \rho$ being too strong,
 in particular, stronger than the precondition $P$.
 Therefore, in line 9, we use \Checker to verify that it is weaker than $P$.
 A counterexample in this case would indicate a state that is allowed by the precondition,
 but not covered by the candidate invariant.
 This could happen due to inadequate exploration of program states during the \Record phase,
 for instance due to a complex transition relation.
-On finding such a counterexample $c$, we collect a few more ($k$) states starting with $c$, in line 11,
-to account for the unexplored program behavior.
+On finding such a counterexample $c$, we invoke \RecordStatesFrom (from \cref{algo:record})
+to collect a few more (\textsf{\small NumStepsOnRestart} parameter in $\Theta$) states starting from $c$,
+in line 11, to account for the unexplored program behavior.
 Finally, in line 12, we restart with the new set of available program states.
-Note that if no such counterexample is found and the current candidate \emph{unconditionally} holds (i.e. $\delta = \TRUE$),
+Note that if no such counterexample is found and the current candidate \emph{unconditionally} holds (i.e. $\rho = \TRUE$),
 as is the case with the candidate $\Inv = (x \geqslant 1)$ for our running example, then
-our current candidate invariant is provably sufficient.
+our current candidate invariant is provably sufficient for guaranteeing correctness of \SyGuSINVQuadruplet.
 
 
 
@@ -354,7 +367,7 @@ For its various components, \LoopInvGen internally uses the following off-the-sh
     
     \item The \BFL component in \PIE uses a standard \emph{probably approximately correct} (PAC) algorithm
           that can learn arbitrary \emph{conjunctive normal form} (CNF) formula,
-          and is biased towards small formula~\cite{Kearns1994AnIT}.
+          and is biased towards small formulas~\cite{Kearns1994AnIT}.
 \end{itemize}
 
 \subsection*{\textsc{Major Implementation Changes}}
@@ -431,7 +444,6 @@ and solves them using \PIE, which uses a form of program synthesis to learn feat
 \noindent
 Thanks to Rahul Sharma for his contributions to our joint prior work on \PIE, and the initial prototype of \LoopInvGen;
 Sumit Gulwani and Zachary Kincaid for access to the \tool{Escher} program synthesis tool;
-Isil Dillig for access to their loop invariant inference benchmarks;
 and the organizers of SyGuS-COMP for making all the artifacts publicly available.
 
 
