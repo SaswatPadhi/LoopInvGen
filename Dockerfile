@@ -46,7 +46,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install alcotest.0.8.3 core.v0.11.1 core_extended.v0.11.1 jbuilder.1.0+beta20
+RUN opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta20
 
 RUN curl -LO https://github.com/Z3Prover/z3/archive/z3-$Z3_VERSION.zip && \
     unzip z3-$Z3_VERSION.zip && mv z3-z3-$Z3_VERSION z3-$Z3_VERSION
