@@ -71,10 +71,6 @@ and goal = {
   mutable status : goal_status;
 }
 
-let short_goal_string goal = match goal.status with
-  | Open -> "<open> " ^ (varray_string goal.varray)
-  | Closed v -> "<closed> " ^ (Vector.string v)
-
 let rec print_goal indent goal =
   if String.length indent > 10 then Stdio.print_endline (indent ^ "...")
   else Stdio.print_endline (indent ^ "goal: " ^ (varray_string goal.varray))

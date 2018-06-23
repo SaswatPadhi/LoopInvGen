@@ -35,6 +35,12 @@ Docker containers have negligible performance overhead.
 1. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
 2. Run a container over the image: `docker run -it loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
 
+<a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
+
+```bash
+docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen
+```
+
 <details>
 
 <summary> Docker also allows you to easily limit the container's memory and/or CPU usage.</summary>
@@ -49,11 +55,6 @@ for more details on applying resource constraints.
 
 </details>
 
-<a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
-
-```bash
-docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen
-```
 
 ### Manual Installation
 

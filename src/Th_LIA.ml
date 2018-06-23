@@ -51,6 +51,18 @@ let new_components = let open Polymorphic_compare in [
     dump = (fun[@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")")
   } ;
   {
+    name = "int-eq";
+    codomain = TBool;
+    domain = [TInt;TInt];
+    check = (function
+             | [x ; y] -> x <> y
+             | _ -> false);
+    apply = (function
+             | [VInt x ; VInt y] -> VBool (x = y)
+             | _ -> VError);
+    dump = (fun[@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")")
+  } ;
+  {
     name = "int-leq";
     codomain = TBool;
     domain = [TInt;TInt];
@@ -97,18 +109,6 @@ let new_components = let open Polymorphic_compare in [
              | [VInt x ; VInt y] -> VBool (x > y)
              | _ -> VError);
     dump = (fun[@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")")
-  } ;
-  {
-    name = "int-eq";
-    codomain = TBool;
-    domain = [TInt;TInt];
-    check = (function
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VBool (x = y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")")
   }
 ]
 
