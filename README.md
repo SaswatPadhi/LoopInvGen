@@ -1,6 +1,6 @@
 LoopInvGen
-  [![Build Status](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?label=Travis+build)][travis]
-  [![Docker Build](https://img.shields.io/docker/build/padhi/loopinvgen.svg?label=Docker+image)][dockerhub]
+  [![Build Status](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?label=Travis+Build)][travis]
+  [![Docker Build](https://img.shields.io/docker/build/padhi/loopinvgen.svg?label=Docker+Image)][dockerhub]
 ==========
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
@@ -22,7 +22,7 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 ## Installation
 
-### Using `Dockerfile` (recommended)
+### Using `docker` (recommended)
 
 _**Note:** The docker image consumes ~4GB of disk space._
 
@@ -81,10 +81,10 @@ $ opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+be
 ```
 
 #### 3. Get the [Z3 project][z3].
-We have tested LoopInvGen with the latest stable version of Z3 (4.6.0).
+We have tested LoopInvGen with the latest stable version of Z3 (4.7.1).
 You could either:
 - `git checkout https://github.com/Z3Prover/z3.git` for the bleeding edge version, or
-- `wget https://github.com/Z3Prover/z3/archive/z3-4.6.0.zip && unzip z3-4.6.0.zip` for the stable version
+- `wget https://github.com/Z3Prover/z3/archive/z3-4.7.1.zip && unzip z3-4.7.1.zip` for the stable version
 
 #### 4. `git clone` this project, and build everything.
 ```bash
@@ -116,7 +116,7 @@ and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill LoopInvGen and with
 
 #### Inference Timeout
 
-The `-t` flag allows users to run LoopInvGen with a maximum limit
+You may use the `-t` flag to run LoopInvGen with a maximum limit
 on the number of _seconds_ (wall-clock time) for which the inference algorithm may run.
 ```bash
 $ ./loopinvgen.sh -t 8 benchmarks/2016/array.sl

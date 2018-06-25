@@ -31,8 +31,7 @@ type t = {
 
 let rec extract_consts (exp : Sexp.t) : (value list) =
   match exp with
-  | List([]) | List((List _) :: _)
-    -> raise (Parse_Exn ("Invalid expression: " ^ (Sexp.to_string_hum exp)))
+  | List([]) -> []
   | (Atom a) | List([Atom a])
     -> List.cons_opt_value (deserialize_value a) []
   (* FIXME: Handling let expressins needs  more work:
@@ -51,7 +50,7 @@ let rec extract_consts (exp : Sexp.t) : (value list) =
                 (dedup_and_sort ~compare:Poly.compare (consts @ consts_in_bind))) *)
   | List ((Atom "let") :: _)
     -> raise (Parse_Exn ("`let` constructs are currently not supported: " ^ (Sexp.to_string_hum exp)))
-  | List((Atom op) :: fargs)
+  | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Poly.compare consts)
 

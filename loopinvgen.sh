@@ -123,11 +123,13 @@ while true ; do
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
     -s | --record-states )
-         [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] || usage "$2 must be > $MIN_RECORD_STATES_PER_FORK."
+         [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
+           || usage "$2 must be > $MIN_RECORD_STATES_PER_FORK."
          STATES="$2"
          shift ; shift ;;
     -t | --infer-timeout )
-         [ "$2" -gt "$MIN_INFER_TIMEOUT" ] || usage "$2 must be > $MIN_INFER_TIMEOUT."
+         [ "$2" -gt "$MIN_INFER_TIMEOUT" ] \
+           || usage "$2 must be > $MIN_INFER_TIMEOUT."
          INFER_TIMEOUT="$2"
          shift ; shift ;;
     -z | --z3-path )
@@ -140,7 +142,8 @@ while true ; do
 done
 
 [ -d "$INTERMEDIATES_DIR" ] || mkdir -p "$INTERMEDIATES_DIR"
-[ -d "$INTERMEDIATES_DIR" ] || usage "Intermediates directory [$INTERMEDIATES_DIR] not found."
+[ -d "$INTERMEDIATES_DIR" ] \
+  || usage "Intermediates directory [$INTERMEDIATES_DIR] not found."
 
 TESTCASE="$1"
 [ -f "$TESTCASE" ] || usage "Input file [$TESTCASE] not found."
@@ -151,12 +154,10 @@ TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
 TESTCASE_PROCESSED="$TESTCASE_PREFIX.pro"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
-TESTCASE_LOG="$TESTCASE_PREFIX.log"
+TESTCASE_ALL_LOG="$TESTCASE_PREFIX.log"
 TESTCASE_REC_LOG="$TESTCASE_PREFIX.rlog"
-TESTCASE_REC_LOG_PATTERN="$TESTCASE_REC_LOG"?
 
-TESTCASE_STATE="$TESTCASE_PREFIX.s"
-TESTCASE_STATE_PATTERN="$TESTCASE_STATE"?
+TESTCASE_REC_STATES="$TESTCASE_PREFIX.rstates"
 TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
 
 RECORD="$RECORD -z $Z3_PATH"
@@ -165,18 +166,21 @@ VERIFY="$VERIFY -z $Z3_PATH"
 
 INFER_TIMEOUT="${INFER_TIMEOUT}s"
 
-[ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l $TESTCASE_LOG"
-[ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l $TESTCASE_REC_LOG"
-[ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_LOG"
-[ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_LOG"
+[ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l \"$TESTCASE_ALL_LOG\""
+[ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l \"$TESTCASE_REC_LOG\""
+[ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l \"$TESTCASE_ALL_LOG\""
+[ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l \"$TESTCASE_ALL_LOG\""
 
-rm -rf $TESTCASE_INVARIANT $TESTCASE_STATE_PATTERN $TESTCASE_ALL_STATES
-echo -en '' > "$TESTCASE_LOG"
+rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES &
+echo -en '' > "$TESTCASE_INVARIANT" &
+echo -en '' > "$TESTCASE_ALL_LOG"
+
 
 show_status "(@ process)"
 
-$PROCESS -o $TESTCASE_PROCESSED $TESTCASE ${DO_LOG[process]} $PROCESS_ARGS >&2
+$PROCESS -o "$TESTCASE_PROCESSED" "$TESTCASE" ${DO_LOG[process]} $PROCESS_ARGS >&2
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
+
 
 show_status "(@ record)"
 
@@ -184,46 +188,46 @@ for i in `seq 1 $RECORD_FORKS` ; do
   [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
   (timeout $RECORD_TIMEOUT \
            $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i"       \
-                   -o $TESTCASE_STATE$i $LOG_PARAM $RECORD_ARGS \
-                   $TESTCASE_PROCESSED) >&2 &
+                   -o "$TESTCASE_REC_STATES$i" $LOG_PARAM $RECORD_ARGS \
+                   "$TESTCASE_PROCESSED") >&2 &
 done
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_STATE_PATTERN | sort -u > $TESTCASE_ALL_STATES
+grep -hv "^[[:space:]]*$" "$TESTCASE_REC_STATES"? | sort -u > "$TESTCASE_ALL_STATES"
 
-[ -z "${DO_LOG[record]}" ] || cat $TESTCASE_REC_LOG_PATTERN >> $TESTCASE_LOG
+[ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"? >> "$TESTCASE_ALL_LOG"
 
 
 show_status "(@ infer)"
 
 timeout --foreground $INFER_TIMEOUT \
-        $INFER -s $TESTCASE_ALL_STATES -o $TESTCASE_INVARIANT \
-               ${DO_LOG[infer]} $INFER_ARGS $TESTCASE_PROCESSED >&2
+        $INFER -s "$TESTCASE_ALL_STATES" -o "$TESTCASE_INVARIANT" \
+               ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" >&2
 INFER_RESULT_CODE=$?
 
 
 if [ "$DO_VERIFY" = "yes" ] ; then
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
-    echo > $TESTCASE_INVARIANT ; echo -n "[TIMEOUT] "
+    echo > "$TESTCASE_INVARIANT" ; echo -n "[TIMEOUT] "
   fi
 
   show_status "(@ verify)"
 
-  touch $TESTCASE_INVARIANT
-  $VERIFY -i $TESTCASE_INVARIANT ${DO_LOG[verify]} $VERIFY_ARGS $TESTCASE > "$TESTCASE_PREFIX.result"
+  $VERIFY -i "$TESTCASE_INVARIANT" ${DO_LOG[verify]} $VERIFY_ARGS "$TESTCASE" \
+    > "$TESTCASE_PREFIX.result"
   RESULT_CODE=$?
 
   show_status "" ; cat "$TESTCASE_PREFIX.result"
 elif [ $INFER_RESULT_CODE == 0 ] ; then
-  cat $TESTCASE_INVARIANT ; echo
+  cat "$TESTCASE_INVARIANT" ; echo
   RESULT_CODE=0
 fi
 
 
 if [ "$DO_CLEAN" == "yes" ] ; then
-  rm -rf $TESTCASE_STATE_PATTERN $TESTCASE_REC_LOG_PATTERN
+  rm -rf "$TESTCASE_REC_STATES"? "$TESTCASE_REC_LOG"?
   if [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ; then
-    rm -rf $TESTCASE_PROCESSED $TESTCASE_ALL_STATES
+    rm -rf "$TESTCASE_PROCESSED" "$TESTCASE_ALL_STATES"
   fi
 fi
 
