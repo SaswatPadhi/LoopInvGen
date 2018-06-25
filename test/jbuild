@@ -1,0 +1,12 @@
+(jbuild_version 1)
+
+(executable
+    ((name RunUnitTests)
+     (ocamlopt_flags (:standard (:include ../src/.flambda_flags)))
+     (libraries (LoopInvGen core alcotest))
+     (preprocessor_deps ((file ../src/config.h)))
+     (preprocess (pps (ppx_optcomp)))))
+
+(alias
+  ((name runtest)
+   (action (run ./RunUnitTests.exe))))

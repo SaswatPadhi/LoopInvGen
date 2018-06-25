@@ -48,7 +48,7 @@ while true ; do
 done
 
 if [ -n "$MAKE_Z3_AT" ] ; then
-  LIG=`pwd`
+  LIG_DIR=`pwd`
   Z3_BUILD_DIR="build_for_pie"
   cd "$MAKE_Z3_AT"
 
@@ -61,9 +61,9 @@ if [ -n "$MAKE_Z3_AT" ] ; then
   cd "$Z3_BUILD_DIR"
   make -j "$JOBS"
 
-  mkdir -p "$LIG/_dep"
-  cp z3 "$LIG/_dep/z3"
-  cd "$LIG"
+  mkdir -p "$LIG_DIR/_dep"
+  cp z3 "$LIG_DIR/_dep/z3"
+  cd "$LIG_DIR"
 fi
 
 if [ -n "$MAKE_DEBUG" ] ; then

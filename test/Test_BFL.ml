@@ -1,30 +1,19 @@
-(* FIXME: Not maintained; needs updates. *)
-
-open BFL
 open Core
-open Exceptions
-open Utils
-
-let uniform_costs n =
-  Hashtbl.Poly.of_alist_exn (
-    List.range_map ~stop:`inclusive 1 n ~f:(fun i -> (i, 1.0)))
+open LoopInvGen
 
 let prune_with_neg_example_1 () =
-  Alcotest.check_raises "no more literals" NoSuchFunction (
+  Alcotest.check_raises "no more literals" Exceptions.NoSuchFunction (
     fun () -> let f = Hashtbl.Poly.of_alist_exn
               in ignore (BFL.pruneWithNegativeExamples
                           []
-                          (uniform_costs 5)
-                          (List.map ~f [
-                              [(1, false) ; (2, false)] ;
-                              [(2, true)]
-                          ])))
+                          (List.map ~f [ [(1, false) ; (2, false)]
+                                       ; [(2, true)]
+                                       ])))
 
 let prune_with_neg_example_2 () =
   let f = Hashtbl.Poly.of_alist_exn in
   let res = BFL.pruneWithNegativeExamples
               [1; 2; 3]
-              (uniform_costs 3)
               (List.map ~f [ [(1, false)] ])
   in Alcotest.(check (slist int compare)) "equivalent list" [1] res
 
@@ -32,7 +21,6 @@ let prune_with_neg_example_3 () =
   let f = Hashtbl.Poly.of_alist_exn in
   let res = BFL.pruneWithNegativeExamples
               [1; 2; 3; 4; 5]
-              (uniform_costs 5)
               (List.map ~f [
                  [(1, true) ; (5, false) ; (3, true)] ;
                  [(2, false) ; (3, false)] ;
@@ -50,12 +38,14 @@ let learnCNF_xor_k2 () =
                              (CNF.to_string res ~stringify:string_of_int)
 
 let learnCNF_xor_k1 () =
-  Alcotest.check_raises "not expressive enough" NoSuchFunction (
+  Alcotest.check_raises "not expressive enough" Exceptions.NoSuchFunction (
     fun () -> ignore (
                 BFL.learnCNF [[false ; true] ; [true ; false]]
                              [[true ; true] ; [false ; false]]
                              ~n:2 ~conf:{ BFL.default_config with
-                                            k = 1 ; auto_incr_k = false ; }))
+                                          k = 1
+                                        ; auto_incr_k = false
+                                        }))
 
 let all = [
   "Negative Pruning 1", `Quick, prune_with_neg_example_1 ;

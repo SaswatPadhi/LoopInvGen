@@ -1,4 +1,5 @@
 open Core
+open LoopInvGen
 
 let main zpath size seed statefile logfile filename () =
   Log.enable ~msg:"RECORD" logfile ;

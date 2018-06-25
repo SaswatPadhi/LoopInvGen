@@ -1,4 +1,5 @@
 open Core
+open LoopInvGen
 
 let main zpath statefile outfile logfile false_on_failure
          max_conflicts max_strengthening_attempts
@@ -17,11 +18,11 @@ let main zpath statefile outfile logfile false_on_failure
    ; let sygus = SyGuS.read_from filename
      in let synth_logic = Types.logic_of_string sygus.logic
      in let conf = {
-       LoopInvGen.default_config with
+       LIG.default_config with
        for_VPIE = {
-         LoopInvGen.default_config.for_VPIE with
+         LIG.default_config.for_VPIE with
          for_PIE = {
-           LoopInvGen.default_config.for_VPIE.for_PIE with
+           LIG.default_config.for_VPIE.for_PIE with
            synth_logic;
            max_conflict_group_size = (if max_conflicts > 0 then max_conflicts
                                       else ((PIE.conflict_group_size_multiplier_for_logic synth_logic)
@@ -32,7 +33,7 @@ let main zpath statefile outfile logfile false_on_failure
      ; max_restarts
      ; max_steps_on_restart
      }
-     in let inv = LoopInvGen.learnInvariant ~conf ~zpath ~states sygus
+     in let inv = LIG.learnInvariant ~conf ~zpath ~states sygus
      in let out_chan = Utils.get_out_channel outfile
      in if (not false_on_failure) && (String.equal inv "false") then ()
         else Stdio.Out_channel.output_string out_chan
@@ -51,11 +52,11 @@ let spec =
 
       +> flag "-max-conflicts"              (optional_with_default 0 int)
                                             ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
-      +> flag "-max-strengthening-attempts" (optional_with_default (LoopInvGen.default_config.for_VPIE.max_tries) int)
+      +> flag "-max-strengthening-attempts" (optional_with_default (LIG.default_config.for_VPIE.max_tries) int)
                                             ~doc:"NUMBER max candidates to consider, per strengthening. 0 = unlimited"
-      +> flag "-max-restarts"               (optional_with_default (LoopInvGen.default_config.max_restarts) int)
+      +> flag "-max-restarts"               (optional_with_default (LIG.default_config.max_restarts) int)
                                             ~doc:"NUMBER number of times the inference engine may restart"
-      +> flag "-max-steps-on-restart"       (optional_with_default (LoopInvGen.default_config.max_steps_on_restart) int)
+      +> flag "-max-steps-on-restart"       (optional_with_default (LIG.default_config.max_steps_on_restart) int)
                                             ~doc:"NUMBER number of states to collect after each restart"
 
       +> anon ("filename" %: file)

@@ -1,4 +1,5 @@
 open Core
+open LoopInvGen
 
 let main outfile logfile filename () =
   Log.enable ~msg:"PROCESS" logfile ;

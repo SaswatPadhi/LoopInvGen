@@ -135,7 +135,7 @@ let add_tests ~(job : ('a, 'b) job) (tests : 'a list) : (('a, 'b) job * int) =
       },
       List.(length pos + length neg))
 
-let update_feature_vecs (features : 'a feature with_desc list)
+let add_to_feature_vecs (features : 'a feature with_desc list)
                         ~(job : ('a, 'b) job) : ('a, 'b) job =
   let add_to_fvec fs (t, fv) =
     (t, lazy ((compute_feature_vector fs t) @ (Lazy.force fv)))
@@ -250,7 +250,7 @@ let rec augmentFeatures ?(conf = default_config) ?(consts = [])
           in if new_features = []
              then (Log.debug (lazy ("CONFLICT RESOLUTION FAILED"))
                   ; raise NoSuchFunction)
-             else augmentFeatures (update_feature_vecs new_features ~job) ~conf ~consts
+             else augmentFeatures (add_to_feature_vecs new_features ~job) ~conf ~consts
 
 (* k is the maximum clause length for the formula we will provide (i.e., it's
    a k-cnf formula) f is the function whose spec we are inferring tests is a

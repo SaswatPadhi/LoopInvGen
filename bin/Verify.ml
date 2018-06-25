@@ -1,7 +1,6 @@
 open Core
-
-open Exceptions
-open Utils
+open LoopInvGen
+open LoopInvGen.Utils
 
 type result = PASS | FAIL of (string list) | IMPOSSIBLE_PASS | IMPOSSIBLE_FAIL
 
@@ -40,7 +39,8 @@ let read_inv_from_chan in_chan ~(sygus : SyGuS.t) : string =
            | (Atom "false") -> ""
            | _ -> to_string_hum inv
           end
-     | _ -> raise (Parse_Exn "Multiple Sexps detected, expecting a single invariant.")
+     | _ -> raise (Exceptions.Parse_Exn
+                     "Multiple Sexps detected, expecting a single invariant.")
 
 let string_of_result res =
   match res with
