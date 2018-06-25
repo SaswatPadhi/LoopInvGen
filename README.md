@@ -33,12 +33,12 @@ Docker containers have negligible performance overhead.
 
 0. [Get `docker` for your OS](https://docs.docker.com/install).
 1. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
-2. Run a container over the image: `docker run -it loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
+2. Run a container over the image: `docker run -it padhi/loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
 
 <a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
 
 ```bash
-docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen
+docker build -t padhi/loopinvgen github.com/SaswatPadhi/LoopInvGen
 ```
 
 <details>
@@ -47,7 +47,7 @@ docker build -t loopinvgen github.com/SaswatPadhi/LoopInvGen
 
 ```bash
 # Create a LoopInvGen container with 4GB memory, no swap and 1 CPU
-$ docker run -it --memory=4g --memory-swap=4g --cpus=1 loopinvgen
+$ docker run -it --memory=4g --memory-swap=4g --cpus=1 padhi/loopinvgen
 ```
 
 See [the official Docker guide](https://docs.docker.com/config/containers/resource_constraints)

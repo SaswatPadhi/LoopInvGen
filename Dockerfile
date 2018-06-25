@@ -1,6 +1,6 @@
 # Adapted from https://github.com/akabe/docker-ocaml/blob/master/dockerfiles/ubuntu16.04_ocaml4.06.1/Dockerfile
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 LABEL maintainer="padhi@cs.ucla.edu"
 
@@ -9,23 +9,19 @@ ENV OPAM_VERSION  1.2.2
 ENV OCAML_VERSION 4.06.1+flambda
 ENV Z3_VERSION    4.7.1
 
-ENV TIME_ZONE     'America/Los_Angeles'
-
 ENV HOME /home/opam
 
 
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
-    apt upgrade -y && \
-    apt install -y aspcud binutils cmake curl g++ git libgmp-dev libgomp1 \
-                   libomp5 libomp-dev libx11-dev m4 make patch python2.7  \
-                   sudo tzdata unzip
-
-# Bug in Ubuntu Xenial: https://bugs.launchpad.net/ubuntu/+source/tzdata/+bug/1554806
-RUN ln -fs /usr/share/zoneinfo/$TIME_ZONE /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
+    apt upgrade -yq && \
+    apt install -yq aspcud binutils cmake curl g++ git libgmp-dev libgomp1 \
+                    libomp5 libomp-dev libx11-dev m4 make patch python2.7  \
+                    sudo tzdata unzip
 
 RUN adduser --disabled-password --home $HOME --shell /bin/bash --gecos '' opam && \
     echo 'opam ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers
+
 
 RUN curl -L -o /usr/bin/opam "https://github.com/ocaml/opam/releases/download/$OPAM_VERSION/opam-$OPAM_VERSION-$(uname -m)-$(uname -s)" && \
     chmod 755 /usr/bin/opam
