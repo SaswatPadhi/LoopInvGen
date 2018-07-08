@@ -1,23 +1,41 @@
 LoopInvGen
   [![Build Status](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?label=Travis+Build)][travis]
-  [![Docker Build](https://img.shields.io/docker/build/padhi/loopinvgen.svg?label=Docker+Image)][dockerhub]
+  [![Docker Build](https://img.shields.io/docker/build/padhi/loopinvgen.svg?label=Docker+Image)][docker-hub]
 ==========
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
 
 <p align="center"><img src="docs/architecture.png" width="400"/></p>
 
+---
+
+[**Docker Hub**][docker-hub]
+&nbsp; &nbsp; &vert; &nbsp; &nbsp;
+[Installation](#installation)
+&nbsp;&middot;&nbsp;
+[Invariant Inference](#invariant-inference)
+&nbsp;&middot;&nbsp;
+[Batch Verification](#batch-verification)
+&nbsp; &nbsp; &vert; &nbsp; &nbsp;
+[Citing `LoopInvGen`](#citing-loopinvgen)
+&nbsp;&middot;&nbsp;
+[License (MIT)](LICENSE.md)
+
+---
+
 #### :page_with_curl: Papers and Presentations
 
-- [SyGuS-COMP 2018][SyGuSCOMP18] (a satellite event of FLoC, CAV and SYNT 2018) -
+- [PLDI 2016](http://conf.researchr.org/home/pldi-2016) -
+  Original [paper on PIE](http://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf) (Precondition Inference Engine), the backbone of LoopInvGen
+  <br><br>
+- [SyGuS-COMP 2018][SyGuSCOMP18] (a satellite event of CAV and SYNT at FLoC 2018) -
   Solver Presentation (_TODO!_) and [Description](docs/2018_SyGuS-COMP-Description.pdf)
 - [SyGuS-COMP 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) -
   Solver [Presentation](docs/2017_SyGuS-COMP-Presentation.pdf) and [Description](docs/2017_SyGuS-COMP-Description.pdf)
-- [PLDI 2016](http://conf.researchr.org/home/pldi-2016) -
-  Original [paper on PIE](http://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf) (Precondition Inference Engine), the backbone of LoopInvGen
 
 #### :trophy: Awards and Honors
 
+- :1st_place_medal: [SyGuS-COMP 2018][SyGuSCOMP18] - INV Track **Winner**
 - :1st_place_medal: [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Results](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf))
 
 ## Installation
@@ -31,9 +49,9 @@ as opposed to installing it within your host OS.
 Docker containers have negligible performance overhead.
 (See [this report](http://domino.research.ibm.com/library/cyberdig.nsf/papers/0929052195DD819C85257D2300681E7B/$File/rc25482.pdf))
 
-0. [Get `docker` for your OS](https://docs.docker.com/install).
-1. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
-2. Run a container over the image: `docker run -it padhi/loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
+1. [Get `docker` for your OS](https://docs.docker.com/install).
+2. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
+3. Run a container over the image: `docker run -it padhi/loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
 
 <a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
 
@@ -102,11 +120,11 @@ using: `jbuilder build @<mode>`.
 
 </details>
 
-## Usage
+## Invariant Inference
 
-Infer invariants for SyGuS benchmarks by invoking LoopInvGen as:
+Infer invariants for SyGuS-INV benchmarks by invoking LoopInvGen as:
 ```bash
-$ ./loopinvgen.sh benchmarks/2016/array.sl
+$ ./loopinvgen.sh benchmarks/LIA/2016.SyGuS-COMP/array.sl
 (define-fun inv-f ((x Int) (y Int) (z Int)) Bool (not (and (>= x 5) (not (<= y z)))))
 ```
 
@@ -119,18 +137,20 @@ and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill LoopInvGen and with
 You may use the `-t` flag to run LoopInvGen with a maximum limit
 on the number of _seconds_ (wall-clock time) for which the inference algorithm may run.
 ```bash
-$ ./loopinvgen.sh -t 8 benchmarks/2016/array.sl
+$ ./loopinvgen.sh -t 8 benchmarks/LIA/2016.SyGuS-COMP/array.sl
 ```
 
 For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulimit.html).
 
 <details>
 
+<summary><kbd>CLICK</kbd> for further details</summary>
+
 #### Verifying Generated Invariants
 
 The `-v` switch makes LoopInvGen verify the generated invariant:
 ```bash
-$ ./loopinvgen.sh -v benchmarks/2016/array.sl
+$ ./loopinvgen.sh -v benchmarks/LIA/2016.SyGuS-COMP/array.sl
 PASS
 ```
 
@@ -152,9 +172,11 @@ Try `./loopinvgen.sh -h` for other options that allow more control over the infe
 </details>
 
 
-## Testing
+## Batch Verification
 
-Execute `./test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].
+Execute `./test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].  
+The `test_all.sh` script invokes LoopInvGen for invariant inference,
+and then verifies that the generated invariant is sufficient to prove correctness of the SyGuS benchmark.
 
 **Note:** Within `test_all.sh`,
 we trap <kbd>CTRL</kbd>+<kbd>C</kbd> (`SIGINT` signal) to kill the currently running benchmark,
@@ -162,9 +184,9 @@ and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill the `test_all.sh` s
 
 <details>
 
-The `test_all.sh` script invokes LoopInvGen for invariant inference,
-and then verifies that the generated invariant is sufficient to prove correctness of the SyGuS benchmark.  
-For each benchmark, it generates one of the verdicts mentioned [above](#verifying-generated-invariants), or:
+<summary><kbd>CLICK</kbd> for further details</summary>
+
+For each benchmark, the `test_all.sh` script generates one of the verdicts mentioned [above](#verifying-generated-invariants), or:
 ```
 [SKIPPED] <verdict> : Invariant inference was skipped for an already passing benchmark.
                       <verdict> is one of the PASS verdicts above.
@@ -189,6 +211,25 @@ Try `./test_all.sh -h` for more options.
 
 </details>
 
+## Citing `LoopInvGen`
+
+```
+@inproceedings{DBLP:conf/pldi/PadhiSM16,
+  author    = {Saswat Padhi and Rahul Sharma and Todd D. Millstein},
+  title     = {Data-driven precondition inference with learned features},
+  booktitle = {Proceedings of the 37th {ACM} {SIGPLAN} Conference on Programming
+               Language Design and Implementation, {PLDI} 2016, Santa Barbara, CA,
+               USA, June 13-17, 2016},
+  pages     = {42--56},
+  year      = {2016},
+  crossref  = {DBLP:conf/pldi/2016},
+  url       = {http://doi.acm.org/10.1145/2908080.2908099},
+  doi       = {10.1145/2908080.2908099},
+  timestamp = {Mon, 27 Jun 2016 07:33:52 +0200},
+  biburl    = {https://dblp.org/rec/bib/conf/pldi/PadhiSM16},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+```
 
 
 [flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
@@ -199,4 +240,4 @@ Try `./test_all.sh -h` for more options.
 [SyGuSCOMP18]:    http://www.sygus.org/SyGuS-COMP2018.html
 
 [travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
-[dockerhub]:      https://hub.docker.com/r/padhi/loopinvgen
+[docker-hub]:      https://hub.docker.com/r/padhi/loopinvgen

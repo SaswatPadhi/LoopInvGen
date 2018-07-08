@@ -12,6 +12,10 @@
 \IEEEauthorblockA{University of California, Los Angeles\\
 Email: \mailtourl{padhi@cs.ucla.edu}}
 \and
+\IEEEauthorblockN{Rahul Sharma}
+\IEEEauthorblockA{Microsoft Research, India\\
+Email: \mailtourl{rahsha@microsoft.com}}
+\and
 \IEEEauthorblockN{Todd Millstein}
 \IEEEauthorblockA{University of California, Los Angeles\\
 Email: \mailtourl{todd@cs.ucla.edu}}}
@@ -23,16 +27,17 @@ Email: \mailtourl{todd@cs.ucla.edu}}}
 \maketitle
 
 \begin{abstract}
-We present \LoopInvGen, a tool for generating loop invariants that can provably guarantee correctness of a program
-with respect to a given specification.
-We extend the data-driven approach to inferring sufficient loop invariants from a collection of program states.
-In contrast to existing data-driven techniques, \LoopInvGen is not restricted to a fixed set of \emph{features} --
+We describe the \LoopInvGen tool for generating loop invariants that can
+provably guarantee correctness of a program with respect to a given specification.
+\LoopInvGen is an efficient implementation of the inference technique
+originally proposed in our earlier work on \PIE~\cite{Padhi2016DatadrivenPI}.
+
+In contrast to existing techniques, \LoopInvGen is not restricted to a fixed set of \emph{features} --
 atomic predicates that are composed together to build complex loop invariants.
 Instead, we start with no initial features, and use program synthesis techniques to grow the set on demand.
-
-Compared to existing static and dynamic techniques for loop invariant inference,
-not only does \LoopInvGen enable a less onerous and more expressive approach,
-but is also significantly faster over the SyGuS-INV (2017) benchmarks.
+This not only enables a less onerous and more expressive approach,
+but also appears to be significantly faster than the existing tools over
+the SyGuS-COMP 2017 benchmarks from the INV track.
 \end{abstract}
 
 
@@ -118,8 +123,8 @@ and $y$ may be arbitrarily updated at each iteration.
 The goal is to verify that $(x \geqslant 1)$ always holds after the loop.
 The SyGuS-INV format~\cite{Alur2016SyGuSComp2R} used in \cref{code:sygus},
 allows encoding the semantics of the program along with a desired functional specification.
-For the remainder of the paper, we use the triplet \SyGuSINVQuadruplet to denote an arbitrary SyGuS-INV problem ---
-$P$ being the precondition, $Q$ the postcondition, $T$ the state transition relation, and $\Delta$ the remaining facts, if any.
+For the rest of the paper, we use the quadruplet \SyGuSINVQuadruplet\ to denote an arbitrary SyGuS-INV problem ---
+$P$ being the precondition, $Q$ the postcondition, $T$ the state transition relation, and $\Delta$ the remaining relations, if any.
 
 \begin{figure}[!t]
     \begin{tcolorbox}
@@ -206,12 +211,12 @@ and returns the set \States of the states of the variables in $V$.
     \begin{algfunction}
         {\RecordStatesFrom}
         {m\colon \TState, k\colon \TInt}
-        {A sequence $\{m, m_1, m_2, \cdots, m_l\}$ of states, where $l \leqslant k$.}
-          \State $\States \gets \{m\}$
-          \While{$|\States| < n$}
+        {A sequence $\langle m, m_1, m_2, \cdots, m_l \rangle$ of states, where $l < k$.}
+          \State $\States \gets \langle m \rangle$
+          \While{$|\States| < k$}
               \LeftComment{\hspace*{1.125em} Make a transition, i.e. execute a single iteration of the loop.}
               \State{$m \gets \Call{GetModel}{\Delta \wedge T(m, m'), \; \{v' \mid v \in V\}}$}
-              \IfThenElse{$m = \NONE$}{\textbf{break}}{$\States \gets \States \cup \{m\}$}
+              \IfThenElse{$m = \NONE$}{\textbf{break}}{$\States \gets \States \circ \langle m \rangle$}
           \EndWhile
           \Return{\States}
       \end{algfunction}}
@@ -442,8 +447,7 @@ and solves them using \PIE, which uses a form of program synthesis to learn feat
 \section*{Acknowledgment}
 
 \noindent
-Thanks to Rahul Sharma for his contributions to our joint prior work on \PIE, and the initial prototype of \LoopInvGen;
-Sumit Gulwani and Zachary Kincaid for access to the \tool{Escher} program synthesis tool;
+Thanks to Sumit Gulwani and Zachary Kincaid for access to the \tool{Escher} program synthesis tool;
 and the organizers of SyGuS-COMP for making all the artifacts publicly available.
 
 
