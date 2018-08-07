@@ -29,14 +29,14 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
   Original [paper on PIE](http://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf) (Precondition Inference Engine), the backbone of LoopInvGen
   <br><br>
 - [SyGuS-COMP 2018][SyGuSCOMP18] (a satellite event of CAV and SYNT at FLoC 2018) -
-  Solver Presentation (_TODO!_) and [Description](docs/2018_SyGuS-COMP-Description.pdf)
+  Solver [Presentation](docs/2018_SyGuS-COMP-Presentation.pdf) and [Description](docs/2018_SyGuS-COMP-Description.pdf)
 - [SyGuS-COMP 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) -
   Solver [Presentation](docs/2017_SyGuS-COMP-Presentation.pdf) and [Description](docs/2017_SyGuS-COMP-Description.pdf)
 
 #### :trophy: Awards and Honors
 
-- :1st_place_medal: [SyGuS-COMP 2018][SyGuSCOMP18] - INV Track **Winner**
-- :1st_place_medal: [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Results](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf))
+- :1st_place_medal: [SyGuS-COMP 2018][SyGuSCOMP18] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp18.pdf))
+- :1st_place_medal: [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf) and [Report](http://sygus.seas.upenn.edu/files/SyGuSComp2017.pdf))
 
 ## Installation
 
@@ -90,12 +90,12 @@ except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 #### 1. Install `ocaml` >= 4.04.2.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enabled.
 For example, with [`opam`](https://opam.ocaml.org/), you could:
-- run `opam switch 4.06.1+flambda` for opam 1.x
-- run `opam switch create 4.06.1+flambda` for opam 2.x
+- run `opam switch 4.07.0+flambda` for opam 1.x
+- run `opam switch create 4.07.0+flambda` for opam 2.x
 
 #### 2. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.3 core.v0.11.0 core_extended.v0.11.0 jbuilder.1.0+beta20
+$ opam install alcotest.0.8.3 core.v0.11.2 core_extended.v0.11.2 dune.1.1.1
 ```
 
 #### 3. Get the [Z3 project][z3].
@@ -113,10 +113,9 @@ Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply
 
 For debug builds, use the `-D` or `--debug` switch when invoking `./build_all.sh`.
 
-For future builds after any changes to the source code, you only need to run `jbuilder build`.
-You can configure the build mode to either `debug` (default) or `optimize`,
-using: `jbuilder build @<mode>`.  
-(You would need to run `jbuilder build` after changing the build mode.)
+For future builds after any changes to the source code, you only need to run `dune build`.
+You can configure the build profile to either `debug` or `optimize` (default),
+using: `dune build --profile <profile>`.  
 
 </details>
 
@@ -148,7 +147,7 @@ For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulim
 
 #### Verifying Generated Invariants
 
-The `-v` switch makes LoopInvGen verify the generated invariant:
+The `-v` switch makes LoopInvGen verify the benchmark with the generated invariant:
 ```bash
 $ ./loopinvgen.sh -v benchmarks/LIA/2016.SyGuS-COMP/array.sl
 PASS
@@ -206,6 +205,13 @@ This may be disabled by:
 which accepts the SyGuS format. This makes it easier for us to compare various tools easily.  
 To use an invariant inference tool other than LoopInvGen, invoke it as:
 `test_all.sh -b <path/to/benchmarks> -T <path/to/tool> [-- -tool -specific -options]`
+
+#### Limiting Execution Time
+
+Just like `loopinvgen.sh`, the `test_all.sh` script allows users to limit the execution time for the invariant inference tools using the `-t` flag.
+```bash
+$ ./test_all.sh -b benchmarks/LIA -t 10
+```
 
 Try `./test_all.sh -h` for more options.
 

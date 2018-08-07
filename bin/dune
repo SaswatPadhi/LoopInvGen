@@ -1,0 +1,8 @@
+(env
+    (debug (ocamlopt_flags (:standard -g -Oclassic)))
+    (_ (ocamlopt_flags (:standard -O3 -rounds 6))))
+
+(executables
+    (names Process Record Infer Verify)
+    (public_names lig-process lig-record lig-infer lig-verify)
+    (libraries LoopInvGen core))

@@ -8,7 +8,7 @@ open Utils
 module Bitarray = Core_extended.Bitarray
 
 (* * *
- * Optimization / Simplification of the SyGuS-INV problem:
+ * Optimization / Simplification of a SyGuS-INV problem:
  * -------------------------------------------------------
  * We preserve all functions and all arguments to functions.
  * However, we reduce the [synth_variables], i.e. the variables
@@ -37,7 +37,7 @@ let make_call_table (sygus : t) : func_info String.Table.t =
                        ; used_args = Bitarray.create (List.length f.args) }
   in let table = String.Table.create () ~size:(List.length sygus.functions) ~growth_allowed:false
       in List.iter sygus.functions ~f:(fun func -> String.Table.set table ~key:func.name ~data:(init_info func))
-       ; List.iteri sygus.functions ~f:(fun i func ->
+       ; List.iter sygus.functions ~f:(fun func ->
            let parsed_expr = Parsexp.Single.parse_string_exn func.expr in
            let ops =  extract_operators parsed_expr in
            let callees = List.filter ops ~f:(fun op -> String.Table.find table op <> None)

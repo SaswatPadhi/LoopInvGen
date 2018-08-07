@@ -1,0 +1,11 @@
+(env
+    (debug (ocamlopt_flags (:standard -g -Oclassic)))
+    (_ (ocamlopt_flags (:standard -O3 -rounds 6))))
+
+(executable
+    (name Runner)
+    (libraries LoopInvGen base alcotest))
+
+(alias
+    (name runtest)
+    (action (run ./Runner.exe)))

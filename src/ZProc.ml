@@ -10,7 +10,7 @@ type t = {
   stderr : In_channel.t ;
 }
 
-type model = (string * Types.value) list
+type model = (string * Value.t) list
 
 let query_for_model ?(eval_term = "true") () =
   [ "(check-sat)"
@@ -21,13 +21,13 @@ let query_for_model ?(eval_term = "true") () =
 let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let open Unix in
   let open Process_info in
-  let pi = create_process zpath ["-in";"-smt2"] in
+  let pi = create_process ~prog:zpath ~args:["-in";"-smt2"] in
   let z3 = {
     procid = pi.pid ;
     stdin  = out_channel_of_descr pi.stdin ;
     stdout = in_channel_of_descr pi.stdout ;
     stderr = in_channel_of_descr pi.stdout ;
-  } in Log.info (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
+  } in Log.debug (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
      ; Out_channel.output_lines z3.stdin init_options
      ; (match random_seed with
         | None -> ()
@@ -41,7 +41,7 @@ let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
 
 let close z3 =
   Out_channel.close z3.stdin ; ignore (Unix.waitpid z3.procid) ;
-  Log.info (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
+  Log.debug (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
 let process ?(init_options = []) ?(random_seed = None)
             ~(zpath : string) (f : t -> 'a) : 'a =
@@ -94,23 +94,23 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
         ; (if scoped then close_scope z3 else ())
         ; Out_channel.flush z3.stdin ; List.rev (!results)
 
-let z3_sexp_to_value (sexp : Sexp.t) : Types.value =
+let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
   let vstr = match sexp with
              | Atom v -> v
              | List([(Atom "-") ; (Atom v)]) -> "-" ^ v
              | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                         ^ (to_string_hum sexp)))
-  in Option.value_exn (Types.deserialize_value vstr)
+  in Value.of_string vstr
 
-let z3_result_to_values (result : string list) : model option =
+let z3_result_to_model (result : string list) : model option =
   let open Sexp in
   try [@warning "-8"]
   match result with
   | "unsat" :: _ -> None
   | [ "sat" ; _ ; result ]
     -> begin match Sexp.parse result with
-        | Done (List((Atom model) :: varexps), _)
+        | Done (List((Atom _) :: varexps), _)
           -> let open List in
             Some (map varexps ~f:(
               function
@@ -124,7 +124,7 @@ let z3_result_to_values (result : string list) : model option =
 
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =
-  z3_result_to_values (run_queries z3 (query_for_model ~eval_term ()) ~db)
+  z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
@@ -159,15 +159,14 @@ let simplify (z3 : t) (q : string) : string =
      | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
 
 let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
-                            : (Types.value list -> Types.value) =
-  let open Types in
-  fun (values : value list) ->
+                            : (Value.t list -> Value.t) =
+  fun (values : Value.t list) ->
     match run_queries z3
             ~db:(("(assert " ^ expr ^ ")") ::
                 (List.map2_exn arg_names values
                                ~f:(fun n v -> ("(assert (= " ^ n ^ " " ^
-                                               (serialize_value v) ^ "))"))))
+                                               (Value.to_string v) ^ "))"))))
             [ "(check-sat)" ]
-    with [ "sat" ]   -> vtrue
-       | [ "unsat" ] -> vfalse
+    with [ "sat" ]   -> Value.Bool true
+       | [ "unsat" ] -> Value.Bool false
        | _ -> raise (Internal_Exn "z3 could not verify the query.")

@@ -1,115 +1,117 @@
 open Base
 
-open Components
-open Types
+open Expr
 
-let vzero = VInt 0
-let vone = VInt 1
-
-let new_components = let open Polymorphic_compare in [
+let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
   {
     name = "int-add";
-    codomain = TInt;
-    domain = [TInt; TInt];
-    check = (function
-             | [x ; (FCall ("int-sub", [_ ; y]))] -> x <> y
-             | [(FCall ("int-sub", [_ ; x])) ; y] -> x <> y
-             | [(Const c) ; _] -> c <> vzero
-             | [_ ; (Const c)] -> c <> vzero
-             | [_ ; _] -> true
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VInt (x + y)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a ; b] -> "(+ " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.INT;
+    domain = [Type.INT; Type.INT];
+    is_argument_valid = (function
+                         | [x ; (FCall (comp, [_ ; y]))] when String.equal comp.name "int-sub"
+                           -> x =/= y && (x =/= (Const (Value.Int 0)))
+                         | [(FCall (comp, [_ ; x])) ; y] when String.equal comp.name "int-sub"
+                           -> x =/= y && (y =/= (Const (Value.Int 0)))
+                         | [x ; y] -> (x =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 0)))
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x + y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(+ " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "int-sub";
-    codomain = TInt;
-    domain = [TInt; TInt];
-    check = (function
-             | [(Const c) ; _] -> c <> vzero
-             | [_ ; (Const c)] -> c <> vzero
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VInt (x - y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(- " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.INT;
+    domain = [Type.INT; Type.INT];
+    is_argument_valid = (function
+                         | [(FCall (comp, [x ; y])) ; z] when String.equal comp.name "int-add"
+                           -> x =/= z && y =/= z && (z =/= (Const (Value.Int 0)))
+                         | [(FCall (comp, [x ; _])) ; y] when String.equal comp.name "int-sub"
+                           -> x =/= y && (y =/= (Const (Value.Int 0)))
+                         | [x ; (FCall (comp, [y ; _]))] when (String.equal comp.name "int-sub"
+                                                              || String.equal comp.name "int-add")
+                           -> x =/= y
+                         | [x ; y] -> (x =/= y)
+                                   && (x =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 0)))
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x - y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(- " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "lin-int-mult";
-    codomain = TInt;
-    domain = [TInt; TInt];
-    check = (function
-             | [(Const c) ; _] -> (c <> vzero) && (c <> vone)
-             | [_ ; (Const c)] -> (c <> vzero) && (c <> vone)
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VInt (x * y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.INT;
+    domain = [Type.INT; Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) as x ; (Const _) as y]
+                           -> (x =/= (Const (Value.Int 0))) && (x =/= (Const (Value.Int 1)))
+                           && (y =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 1)))
+                         | [(Const _) as x ; (Var _)]
+                           -> (x =/= (Const (Value.Int 0))) && (x =/= (Const (Value.Int 1)))
+                         | [(Var _) ; (Const _) as y]
+                           -> (y =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 1)))
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x * y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "int-eq";
-    codomain = TBool;
-    domain = [TInt;TInt];
-    check = (function
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VBool (x = y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x = y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "int-leq";
-    codomain = TBool;
-    domain = [TInt;TInt];
-    check = (function
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VBool (x <= y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(<= " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x <= y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(<= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "int-geq";
-    codomain = TBool;
-    domain = [TInt;TInt];
-    check = (function
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VBool (x >= y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x >= y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "int-lt";
-    codomain = TBool;
-    domain = [TInt;TInt];
-    check = (function
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VBool (x < y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(< " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x < y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(< " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "int-gt";
-    codomain = TBool;
-    domain = [TInt;TInt];
-    check = (function
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VBool (x > y)
-             | _ -> VError);
-    dump = (fun[@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x > y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   }
 ]
-
-let all_components = Th_Bool.all_components @ new_components

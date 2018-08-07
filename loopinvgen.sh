@@ -18,7 +18,7 @@ VERIFY="$BIN_DIR/lig-verify"
 if [ ! -f $PROCESS ] || [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
   echo -en "
 One or more dependencies not found. Building OCaml modules ...
-" >&2 ; jbuilder build || exit $EXIT_CODE_BUILD_ERROR
+" >&2 ; dune build || exit $EXIT_CODE_BUILD_ERROR
 fi
 
 trap 'jobs -p | xargs kill -TERM > /dev/null 2> /dev/null' INT
@@ -166,10 +166,10 @@ VERIFY="$VERIFY -z $Z3_PATH"
 
 INFER_TIMEOUT="${INFER_TIMEOUT}s"
 
-[ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l \"$TESTCASE_ALL_LOG\""
-[ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l \"$TESTCASE_REC_LOG\""
-[ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l \"$TESTCASE_ALL_LOG\""
-[ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l \"$TESTCASE_ALL_LOG\""
+[ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l $TESTCASE_ALL_LOG"
+[ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l $TESTCASE_REC_LOG"
+[ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_ALL_LOG"
+[ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_ALL_LOG"
 
 rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES &
 echo -en '' > "$TESTCASE_INVARIANT" &

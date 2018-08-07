@@ -1,36 +1,36 @@
 language: generic
-sudo: false
+sudo: required
 
-addons:
-  apt:
-    sources:
-    - avsm
-    packages:
-    - aspcud
-    - opam
+services:
+  - docker
 
-script: bash -ex .travis.sh
+before_install:
+  - docker run --name opam -td ocaml/opam2
+  - docker cp `pwd` opam:/travis
+  - docker exec opam bash -c "sudo chown -R opam:opam /travis"
+
+install: docker exec opam bash -c "sudo apt -yqq install m4"
+
+script: |
+  docker exec -t -e OCAML_VERSION="$OCAML_VERSION" -e PROFILE="$PROFILE" \
+              opam bash -c "cd /travis && bash -ex .travis.sh"
+
+after_script: docker stop opam
 
 env:
-  - OCAML_VERSION=4.04.2
-  - OCAML_VERSION=4.04.2+flambda
-  - OCAML_VERSION=4.05.0
-  - OCAML_VERSION=4.05.0+flambda
-  - OCAML_VERSION=4.06.0
-  - OCAML_VERSION=4.06.0+flambda
-  - OCAML_VERSION=4.04.2          BUILD_FLAGS="-optimize"
-  - OCAML_VERSION=4.04.2+flambda  BUILD_FLAGS="-optimize"
-  - OCAML_VERSION=4.05.0          BUILD_FLAGS="-optimize"
-  - OCAML_VERSION=4.05.0+flambda  BUILD_FLAGS="-optimize"
-  - OCAML_VERSION=4.06.0          BUILD_FLAGS="-optimize"
-  - OCAML_VERSION=4.06.0+flambda  BUILD_FLAGS="-optimize"
-
-#matrix:
-#  fast_finish: true
-#  allow_failures:
-#    - env: OCAML_VERSION=4.05.0
-#    - env: OCAML_VERSION=4.05.0+flambda
-
-cache:
-  directories:
-  - $HOME/.opam
+  - OCAML_VERSION=4.04.2          PROFILE="optimize"
+  - OCAML_VERSION=4.04.2+flambda  PROFILE="optimize"
+  - OCAML_VERSION=4.05.0          PROFILE="optimize"
+  - OCAML_VERSION=4.05.0+flambda  PROFILE="optimize"
+  - OCAML_VERSION=4.06.1          PROFILE="optimize"
+  - OCAML_VERSION=4.06.1+flambda  PROFILE="optimize"
+  - OCAML_VERSION=4.07.0          PROFILE="optimize"
+  - OCAML_VERSION=4.07.0+flambda  PROFILE="optimize"
+  - OCAML_VERSION=4.04.2          PROFILE="debug"
+  - OCAML_VERSION=4.04.2+flambda  PROFILE="debug"
+  - OCAML_VERSION=4.05.0          PROFILE="debug"
+  - OCAML_VERSION=4.05.0+flambda  PROFILE="debug"
+  - OCAML_VERSION=4.06.1          PROFILE="debug"
+  - OCAML_VERSION=4.06.1+flambda  PROFILE="debug"
+  - OCAML_VERSION=4.07.0          PROFILE="debug"
+  - OCAML_VERSION=4.07.0+flambda  PROFILE="debug"

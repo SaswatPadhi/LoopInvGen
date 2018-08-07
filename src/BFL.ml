@@ -160,7 +160,7 @@ let allKTuples (k : int) (n : int) : conjunct list =
               concat_map l ~f:(fun l ->
                                  match l with
                                  | [] -> []
-                                 | x :: xs
+                                 | x :: _
                                    -> map (srange (x+1) n) ~f:(fun v -> v::l))
               ) in aux (k - 1) next (rest @ l)
     end in

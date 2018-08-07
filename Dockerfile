@@ -35,7 +35,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install alcotest.0.8.3 core.v0.11.2 core_extended.v0.11.2 dune.1.1.0
+RUN opam install alcotest.0.8.3 core.v0.11.2 core_extended.v0.11.2 dune.1.1.1
 RUN opam clean
 
 

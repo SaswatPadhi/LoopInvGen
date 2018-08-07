@@ -1,16 +1,16 @@
-open Core
+open Base
 open LoopInvGen
 open LoopInvGen.ZProc
 
-let model_to_string (m : model option) : string = 
+let model_to_string (m : model option) : string =
   match m with
   | None -> "false"
   | Some [ var, value ]
-    -> "(= " ^ var ^ " " ^ (Types.serialize_value value) ^ ")"
+    -> "(= " ^ var ^ " " ^ (Value.to_string value) ^ ")"
   | Some var_val_list
     -> "(and" ^ (Utils.List.to_string_map var_val_list ~sep:" "
                    ~f:(fun (var, value) -> "(= " ^ var ^ " "
-                                         ^ (Types.serialize_value value) ^ ")"))
+                                         ^ (Value.to_string value) ^ ")"))
      ^ ")"
 
 let implication_true ~(zpath : string) () =

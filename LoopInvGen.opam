@@ -14,11 +14,11 @@ dev-repo: "git+https://github.com:SaswatPadhi/LoopInvGen.git"
 available: [ ocaml-version >= "4.04.2" ]
 
 build: [
-  [ "jbuilder" "build" "-p" name "-j" jobs ]
+  [ "dune" "build" "-p" name "-j" jobs ]
 ]
 
 depends: [
-  "jbuilder"      {build & >= "1.0+beta19"}
+  "dune"          {build & >= "1.1.1"}
   "alcotest"      {test & >= "0.7"}
   "core"          {>= "0.11"}
   "core_extended" {>= "0.11"}
