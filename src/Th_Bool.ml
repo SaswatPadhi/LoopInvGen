@@ -1,54 +1,46 @@
 open Base
 
-open Components
-open Types
+open Expr
 
-let vtrue = VBool true
-let vfalse = VBool false
-
-let new_components = let open Polymorphic_compare in [
+let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
   {
     name = "not";
-    codomain = TBool;
-    domain = [TBool];
-    check = (function
-             | [FCall ("not", _)] -> false
-             | [Const _] -> false
-             | [_] -> true
-             | _ -> false);
-    apply = (function
-             | [VBool x] -> VBool (not x)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a] -> "(not " ^ a ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.BOOL];
+    is_argument_valid = (function
+                         | [FCall (comp, _)] when String.equal comp.name "not"
+                           -> false
+                         | [Const _] -> false
+                         | [_] -> true
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Bool x] -> Value.Bool (not x));
+    to_string = (fun [@warning "-8"] [a] -> "(not " ^ a ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "and";
-    codomain = TBool;
-    domain = [TBool;TBool];
-    check = (function
-             | [(Const _) ; _] -> false
-             | [_ ; (Const _)] -> false
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VBool x ; VBool y] -> VBool (x && y)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a ; b] -> "(and " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.BOOL;Type.BOOL];
+    is_argument_valid = (function
+                         | [(Const _) ; _] -> false
+                         | [_ ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Bool x ; Value.Bool y] -> Value.Bool (x && y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(and " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   } ;
   {
     name = "or";
-    codomain = TBool;
-    domain = [TBool;TBool];
-    check = (function
-             | [(Const _) ; _] -> false
-             | [_ ; (Const _)] -> false
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VBool x ; VBool y] -> VBool (x || y)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a ; b] -> "(or " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.BOOL;
+    domain = [Type.BOOL;Type.BOOL];
+    is_argument_valid = (function
+                         | [(Const _) ; _] -> false
+                         | [_ ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Bool x ; Value.Bool y] -> Value.Bool (x || y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(or " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   }
 ]
-
-let all_components = new_components

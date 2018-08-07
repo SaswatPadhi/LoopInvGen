@@ -2,17 +2,17 @@
 
 open Base
 
-open Components
 open Exceptions
-open Sexplib
-open Types
+open Sexplib.Type
 open Utils
+
+type var = string * Type.t
 
 type func = {
   args : var list ;
   name : string ;
   expr : string ;
-  return : typ ;
+  return : Type.t ;
 }
 
 type t = {
@@ -23,17 +23,16 @@ type t = {
   pre_func : func ;
   trans_func : func ;
 
-  constants : value list ;
+  constants : Value.t list ;
   functions : func list ;
   variables : var list ;
   synth_variables : var list ;
 }
 
-let rec extract_consts (exp : Sexp.t) : (value list) =
+let rec extract_consts (exp : Sexp.t) : (Value.t list) =
   match exp with
   | List([]) -> []
-  | (Atom a) | List([Atom a])
-    -> List.cons_opt_value (deserialize_value a) []
+  | (Atom a) | List([Atom a]) -> (try [ Value.of_string a ] with _ -> [])
   (* FIXME: Handling let expressins needs  more work:
      let in SyGuS format looks like (let ((<symb> <sort> <term>)+) <term>),
      but in Z3 the syntax is (let ((<symb> <term>)+) <term>).
@@ -52,14 +51,14 @@ let rec extract_consts (exp : Sexp.t) : (value list) =
     -> raise (Parse_Exn ("`let` constructs are currently not supported: " ^ (Sexp.to_string_hum exp)))
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
-        in List.(dedup_and_sort ~compare:Poly.compare consts)
+        in List.(dedup_and_sort ~compare:Value.compare consts)
 
 let parse_variable_declaration (sexp : Sexp.t) : var =
   match sexp with
-  | List([Atom(v) ; Atom(t)]) -> (v, (to_typ t))
+  | List([Atom(v) ; Atom(t)]) -> (v, (Type.of_string t))
   | _ -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
-let parse_define_fun (sexp_list : Sexp.t list) : func * value list =
+let parse_define_fun (sexp_list : Sexp.t list) : func * Value.t list =
   match sexp_list with
   | [Atom(name) ; List(args) ; Atom(r_typ) ; expr]
     -> let args = List.map ~f:parse_variable_declaration args in
@@ -67,7 +66,7 @@ let parse_define_fun (sexp_list : Sexp.t list) : func * value list =
        in ({ name = name
            ; expr = (Sexp.to_string_hum expr)
            ; args = args
-           ; return = (to_typ r_typ)
+           ; return = (Type.of_string r_typ)
            }, consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: sexp_list)))))
@@ -75,15 +74,15 @@ let parse_define_fun (sexp_list : Sexp.t list) : func * value list =
 let func_definition (f : func) : string =
   "(define-fun " ^ f.name ^ " ("
   ^ (List.to_string_map
-       f.args ~sep:" " ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (string_of_typ t) ^ ")"))
-  ^ ") " ^ (string_of_typ f.return) ^ " " ^ f.expr ^ ")"
+       f.args ~sep:" " ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Type.to_string t) ^ ")"))
+  ^ ") " ^ (Type.to_string f.return) ^ " " ^ f.expr ^ ")"
 
 let var_declaration ((var_name, var_type) : var) : string =
-  "(declare-var " ^ var_name ^ " " ^ (string_of_typ var_type) ^ ")"
+  "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
 let parse (chan : Stdio.In_channel.t) : t =
   let logic : string ref = ref "" in
-  let consts : value list ref = ref [] in
+  let consts : Value.t list ref = ref [] in
   let funcs : func list ref = ref [] in
   let invf_name : string ref = ref "" in
   let postf_name : string ref = ref "" in
@@ -91,11 +90,11 @@ let parse (chan : Stdio.In_channel.t) : t =
   let transf_name : string ref = ref "" in
   let variables : var list ref = ref [] in
   let invf_vars : var list ref = ref []
-   in List.iter (Sexp.input_sexps chan)
+   in List.iter (Sexplib.Sexp.input_sexps chan)
         ~f:(function
               | List([Atom("check-synth")]) -> ()
               | List([Atom("set-logic"); Atom(_logic)])
-                -> if String.equal !logic "" then (ignore (logic_of_string _logic) ; logic := _logic)
+                -> if String.equal !logic "" then logic := _logic
                    else raise (Parse_Exn ("Logic already set to: " ^ !logic))
               | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars)])
                 -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
@@ -122,7 +121,9 @@ let parse (chan : Stdio.In_channel.t) : t =
                    then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared"))
               | _ as sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
-    ; Log.debug (lazy ("Detected Constants: " ^ (serialize_values ~sep:", " !consts)))
+    ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
+    ; if String.equal !logic ""
+      then (logic := "LIA" ; Log.debug (lazy ("Using default logic: LIA")))
     ; { constants = !consts
       ; functions = List.rev !funcs
       ; logic = !logic
@@ -135,7 +136,7 @@ let parse (chan : Stdio.In_channel.t) : t =
         { args = !invf_vars
         ; name = !invf_name
         ; expr = ""
-        ; return = TBool
+        ; return = Type.BOOL
         }
       }
 
@@ -168,6 +169,6 @@ let translate_smtlib_expr (expr : string) : string =
       -> helper (replace name expr body)
     | List(l) -> List(List.map l ~f:helper)
     | _ -> sexp
-  in match Sexp.parse expr with
+  in match Sexplib.Sexp.parse expr with
      | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))
      | _ -> raise (Internal_Exn "Incomplete sexp encountered!")

@@ -1,4 +1,4 @@
-open Core
+open Base
 open LoopInvGen
 
 let prune_with_neg_example_1 () =
@@ -35,7 +35,7 @@ let learnCNF_xor_k2 () =
                                         k = 2 ; auto_incr_k = false ; }
   in Alcotest.(check string) "identical"
                              "(and (or (not 1) (not 2)) (or 1 2))"
-                             (CNF.to_string res ~stringify:string_of_int)
+                             (CNF.to_string res ~stringify:Int.to_string)
 
 let learnCNF_xor_k1 () =
   Alcotest.check_raises "not expressive enough" Exceptions.NoSuchFunction (

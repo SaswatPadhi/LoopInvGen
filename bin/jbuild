@@ -1,9 +1,0 @@
-(jbuild_version 1)
-
-(executables
-    ((names (Process Record Infer Verify))
-     (public_names (lig-process lig-record lig-infer lig-verify))
-     (ocamlopt_flags (:standard (:include ../src/.flambda_flags)))
-     (libraries (LoopInvGen core core_extended))
-     (preprocessor_deps ((file ../src/config.h)))
-     (preprocess (pps (ppx_optcomp)))))

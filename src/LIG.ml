@@ -1,7 +1,6 @@
 open Core_kernel
 
 open SyGuS
-open Types
 open Utils
 open VPIE
 
@@ -26,8 +25,8 @@ let default_config = {
 }
 
 let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
-                 ~(states : value list list) (inv : PIE.desc)
-                 : (PIE.desc * ZProc.model option) =
+                 ~(states : Value.t list list) (inv : Job.desc)
+                 : (Job.desc * ZProc.model option) =
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_func.args ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
@@ -40,26 +39,22 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
     Log.info (lazy ("IND >> Strengthening for inductiveness:"
                    ^ (Log.indented_sep 4) ^ inv)) ;
     if String.equal inv "false" then ("false", None) else
-    let inv_def =
-      "(define-fun invf (" ^
-      (List.to_string_map sygus.inv_func.args ~sep:" "
-                          ~f:(fun (s, t) -> "(" ^ s ^ " " ^
-                                            (Types.string_of_typ t) ^ ")")) ^
-      ") Bool " ^ inv ^ ")"
+    let inv_def = "(define-fun invf ("
+                ^ (List.to_string_map sygus.inv_func.args ~sep:" "
+                                      ~f:(fun (s, t) -> "(" ^ s ^ " " ^ (Type.to_string t) ^ ")"))
+                ^ ") Bool " ^ inv ^ ")"
     in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans_func.expr ^ ")"
                                            ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv =
          VPIE.learnVPreCond
-           ~conf:conf.for_VPIE ~consts:sygus.constants ~z3 ~eval_term
-           ((PIE.create_pos_job ()
-               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
-                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
-               ~args: sygus.synth_variables
-               ~post: (fun _ res -> match res with
-                                    | Ok v when v = vfalse -> true
-                                    | _ -> false)
-               ~pos_tests: states
-            ), invf'_call)
+           ~conf:conf.for_VPIE ~consts:sygus.constants ~eval_term ~post_desc:invf'_call ~z3
+           (Job.create_positive states
+              ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
+                    ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
+              ~args: sygus.synth_variables
+              ~post: (fun _ res -> match res with
+                                   | Ok v when v = Value.Bool false -> true
+                                   | _ -> false))
       in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
        ; if String.equal pre_inv "true" then (inv, None)
@@ -73,8 +68,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   end in helper inv
 
 let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
-                                ~(states : value list list) (sygus : SyGuS.t)
-                                (seed_string : string) (z3 : ZProc.t) : PIE.desc =
+                                ~(states : Value.t list list) (sygus : SyGuS.t)
+                                (seed_string : string) (z3 : ZProc.t) : Job.desc =
   let open Quickcheck in
   let open Simulator in
   let restart_with_new_states head =
@@ -87,7 +82,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                      ^ (string_of_int (1 + conf.max_restarts - restarts_left))
                      ^ "/" ^ (string_of_int conf.max_restarts) ^".")) ;
       learnInvariant_internal
-        ~states:List.(dedup_and_sort ~compare:(compare value_compare) (
+        ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (
           states @ (random_value ~size:conf.max_steps_on_restart ~seed:(`Deterministic seed_string)
                                  (simulate_from sygus z3 head))))
         ~conf (restarts_left - 1) sygus (seed_string ^ "#") z3
@@ -97,11 +92,12 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
        -> if inv <> "false" then ZProc.simplify z3 inv
           else restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
                                                      (gen_pre_state ~use_trans:true sygus z3))
-     | inv, (Some ce_model)
+     | _, (Some ce_model)
        -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
-                                                (gen_state_from_model sygus z3 (Some ce_model)))
+                                                (gen_state_from_model sygus (Some ce_model)))
 
-let learnInvariant ?(conf = default_config) ~(states : value list list) ~(zpath : string) (sygus : SyGuS.t) : PIE.desc =
+let learnInvariant ?(conf = default_config) ~(states : Value.t list list)
+                   ~(zpath : string) (sygus : SyGuS.t) : Job.desc =
   let open ZProc
   in process ~zpath
        ~random_seed:(Some (Int.to_string (Quickcheck.(random_value ~seed:(`Deterministic conf.base_random_seed)

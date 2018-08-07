@@ -7,6 +7,7 @@ Usage: $0 [flags]
 Flags:
     [--debug, -D]             Create a debug build (minimal optimization and allows logging)
     [--star-exec, -S]         Generate package for running on StarExec
+    [--with-logging, -L]      Enable logging within the LoopInvGen binaries
 
 Configuration:
     [--jobs, -j <num>]        Use <num> jobs for building LoopInvGen (and z3)
@@ -15,13 +16,14 @@ Configuration:
   exit 1 ;
 }
 
-OPTS=`getopt -n 'parse-options' -o :DSj:z: --long debug,star-exec,jobs:,build-z3: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :DSLj:z: --long debug,star-exec,with-logging,jobs:,build-z3: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
 JOBS="`cat /proc/cpuinfo | grep processor | wc -l`"
 
+WITH_LOGGING=""
 MAKE_Z3_AT=""
 MAKE_STAREXEC=""
 MAKE_DEBUG=""
@@ -35,6 +37,9 @@ while true ; do
          shift ;;
     -S | --star-exec )
          MAKE_STAREXEC="YES" ;
+         shift ;;
+    -L | --with-logging )
+         WITH_LOGGING="YES" ;
          shift ;;
     -j | --jobs )
          JOBS="$2" ;
@@ -66,13 +71,18 @@ if [ -n "$MAKE_Z3_AT" ] ; then
   cd "$LIG_DIR"
 fi
 
-if [ -n "$MAKE_DEBUG" ] ; then
-  jbuilder build @debug
+if [ -n "$WITH_LOGGING" ] ; then
+  dune build @Logging || exit $?
 else
-  jbuilder build @optimize
+  dune build @NoLog || exit $?
 fi
 
-jbuilder build -j "$JOBS" || exit $?
+if [ -n "$MAKE_DEBUG" ] ; then
+  dune build --profile debug -j "$JOBS" || exit $?
+else
+  dune build --profile optimize -j "$JOBS" || exit $?
+fi
+
 if [ -z "$MAKE_STAREXEC" ] ; then exit 0 ; fi
 
 rm -rf starexec && mkdir -p starexec/bin/_bin

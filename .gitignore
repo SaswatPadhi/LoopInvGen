@@ -1,3 +1,4 @@
+config.h
 *.tgz
 starexec*
 
@@ -23,7 +24,7 @@ _build/
 *.byte
 *.native
 
-# jbuilder generated files
+# dune/jbuilder generated files
 .merlin
 *.install
 

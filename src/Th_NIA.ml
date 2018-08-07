@@ -1,55 +1,48 @@
 open Base
 
-open Components
-open Types
+open Expr
 
 let pos_div x y = (x - (x % y)) / y
 
-let new_components = let open Polymorphic_compare in [
+let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
   {
     name = "int-div";
-    codomain = TInt;
-    domain = [TInt;TInt];
-    check = (function
-             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
-             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
-             | [x ; y] -> (x <> y)
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (pos_div x y)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a ; b] -> "(div " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.INT;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [x ; y] -> x =/= y
+                                   && (x =/= (Const (Value.Int 0))) && (x =/= (Const (Value.Int 1)))
+                                   && (y =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 1)))
+                         | _ -> false);
+    evaluate = (function [@warning "-8"]
+                | [Value.Int x ; Value.Int y] when y <> 0 -> Value.Int (pos_div x y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(div " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun [@warning "-8"] [_ ; b] -> ["(not (= 0 " ^ b ^ "))"]);
   } ;
   {
     name = "int-mod";
-    codomain = TInt;
-    domain = [TInt;TInt];
-    check = (function
-             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
-             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
-             | [x ; y] -> x <> y
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> if y = 0 then VError else VInt (x % y)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a ; b] -> "(mod " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.INT;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [x ; y] -> x =/= y
+                                   && (x =/= (Const (Value.Int 0))) && (x =/= (Const (Value.Int 1)))
+                                   && (y =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 1)))
+                         | _ -> false);
+    evaluate = (function [@warning "-8"]
+                | [Value.Int x ; Value.Int y] when y <> 0 -> Value.Int (x % y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(mod " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun [@warning "-8"] [_ ; b] -> ["(not (= 0 " ^ b ^ "))"]);
   } ;
   {
     name = "nonlin-int-mult";
-    codomain = TInt;
-    domain = [TInt; TInt];
-    check = (function
-             | [(Const c) ; _] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
-             | [_ ; (Const c)] -> (c <> Th_LIA.vzero) && (c <> Th_LIA.vone)
-             | [_ ; _] -> true
-             | _ -> false);
-    apply = (function
-             | [VInt x ; VInt y] -> VInt (x * y)
-             | _ -> VError);
-    dump = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")")
+    codomain = Type.INT;
+    domain = [Type.INT; Type.INT];
+    is_argument_valid = (function
+                         | [x ; y] -> (x =/= (Const (Value.Int 0))) && (x =/= (Const (Value.Int 1)))
+                                   && (y =/= (Const (Value.Int 0))) && (y =/= (Const (Value.Int 1)))
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x * y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   }
 ]
-
-let all_components =
-  (List.filter Th_LIA.all_components ~f:(fun c -> not (String.equal c.name "lin-int-mult")))
-  @ new_components

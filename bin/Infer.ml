@@ -10,22 +10,21 @@ let main zpath statefile outfile logfile false_on_failure
   let states = List.(permute
     ~random_state:(Random.State.make [| 79 ; 97 |])
     (map (Stdio.In_channel.input_lines state_chan)
-         ~f:(fun l -> map (Types.deserialize_values l)
-                          ~f:(fun v -> Option.value_exn v))))
+         ~f:(fun l -> map (String.split ~on:'\t' l) ~f:Value.of_string)))
   in Stdio.In_channel.close state_chan
    ; Log.debug (lazy ("Loaded " ^ (Int.to_string (List.length states)) ^
                       " program states."))
    ; let sygus = SyGuS.read_from filename
-     in let synth_logic = Types.logic_of_string sygus.logic
+     in let logic = Logic.of_string sygus.logic
      in let conf = {
        LIG.default_config with
        for_VPIE = {
          LIG.default_config.for_VPIE with
          for_PIE = {
            LIG.default_config.for_VPIE.for_PIE with
-           synth_logic;
+           synth_logic = logic;
            max_conflict_group_size = (if max_conflicts > 0 then max_conflicts
-                                      else ((PIE.conflict_group_size_multiplier_for_logic synth_logic)
+                                      else (logic.conflict_group_size_multiplier
                                             * PIE.base_max_conflict_group_size)) ;
          }
        ; max_tries = max_strengthening_attempts

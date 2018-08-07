@@ -10,20 +10,21 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
   let debug _ = ()
 
   let disable () = ()
-  
-  let enable ?(msg = "") ?(level = 5) (file : string option) = ()
+
+  let [@warning "-27"] enable ?msg ?level _ = ()
 [%%else]
   open Core_extended.Logger
 
   let logger = ref (create_default "")
+  let do_log level lstr = try log (!logger) (level , (Lazy.force lstr)) with _ -> ()
 
   let enabled = ref 0
 
-  let fatal lstr = if !enabled > 0 then log (!logger) (`Fatal , (Lazy.force lstr)) else ()
-  let error lstr = if !enabled > 1 then log (!logger) (`Error , (Lazy.force lstr)) else ()
-  let warn  lstr = if !enabled > 2 then log (!logger) (`Warn  , (Lazy.force lstr)) else ()
-  let info  lstr = if !enabled > 3 then log (!logger) (`Info  , (Lazy.force lstr)) else ()
-  let debug lstr = if !enabled > 4 then log (!logger) (`Debug , (Lazy.force lstr)) else ()
+  let fatal lstr = if !enabled > 0 then do_log `Fatal lstr
+  let error lstr = if !enabled > 1 then do_log `Error lstr
+  let warn  lstr = if !enabled > 2 then do_log `Warn lstr
+  let info  lstr = if !enabled > 3 then do_log `Info lstr
+  let debug lstr = if !enabled > 4 then do_log `Debug lstr
 
   let disable () = enabled := 0
 

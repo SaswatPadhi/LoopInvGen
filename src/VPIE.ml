@@ -1,14 +1,13 @@
 open Core_kernel
 
 open PIE
-open Types
 open Utils
 
 type 'a config = {
   for_PIE : PIE.config ;
 
   base_random_seed : string ;
-  describe : (('a feature with_desc) CNF.t option) -> desc ;
+  describe : (('a Job.feature Job.with_desc) CNF.t option) -> Job.desc ;
   max_tries : int ;
   simplify : bool ;
 }
@@ -23,8 +22,8 @@ let default_config = {
 }
 
 let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
-                  ?(consts = []) (job_post : ('a, 'b) job with_desc) : desc =
-  let rec helper tries_left (job, post_desc) =
+                  ?(consts = []) ~(post_desc : Job.desc) (job : Job.t) : Job.desc =
+  let rec helper tries_left job =
     if conf.max_tries > 0 && tries_left < 1
     then (Log.error (lazy ("VPIE Reached MAX attempts ("
                           ^ (Int.to_string conf.max_tries)
@@ -38,13 +37,13 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
       | None | Some [[]] -> conf.describe None
       | precond
         -> let pre_desc = conf.describe precond
-            in Log.debug (lazy ("Candidate Precondition: " ^ pre_desc))
+            in Log.info (lazy ("Candidate Precondition: " ^ pre_desc))
               ; begin match ZProc.implication_counter_example ~eval_term z3
                                                         pre_desc post_desc with
                 | None -> let pre_desc =
                             if conf.simplify then ZProc.simplify z3 pre_desc
                                               else pre_desc
-                          in Log.debug (lazy ("Verified Precondition: " ^ pre_desc))
+                          in Log.info (lazy ("Verified Precondition: " ^ pre_desc))
                             ; pre_desc
                 | Some model
                   -> let model = Hashtbl.Poly.of_alist_exn model in
@@ -54,18 +53,18 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
                                         | Some v -> v
                                         | None
                                           -> let open Quickcheck
-                                              in random_value (GenTests.typ_gen t)
+                                              in random_value (TestGen.for_type t)
                                                   ~size:1
                                                   ~seed:(`Deterministic (
                                                     conf.base_random_seed ^
                                                     (string_of_int tries_left))))
-                      in Log.debug (lazy ("Counter example: {"
+                      in Log.info (lazy ("Counter example: {"
                                         ^ (List.to_string_map2
                                              test job.farg_names ~sep:", "
                                              ~f:(fun v n -> n ^ " = " ^
-                                                            (serialize_value v)))
+                                                            (Value.to_string v)))
                                         ^ "}"))
-                      ; helper (tries_left - 1) ((add_neg_test ~job test), post_desc)
+                      ; helper (tries_left - 1) (Job.add_neg_test ~job test)
                 end
     end
-  in helper conf.max_tries job_post
+  in try helper conf.max_tries job with _ -> "false"
