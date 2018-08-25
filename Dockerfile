@@ -34,8 +34,8 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install alcotest.0.8.3 core.v0.11.2 core_extended.v0.11.0 dune.1.1.1
-RUN opam clean
+RUN opam install --yes alcotest.0.8.3 core.v0.11.2 core_extended.v0.11.0 dune.1.1.1
+RUN opam clean --yes
 
 
 RUN curl -LO https://github.com/Z3Prover/z3/archive/z3-$Z3_VERSION.zip && \

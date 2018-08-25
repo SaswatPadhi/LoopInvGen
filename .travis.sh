@@ -2,6 +2,8 @@
 
 ### Initialize `opam`
 
+export OPAMYES=1
+
 if [ -f "$HOME/.opam/config" ]; then
     opam update || UPDATE_FAILED="yes"
     opam upgrade || UPGRADE_FAILED="yes"
