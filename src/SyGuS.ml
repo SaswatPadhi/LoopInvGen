@@ -31,8 +31,9 @@ type t = {
 
 let rec extract_consts (exp : Sexp.t) : (Value.t list) =
   match exp with
-  | List([]) -> []
-  | (Atom a) | List([Atom a]) -> (try [ Value.of_string a ] with _ -> [])
+  | List [] -> []
+  | Atom a | List [Atom a]
+    -> (try [ Value.of_string a ] with _ -> [])
   (* FIXME: Handling let expressins needs  more work:
      let in SyGuS format looks like (let ((<symb> <sort> <term>)+) <term>),
      but in Z3 the syntax is (let ((<symb> <term>)+) <term>).
@@ -51,22 +52,22 @@ let rec extract_consts (exp : Sexp.t) : (Value.t list) =
     -> raise (Parse_Exn ("`let` constructs are currently not supported: " ^ (Sexp.to_string_hum exp)))
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
-        in List.(dedup_and_sort ~compare:Value.compare consts)
+        in List.dedup_and_sort ~compare:Value.compare consts
 
 let parse_variable_declaration (sexp : Sexp.t) : var =
   match sexp with
-  | List([Atom(v) ; Atom(t)]) -> (v, (Type.of_string t))
+  | List([Atom v ; Atom t]) -> (v, (Type.of_string t))
   | _ -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun (sexp_list : Sexp.t list) : func * Value.t list =
   match sexp_list with
-  | [Atom(name) ; List(args) ; Atom(r_typ) ; expr]
+  | [Atom name ; List args ; Atom r_type ; expr]
     -> let args = List.map ~f:parse_variable_declaration args in
        let consts = extract_consts expr
        in ({ name = name
-           ; expr = (Sexp.to_string_hum expr)
+           ; expr = Sexp.to_string_hum expr
            ; args = args
-           ; return = (Type.of_string r_typ)
+           ; return = Type.of_string r_type
            }, consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: sexp_list)))))
@@ -120,7 +121,7 @@ let parse (chan : Stdio.In_channel.t) : t =
                  ; if not (String.equal !invf_name _invf_name)
                    then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared"))
               | _ as sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
-    ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
+    ; consts := List.dedup_and_sort ~compare:Value.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
     ; if String.equal !logic ""
       then (logic := "LIA" ; Log.debug (lazy ("Using default logic: LIA")))
@@ -157,17 +158,17 @@ let translate_smtlib_expr (expr : string) : string =
   let rec replace name expr body =
     match body with
     | Atom a when String.equal a name -> expr
-    | List(l) -> List(List.map l ~f:(replace name expr))
+    | List l -> List (List.map l ~f:(replace name expr))
     | _ -> body
   in let rec helper sexp =
     match sexp with
-    | List([Atom("-") ; Atom(num)]) when (String.for_all num ~f:Char.is_digit)
-      -> Atom("-" ^ num)
-    | List([Atom("-") ; name])
-      -> List([Atom("-") ; Atom("0") ; name])
-    | List([Atom("let") ; List([List([Atom(name) ; expr])]) ; body])
+    | List [Atom "-" ; Atom num] when (String.for_all num ~f:Char.is_digit)
+      -> Atom ("-" ^ num)
+    | List [Atom "-" ; name]
+      -> List [Atom "-" ; Atom "0" ; name]
+    | List [Atom "let" ; List [List [Atom name ; expr]] ; body]
       -> helper (replace name expr body)
-    | List(l) -> List(List.map l ~f:helper)
+    | List l -> List (List.map l ~f:helper)
     | _ -> sexp
   in match Sexplib.Sexp.parse expr with
      | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))

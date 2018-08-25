@@ -47,14 +47,16 @@ end
 let solve_impl consts task =
   let int_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.INT) task.logic.components in
   let bool_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.BOOL) task.logic.components in
+  let string_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.STRING) task.logic.components in
 
   let int_candidates = Array.create ~len:max_size (Set.empty (module SynthesizedWithUniqueOutput)) in
   let bool_candidates = Array.create ~len:max_size (Set.empty (module SynthesizedWithUniqueOutput)) in
+  let string_candidates = Array.create ~len:max_size (Set.empty (module SynthesizedWithUniqueOutput)) in
 
   let constants =
     (List.dedup_and_sort ~compare:Value.compare
        ((List.map ~f:(function Value.Int x -> Value.Int (abs x) | x -> x) consts)
-        @ [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ]))
+        @ [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ; Value.String "" ]))
   in
 
   let add_constant_candidate value =
@@ -62,17 +64,20 @@ let solve_impl consts task =
       expr = Expr.Const value;
       outputs = Array.create ~len:(Array.length task.outputs) value;
     } in match Value.typeof value with
-         | Type.BOOL -> bool_candidates.(1) <- Set.add bool_candidates.(1) candidate
          | Type.INT -> int_candidates.(1) <- Set.add int_candidates.(1) candidate
+         | Type.BOOL -> bool_candidates.(1) <- Set.add bool_candidates.(1) candidate
+         | Type.STRING -> string_candidates.(1) <- Set.add string_candidates.(1) candidate
   in
 
   (* Log.debug (lazy ("  + Loaded Constants: [" ^ (List.to_string_map constants ~sep:"; " ~f:Value.to_string) ^ "]")); *)
   List.iter constants ~f:add_constant_candidate;
 
   List.iteri task.inputs ~f:(fun i input ->
-    let candidates = match Value.typeof input.(1) with
+    let candidates =
+      match Value.typeof input.(1) with
       | Type.INT -> int_candidates
       | Type.BOOL -> bool_candidates
+      | Type.STRING -> string_candidates
     in candidates.(1) <- Set.add candidates.(1) { expr = Expr.Var i ; outputs = input })
   ;
 
@@ -89,8 +94,9 @@ let solve_impl consts task =
   let task_codomain = Value.typeof task.outputs.(1) in
 
   begin match task_codomain with
-  | Type.INT -> Set.iter ~f:check int_candidates.(1);
-  | Type.BOOL -> Set.iter ~f:check bool_candidates.(1);
+  | Type.INT -> Set.iter ~f:check int_candidates.(1)
+  | Type.BOOL -> Set.iter ~f:check bool_candidates.(1)
+  | Type.STRING -> Set.iter ~f:check string_candidates.(1)
   end ;
 
   let apply_component size arg_types applier =
@@ -101,6 +107,7 @@ let solve_impl consts task =
                     begin match typ with
                       | Type.INT -> int_candidates.(i)
                       | Type.BOOL -> bool_candidates.(i)
+                      | Type.STRING -> string_candidates.(i)
                     end
       | ([], []) -> applier (List.rev acc)
       | _ -> raise (Internal_Exn "Impossible case!")
@@ -123,8 +130,8 @@ let solve_impl consts task =
   in
   let expand size =
     List.iter2_exn ~f:(expand_type size)
-                   [bool_candidates ; int_candidates]
-                   [bool_components ; int_components]
+                   [bool_candidates ; int_candidates ; string_candidates]
+                   [bool_components ; int_components ; string_components]
   in
 
   for size = 2 to max_size-1 ; do expand size done

@@ -173,7 +173,11 @@ Try `./loopinvgen.sh -h` for other options that allow more control over the infe
 
 ## Batch Verification
 
-Execute `./test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].  
+To batch process all benchmarks in a directory, for example in [benchmarks/LIA], use the `test_all.sh` script as:
+```
+./test_all.sh -b benchmarks/LIA
+```
+
 The `test_all.sh` script invokes LoopInvGen for invariant inference,
 and then verifies that the generated invariant is sufficient to prove correctness of the SyGuS benchmark.
 

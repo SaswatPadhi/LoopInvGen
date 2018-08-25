@@ -5,7 +5,7 @@ open Utils
 
 let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
   ignore (ZProc.run_queries ~scoped:false z3 ~db:((
-    ("(set-logic " ^ s.logic ^ ")")
+    ("(set-logic " ^ (Logic.of_string s.logic).z3_name ^ ")")
     :: (List.map ~f:var_declaration s.variables))
      @ (List.map ~f:func_definition s.functions)) [])
 
