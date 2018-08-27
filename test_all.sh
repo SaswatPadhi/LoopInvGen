@@ -1,5 +1,7 @@
 #!/bin/bash
 
+if (( ${BASH_VERSION%%.*} < 4 )) ; then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+
 SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 trap 'kill -TERM -$INFER_PID > /dev/null 2> /dev/null' INT
@@ -18,9 +20,8 @@ TOOL="$SELF_DIR/loopinvgen.sh"
 VERIFY="$SELF_DIR/_build/install/default/bin/lig-verify"
 
 show_status() {
-  MSG="$1                " ; MSG_LEN=${#MSG}
-  echo -en "$MSG" >&2
-  printf %0"$MSG_LEN"d | tr 0 \\b >&2
+  printf "%s%16s" "$1" >&2
+  printf %0"$(( ${#1} + 16 ))"d | tr 0 \\b >&2
 }
 
 usage() {
@@ -124,7 +125,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   echo > $TESTCASE_INV ; echo > $TESTCASE_RES
 
-  show_status "(@ infer)"
+  show_status "(inferring)"
   (time timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
   INFER_PID=$!
   wait $INFER_PID
@@ -137,7 +138,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     echo -n "[TIMEOUT] " >> $TESTCASE_RES
   fi
 
-  show_status "(@ verify)"
+  show_status "(verifying)"
   $VERIFY -i $TESTCASE_INV $TESTCASE >> $TESTCASE_RES
   show_status "" ; tail -n 1 $TESTCASE_RES ; echo ""
 

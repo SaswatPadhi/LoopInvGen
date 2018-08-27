@@ -31,7 +31,7 @@ Z3_PATH="$SELF_DIR/_dep/z3"
 INFER_TIMEOUT=60
 MIN_INFER_TIMEOUT=5
 
-RECORD_TIMEOUT=0.25s
+RECORD_TIMEOUT=0.5s
 RECORD_FORKS=4
 RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
@@ -51,12 +51,9 @@ declare -A DO_LOG
 DO_CLEAN="no"
 DO_VERIFY="no"
 
-DO_INTERACTIVE="no"
 show_status() {
-  if [ "$DO_INTERACTIVE" == "yes" ] ; then
-    echo -en "$1" >&2
-    printf %16s%0"$(( ${#1} + 16 ))"d | tr 0 \\b >&2
-  fi
+  printf "%s%16s" "$1" >&2
+  printf %0"$(( ${#1} + 16 ))"d | tr 0 \\b >&2
 }
 
 usage() {
@@ -66,13 +63,12 @@ Usage: $0 [options] <benchmark.sl>
 
 Flags:
     [--clean-intermediates, -c]
-    [--interactive, -i]
     [--verify, -v]
 
 Configuration:
     [--intermediates-dir, -p <path>]  (_log)
     [--log, -l [<src_1>[,<src_2>...]] ()\tsrc <- {process|record|infer|verify}
-    [--record-states, -s <count>]     ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
+    [--states-to-record, -s <count>]  ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
 
@@ -84,7 +80,7 @@ Arguments to Internal Programs @ (`dirname $RECORD`):
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
-OPTS=`getopt -n 'parse-options' -o :P:R:I:V:icvl:p:s:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,interactive,clean-intermediates,verify,log:,intermediates-dir:,record-states:,infer-timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :P:R:I:V:cvl:p:s:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,clean-intermediates,verify,log:,intermediates-dir:,states-to-record:,infer-timeout:,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -104,8 +100,6 @@ while true ; do
          VERIFY_ARGS="$2"
          shift ; shift ;;
 
-    -i | --interactive )
-         DO_INTERACTIVE="yes" ; shift ;;
     -c | --clean-intermediates )
          DO_CLEAN="yes" ; shift ;;
     -v | --verify )
@@ -122,7 +116,7 @@ while true ; do
     -p | --intermediates-dir )
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
-    -s | --record-states )
+    -s | --states-to-record )
          [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
            || usage "$2 must be > $MIN_RECORD_STATES_PER_FORK."
          STATES="$2"
@@ -176,13 +170,14 @@ echo -en '' > "$TESTCASE_INVARIANT" &
 echo -en '' > "$TESTCASE_ALL_LOG"
 
 
-show_status "(@ process)"
+show_status "(processsing)"
 
 $PROCESS -o "$TESTCASE_PROCESSED" "$TESTCASE" ${DO_LOG[process]} $PROCESS_ARGS >&2
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
 
 
-show_status "(@ record)"
+wait
+show_status "(recording)"
 
 for i in `seq 1 $RECORD_FORKS` ; do
   [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
@@ -198,7 +193,7 @@ grep -hv "^[[:space:]]*$" "$TESTCASE_REC_STATES"? | sort -u > "$TESTCASE_ALL_STA
 [ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"? >> "$TESTCASE_ALL_LOG"
 
 
-show_status "(@ infer)"
+show_status "(inferring)"
 
 timeout --foreground $INFER_TIMEOUT \
         $INFER -s "$TESTCASE_ALL_STATES" -o "$TESTCASE_INVARIANT" \
@@ -211,7 +206,7 @@ if [ "$DO_VERIFY" = "yes" ] ; then
     echo > "$TESTCASE_INVARIANT" ; echo -n "[TIMEOUT] "
   fi
 
-  show_status "(@ verify)"
+  show_status "(verifying)"
 
   $VERIFY -i "$TESTCASE_INVARIANT" ${DO_LOG[verify]} $VERIFY_ARGS "$TESTCASE" \
     > "$TESTCASE_PREFIX.result"
@@ -221,6 +216,12 @@ if [ "$DO_VERIFY" = "yes" ] ; then
 elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat "$TESTCASE_INVARIANT" ; echo
   RESULT_CODE=0
+else
+  show_status "(failure)"
+  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
+    show_status "(timeout)"
+  fi
+  echo ""
 fi
 
 
