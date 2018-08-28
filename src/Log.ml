@@ -35,5 +35,5 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
                  ; clear_filter (!logger)
                  ; enabled := level
                  ; info (lazy "")
-                 ; info (lazy (msg ^ String.(make (80 - (length msg)) '=')))
+                 ; info (lazy (msg ^ String.(make (79 - (length msg)) '=')))
 [%%endif]

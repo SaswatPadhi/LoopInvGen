@@ -22,8 +22,7 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
     codomain = Type.BOOL;
     domain = [Type.BOOL;Type.BOOL];
     is_argument_valid = (function
-                         | [(Const _) ; _] -> false
-                         | [_ ; (Const _)] -> false
+                         | [(Const _) ; _] | [_ ; (Const _)] -> false
                          | [x ; y] -> x =/= y
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Bool x ; Value.Bool y] -> Value.Bool (x && y));
@@ -35,8 +34,7 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
     codomain = Type.BOOL;
     domain = [Type.BOOL;Type.BOOL];
     is_argument_valid = (function
-                         | [(Const _) ; _] -> false
-                         | [_ ; (Const _)] -> false
+                         | [(Const _) ; _] | [_ ; (Const _)] -> false
                          | [x ; y] -> x =/= y
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Bool x ; Value.Bool y] -> Value.Bool (x || y));

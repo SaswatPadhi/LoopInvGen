@@ -17,7 +17,10 @@ type result = {
   constraints : string list
 }
 
-let max_size = 18
+let explored = ref 0
+let rejected = ref 0
+
+let max_size = 25
 
 exception Success of Expr.t
 
@@ -63,7 +66,7 @@ let solve_impl consts task =
          | Type.INT -> int_candidates.(1) <- Set.add int_candidates.(1) candidate
   in
 
-  Log.debug (lazy ("  + Loaded Constants: [" ^ (List.to_string_map constants ~sep:"; " ~f:Value.to_string) ^ "]"));
+  (* Log.debug (lazy ("  + Loaded Constants: [" ^ (List.to_string_map constants ~sep:"; " ~f:Value.to_string) ^ "]")); *)
   List.iter constants ~f:add_constant_candidate;
 
   List.iteri task.inputs ~f:(fun i input ->
@@ -72,6 +75,9 @@ let solve_impl consts task =
       | Type.BOOL -> bool_candidates
     in candidates.(1) <- Set.add candidates.(1) { expr = Expr.Var i ; outputs = input })
   ;
+
+  explored := 0 ;
+  rejected := 0 ;
 
   let check (candidate : Expr.synthesized) =
     (* Log.debug (lazy ("  > Now checking (@ size " ^ (Int.to_string (Expr.size candidate.expr)) ^ "): "
@@ -102,8 +108,9 @@ let solve_impl consts task =
   in
   let expand_component size candidates component =
     let applier args =
+      explored := !explored + 1;
       match Expr.apply component args with
-      | None -> ()
+      | None -> rejected := !rejected + 1
       | Some result
         -> let h_value = Expr.size result.expr
             in if h_value < max_size
@@ -116,8 +123,8 @@ let solve_impl consts task =
   in
   let expand size =
     List.iter2_exn ~f:(expand_type size)
-                   [int_candidates ; bool_candidates]
-                   [int_components ; bool_components]
+                   [bool_candidates ; int_candidates]
+                   [bool_components ; int_components]
   in
 
   for size = 2 to max_size-1 ; do expand size done
@@ -129,7 +136,9 @@ let solve (consts : Value.t list) (task : task) : result =
        -> let arg_names_array = Array.of_list task.arg_names
            in let solution_string = Expr.to_string arg_names_array solution
            in let solution_constraints = Expr.get_constraints arg_names_array solution
-           in Log.debug (lazy ("  # Solution (@ size " ^ (Int.to_string (Expr.size solution))
+           in Log.debug (lazy ("  # Explored " ^ (Int.to_string !explored) ^ " expressions ("
+                              ^ (Int.to_string !rejected) ^ " rejections)"))
+            ; Log.debug (lazy ("  # Solution (@ size " ^ (Int.to_string (Expr.size solution))
                               ^ "): " ^ solution_string))
             ; Log.debug (lazy ("  # Constraints: "
                               ^ (if (List.length solution_constraints = 0) then "()"

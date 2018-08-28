@@ -13,13 +13,15 @@ include Comparable.Make (T)
 
 let typeof (v : t) : Type.t =
   match v with
-  | Int(_)   -> Type.INT
-  | Bool(_)  -> Type.BOOL
+  | Int _  -> Type.INT
+  | Bool _ -> Type.BOOL
+[@@inline always]
 
 let to_string (v : t) : string =
   match v with
-  | Int(i)   -> Int.to_string i
-  | Bool(b)  -> Bool.to_string b
+  | Int i  -> Int.to_string i
+  | Bool b -> Bool.to_string b
+[@@inline always]
 
 let of_string (s : string) : t =
   try
@@ -28,15 +30,3 @@ let of_string (s : string) : t =
     Int (Int.of_string s)
   with Failure _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
-
-let of_int i = (Int i)
-let to_int v =
-  match v with
-  | Int(i) -> i
-  | _ -> raise (Parse_Exn ("Failed to parse `" ^ (to_string v) ^ "` as `int`."))
-
-let of_bool b = (Bool b)
-let to_bool v =
-  match v with
-  | Bool(b) -> b
-  | _ -> raise (Parse_Exn ("Failed to parse `" ^ (to_string v) ^ "` as `bool`."))
