@@ -2,13 +2,13 @@ open Core
 open LoopInvGen
 open LoopInvGen.Utils
 
-type result = PASS | FAIL of (string list) | IMPOSSIBLE_PASS | IMPOSSIBLE_FAIL
+type result = PASS | FAIL of (string list) | NO_SOLUTION_PASS | NO_SOLUTION_FAIL
 
 let check_invariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result =
   let open ZProc in process ~zpath (fun z3 ->
     Simulator.setup sygus z3 ;
     if not ((implication_counter_example z3 sygus.pre_func.expr sygus.post_func.expr) = None)
-    then (if String.equal inv "" then IMPOSSIBLE_PASS else IMPOSSIBLE_FAIL)
+    then (if String.equal inv "" then NO_SOLUTION_PASS else NO_SOLUTION_FAIL)
     else let inv = (if not (String.equal inv "") then inv
                     else SyGuS.func_definition {sygus.inv_func with expr = "false"})
           in (ignore (run_queries ~scoped:false z3 [] ~db:[ inv ]) ;
@@ -46,17 +46,17 @@ let string_of_result res =
   match res with
   | PASS -> "PASS"
   | FAIL x -> "FAIL {" ^ (String.concat x ~sep:";") ^ "}"
-  | IMPOSSIBLE_PASS -> "PASS (NO SOLUTION)"
-  | IMPOSSIBLE_FAIL -> "FAIL (NO SOLUTION)"
+  | NO_SOLUTION_PASS -> "PASS (NO SOLUTION)"
+  | NO_SOLUTION_FAIL -> "FAIL (NO SOLUTION)"
 
 let exit_code_of_result res =
   match res with
   | PASS -> 0
   | FAIL _ -> 1
-  | IMPOSSIBLE_PASS -> 2
-  | IMPOSSIBLE_FAIL -> 3
+  | NO_SOLUTION_PASS -> 2
+  | NO_SOLUTION_FAIL -> 3
 
-let main zpath invfile logfile filename () =
+let main zpath filename logfile invfile () =
   Log.enable ~msg:"VERIFY" logfile ;
   let sygus = SyGuS.parse (get_in_channel filename) in
   let res = check_invariant ~zpath ~sygus (read_inv_from_chan (get_in_channel invfile) ~sygus)
@@ -66,9 +66,12 @@ let main zpath invfile logfile filename () =
 let spec =
   let open Command.Spec in (
     empty
-    +> flag "-z" (required string)  ~doc:"FILENAME path to the z3 executable"
-    +> flag "-i" (required string)  ~doc:"FILENAME input file containing the loop invariant"
-    +> flag "-l" (optional string)  ~doc:"FILENAME output file for logs, defaults to null"
+    +> flag "-z" (required string)
+       ~doc:"FILENAME path to the z3 executable"
+    +> flag "-s" (required string)
+       ~doc:"FILENAME input file containing the SyGuS-INV problem"
+    +> flag "-l" (optional string)
+       ~doc:"FILENAME output file for logs, defaults to null"
     +> anon (maybe_with_default "-" ("filename" %: file))
   )
 

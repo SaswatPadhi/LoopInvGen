@@ -87,5 +87,29 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
     evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x = y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
+  } ;
+  {
+    name = "int-lt";
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x < y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(< " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
+  } ;
+  {
+    name = "int-gt";
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x > y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
   }
 ]

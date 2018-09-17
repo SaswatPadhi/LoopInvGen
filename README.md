@@ -95,7 +95,7 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 
 #### 2. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.3 core.v0.11.2 core_extended.v0.11.2 dune.1.1.1
+$ opam install alcotest.0.8.3 core.v0.11.3 core_extended.v0.11.2 dune.1.2.1
 ```
 
 #### 3. Get the [Z3 project][z3].
@@ -208,7 +208,8 @@ To use an invariant inference tool other than LoopInvGen, invoke it as:
 
 #### Limiting Execution Time
 
-Just like `loopinvgen.sh`, the `test_all.sh` script allows users to limit the execution time for the invariant inference tools using the `-t` flag.
+Just like `loopinvgen.sh`, the `test_all.sh` script allows users to limit the
+execution time for the invariant inference tools using the `-t` flag.
 ```bash
 $ ./test_all.sh -b benchmarks/LIA -t 10
 ```

@@ -39,7 +39,3 @@ end
 let get_in_channel = function
   | "-"      -> Stdio.In_channel.stdin
   | filename -> Stdio.In_channel.create filename
-
-let get_out_channel = function
-  | None -> Stdio.Out_channel.stdout
-  | Some filename -> Stdio.Out_channel.create filename

@@ -83,11 +83,6 @@ VERIFY="$VERIFY -z $Z3_PATH"
 TOOL_ARGS="$@"
 TIMEOUT="${TIMEOUT}s"
 
-# This is NOT dead code. Don't remove!
-# Sets the output format for `time`
-TIME=$'\nreal\t%e\nuser\t%U\n sys\t%S\ncpu%%\t%P'
-TIMEFORMAT=$'\nreal\t%R\nuser\t%U\n sys\t%S\ncpu%%\t%P'
-
 mkdir -p "$LOGS_DIR"
 
 cd "`dirname "$TOOL"`"
@@ -97,7 +92,7 @@ CSV_SUMMARY="$LOGS_DIR/summary.csv"
 TXT_SUMMARY="$LOGS_DIR/summary.txt"
 
 echo -n "" > "$TXT_SUMMARY"
-echo "Benchmark,Verdict,Time" > "$CSV_SUMMARY"
+echo "Benchmark,Verdict,Wall_Time(s),Max_Memory(MB)" > "$CSV_SUMMARY"
 
 COUNTER=0
 for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
@@ -116,7 +111,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   if [ -z "$RERUN_CACHED" ] && [ -f "$TESTCASE_RES" ] ; then
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
     if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
-      TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
+      TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
       printf "%8.3fs  @  [SKIPPED] $OLD_VERDICT\n" $TESTCASE_REAL_TIME
       echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
       continue
@@ -126,23 +121,31 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   echo > $TESTCASE_INV ; echo > $TESTCASE_RES
 
   show_status "(inferring)"
-  (time timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
+  (\time --format "\nreal(s)\t%e\nuser(s)\t%U\n sys(s)\t%S\n   cpu%%\t%P\nrss(kb)\t%M\n" \
+         timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
   INFER_PID=$!
   wait $INFER_PID
   INFER_RESULT_CODE=$?
 
-  TESTCASE_REAL_TIME=`grep "real" $TESTCASE_RES | cut -f2`
-  printf "%8.3fs  @  " $TESTCASE_REAL_TIME
+  TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
+  TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
+  TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
+  printf "%8.3fs [%5.0f MB]  @  " $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
 
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     echo -n "[TIMEOUT] " >> $TESTCASE_RES
   fi
 
   show_status "(verifying)"
-  $VERIFY -i $TESTCASE_INV $TESTCASE >> $TESTCASE_RES
+  RESULT_CODE=0
+  timeout 120 $VERIFY -s $TESTCASE $TESTCASE_INV >> $TESTCASE_RES
+  RESULT_CODE=$?
+  if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ]; then
+    echo "PASS (UNVERIFIED)" >> $TESTCASE_RES
+  fi
   show_status "" ; tail -n 1 $TESTCASE_RES ; echo ""
 
-  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
+  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY" >> "$CSV_SUMMARY"
 done
 
 print_counts () {
@@ -157,7 +160,7 @@ echo ""
 print_counts TOTAL_PASS ".*PASS.*" TOTAL_FAIL ".*FAIL.*"
 
 echo "" | tee -a "$TXT_SUMMARY"
-print_counts PASS "PASS" "PASS (NO SOLUTION)" "PASS (NO SOLUTION)" "[TIMEOUT] PASS (NO SOLUTION)" "\\[TIMEOUT\\] PASS (NO SOLUTION)"
+print_counts PASS "PASS" "PASS (NO SOLUTION)" "PASS (NO SOLUTION)" "[TIMEOUT] PASS (NO SOLUTION)" "\\[TIMEOUT\\] PASS (NO SOLUTION)" "PASS (UNVERIFIED)"
 
 echo "" | tee -a "$TXT_SUMMARY"
 print_counts FAIL "FAIL {.*}" "FAIL (NO SOLUTION)" "FAIL (NO SOLUTION)" "[TIMEOUT] FAIL" "\\[TIMEOUT\\] FAIL {.*}" "[TIMEOUT] FAIL (NO SOLUTION)" "\\[TIMEOUT\\] FAIL (NO SOLUTION)"

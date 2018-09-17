@@ -1,10 +1,8 @@
 open Core
 open LoopInvGen
 
-let main zpath statefile outfile logfile false_on_failure
-         max_conflicts max_strengthening_attempts
-         max_restarts max_steps_on_restart
-         filename () =
+let main zpath statefile logfile max_conflicts max_strengthening_attempts
+         max_restarts max_steps_on_restart filename () =
   Log.enable ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
   let states = List.(permute
@@ -33,30 +31,28 @@ let main zpath statefile outfile logfile false_on_failure
      ; max_steps_on_restart
      }
      in let inv = LIG.learnInvariant ~conf ~zpath ~states sygus
-     in let out_chan = Utils.get_out_channel outfile
-     in if (not false_on_failure) && (String.equal inv "false") then ()
-        else Stdio.Out_channel.output_string out_chan
-               SyGuS.(func_definition {sygus.inv_func with expr=(translate_smtlib_expr inv)})
-      ; Stdio.Out_channel.close out_chan
+     in Stdio.Out_channel.output_string Stdio.Out_channel.stdout
+          SyGuS.(func_definition {sygus.inv_func with expr=(translate_smtlib_expr inv)})
       ; Caml.exit (if String.equal inv "false" then 1 else 0)
 
 let spec =
   let open Command.Spec in (
       empty
-      +> flag "-z" (required string)  ~doc:"FILENAME path to the z3 executable"
-      +> flag "-s" (required string)  ~doc:"FILENAME states file, containing program states"
-      +> flag "-o" (optional string)  ~doc:"FILENAME output file for invariant, defaults to stdout"
-      +> flag "-l" (optional string)  ~doc:"FILENAME enable logging"
-      +> flag "-f" (no_arg)           ~doc:"generate `false` instead of an empty invariant, in case of failure"
+      +> flag "-z" (required string)
+         ~doc:"FILENAME path to the z3 executable"
+      +> flag "-s" (required string)
+         ~doc:"FILENAME states file, containing program states"
+      +> flag "-l" (optional string)
+         ~doc:"FILENAME enable logging"
 
-      +> flag "-max-conflicts"              (optional_with_default 0 int)
-                                            ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
+      +> flag "-max-conflicts" (optional_with_default 0 int)
+         ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
       +> flag "-max-strengthening-attempts" (optional_with_default (LIG.default_config.for_VPIE.max_tries) int)
-                                            ~doc:"NUMBER max candidates to consider, per strengthening. 0 = unlimited"
-      +> flag "-max-restarts"               (optional_with_default (LIG.default_config.max_restarts) int)
-                                            ~doc:"NUMBER number of times the inference engine may restart"
-      +> flag "-max-steps-on-restart"       (optional_with_default (LIG.default_config.max_steps_on_restart) int)
-                                            ~doc:"NUMBER number of states to collect after each restart"
+         ~doc:"NUMBER max candidates to consider, per strengthening. 0 = unlimited"
+      +> flag "-max-restarts" (optional_with_default (LIG.default_config.max_restarts) int)
+         ~doc:"NUMBER number of times the inference engine may restart"
+      +> flag "-max-steps-on-restart" (optional_with_default (LIG.default_config.max_steps_on_restart) int)
+         ~doc:"NUMBER number of states to collect after each restart"
 
       +> anon ("filename" %: file)
     )

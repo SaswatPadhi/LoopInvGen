@@ -10,8 +10,10 @@ let main outfile logfile filename () =
 let spec =
   let open Command.Spec in (
     empty
-    +> flag "-o" (required string)                ~doc:"FILENAME output file for the post-processed SyGuS problem"
-    +> flag "-l" (optional string)                ~doc:"FILENAME output file for logs, defaults to null"
+    +> flag "-o" (required string)
+       ~doc:"FILENAME (binary) output file for the post-processed SyGuS problem"
+    +> flag "-l" (optional string)
+       ~doc:"FILENAME output file for logs, defaults to null"
     +> anon (maybe_with_default "-" ("filename" %: file))
   )
 

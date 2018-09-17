@@ -98,6 +98,9 @@ let parse (chan : Stdio.In_channel.t) : t =
                    else raise (Parse_Exn ("Logic already set to: " ^ !logic))
               | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars)])
                 -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
+              | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars) ; _])
+                -> (* TODO *) Log.warn (lazy ("LoopInvGen currently does not allow custom grammars. The provided grammar will be ignored, and full SMTLIB2 will be used instead."))
+                 ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List(Atom("declare-var") :: sexps)
                 -> let new_var = parse_variable_declaration (List sexps)
                     in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))

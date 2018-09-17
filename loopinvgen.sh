@@ -28,7 +28,7 @@ INTERMEDIATES_DIR="$SELF_DIR/_log"
 SYGUS_EXT=".sl"
 Z3_PATH="$SELF_DIR/_dep/z3"
 
-INFER_TIMEOUT=60
+INFER_TIMEOUT=86400
 MIN_INFER_TIMEOUT=5
 
 RECORD_TIMEOUT=0.5s
@@ -72,7 +72,7 @@ Configuration:
     [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]            (_dep/z3)
 
-Arguments to Internal Programs @ (`dirname $RECORD`):
+Arguments to Internal Programs (@ `dirname $RECORD`):
     [--Process-args, -P \"<args>\"]   see \``basename "$PROCESS"` -h\` for details
     [--Record-args, -R \"<args>\"]    see \``basename "$RECORD"` -h\` for details
     [--Infer-args, -I \"<args>\"]     see \``basename "$INFER"` -h\` for details
@@ -182,9 +182,8 @@ show_status "(recording)"
 for i in `seq 1 $RECORD_FORKS` ; do
   [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
   (timeout $RECORD_TIMEOUT \
-           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i"       \
-                   -o "$TESTCASE_REC_STATES$i" $LOG_PARAM $RECORD_ARGS \
-                   "$TESTCASE_PROCESSED") >&2 &
+           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i" $LOG_PARAM \
+                   $RECORD_ARGS "$TESTCASE_PROCESSED") > "$TESTCASE_REC_STATES$i" &
 done
 wait
 
@@ -196,8 +195,8 @@ grep -hv "^[[:space:]]*$" "$TESTCASE_REC_STATES"? | sort -u > "$TESTCASE_ALL_STA
 show_status "(inferring)"
 
 timeout --foreground $INFER_TIMEOUT \
-        $INFER -s "$TESTCASE_ALL_STATES" -o "$TESTCASE_INVARIANT" \
-               ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" >&2
+        $INFER -s "$TESTCASE_ALL_STATES" ${DO_LOG[infer]} $INFER_ARGS \
+               "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
 INFER_RESULT_CODE=$?
 
 
@@ -208,7 +207,7 @@ if [ "$DO_VERIFY" = "yes" ] ; then
 
   show_status "(verifying)"
 
-  $VERIFY -i "$TESTCASE_INVARIANT" ${DO_LOG[verify]} $VERIFY_ARGS "$TESTCASE" \
+  $VERIFY -s "$TESTCASE" ${DO_LOG[verify]} $VERIFY_ARGS "$TESTCASE_INVARIANT" \
     > "$TESTCASE_PREFIX.result"
   RESULT_CODE=$?
 
