@@ -1,4 +1,4 @@
 (define-fun inv-f ((n Int) (x Int) (y Int) (z Int)) Bool
   (and (= z (+ (* 6 n) 6))
-	     (= y (+ (* 3 n (+ n 1)) 1))
-	     (= x (* n n n))))
+       (= y (+ (* 3 n (+ n 1)) 1))
+       (= x (* n n n))))

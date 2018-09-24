@@ -60,16 +60,18 @@ let command =
   Command.basic
     ~summary: "Infer a loop invariant sufficient for proving the correctness of the input problem."
     [%map_open
-      let states_path     = flag "states-path" (required string)
-                                 ~doc:"FILENAME path to the file containing sampled program states"
-      and z3_path         = flag "z3-path" (required string)
-                                  ~doc:"FILENAME path to the z3 executable"
-      and report_path     = flag "report-path" (optional string)
-                                 ~doc:"FILENAME report statistics (time and counterexamples) to the specified path"
-      and log_path        = flag "log-path" (optional string)
-                                 ~doc:"FILENAME enable logging and output to the specified path"
-      and config          = config_flags
-      and sygus_path      = anon ("filename" %: string)
+      let states_path        = flag "states-path" (required string)
+                                    ~doc:"FILENAME path to the file containing sampled program states"
+      and z3_path            = flag "z3-path" (required string)
+                                     ~doc:"FILENAME path to the z3 executable"
+      and report_path        = flag "report-path" (optional string)
+                                    ~doc:"FILENAME report statistics (time and counterexamples) to the specified path"
+      and log_path           = flag "log-path" (optional string)
+                                    ~doc:"FILENAME enable logging and output to the specified path"
+      and user_features_path = flag "features-path" (optional string)
+                                    ~doc:"FILENAME initial features to preseed the learner with"
+      and config             = config_flags
+      and sygus_path         = anon ("filename" %: string)
       in fun () -> begin
         Log.enable ~msg:"INFER" log_path ;
         let states_chan = Utils.get_in_channel states_path in
@@ -81,6 +83,9 @@ let command =
           ; Log.debug (lazy ("Loaded " ^ (Int.to_string (List.length states)) ^ " states."))
           ; let sygus = SyGuS.read_from sygus_path in
             let logic = Logic.of_string sygus.logic in
+            let user_input = (match user_features_path with
+                              | Some path -> In_channel.read_lines path
+                              | None -> []) in
             let config = {
               config with
               _VPIE = {
@@ -94,6 +99,7 @@ let command =
               ; num_counterexamples = logic.sample_set_size_multiplier
                                     * config._VPIE.num_counterexamples
               }
+              ; user_features = Utils.make_user_features user_input sygus.synth_variables
             }
             in let inv, stats = LIG.learnInvariant ~config ~zpath:z3_path ~states sygus
             in Out_channel.output_string

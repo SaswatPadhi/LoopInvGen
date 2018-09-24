@@ -2,6 +2,7 @@ open Core
 
 open Exceptions
 open Sexplib
+open Utils
 
 type t = {
   procid : Pid.t ;
@@ -108,17 +109,17 @@ let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
 let z3_result_to_model (result : string list) : model option =
   let open Sexp in
   try [@warning "-8"]
-  match result with
-  | "unsat" :: _ -> None
-  | [ "sat" ; _ ; result ]
-    -> begin match Sexp.parse result with
-        | Done (List((Atom _) :: varexps), _)
-          -> let open List in
-            Some (map varexps ~f:(
-              function
-              | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                            in (n, (z3_sexp_to_value v))))
-      end
+    match result with
+    | "unsat" :: _ -> None
+    | [ "sat" ; _ ; result ]
+      -> begin match Sexp.parse result with
+          | Done (List((Atom _) :: varexps), _)
+            -> let open List in
+              Some (map varexps ~f:(
+                function
+                | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
+                              in (n, (z3_sexp_to_value v))))
+        end
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
@@ -197,3 +198,12 @@ let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) ?(ru
        in let result = helper (match init with None -> [] | Some m -> [m]) n
            in close_scope z3
             ; result
+
+let build_feature (name : string) (z3 : t) (vals : Value.t list) : bool =
+  let arguments = List.to_string_map vals ~sep:" " ~f:Value.to_string in
+  let result = run_queries z3 [ "(assert (" ^ name ^ " " ^ arguments ^ "))"
+                              ; "(check-sat)" ]
+   in match result with
+      | ["sat"] | [_;"sat"] -> true
+      | ["unsat"] | [_;"unsat"] -> false
+      | _ -> raise (Internal_Exn "z3 could not verify the query.")

@@ -21,6 +21,8 @@ RECORD="$BIN_DIR/lig-record"
 INFER="$BIN_DIR/lig-infer"
 VERIFY="$BIN_DIR/lig-verify"
 
+FEATURE_PARSER="$BIN_DIR/lig-tools-feature-parser"
+
 if [ ! -f $PROCESS ] || [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ]; then
   echo -en "
 One or more dependencies not found. Building OCaml modules ...
@@ -55,7 +57,9 @@ DO_LOG[record]=""
 DO_LOG[infer]=""
 DO_LOG[verify]=""
 
+FEATURES_ARG=""
 STATS_ARG=""
+
 DO_CLEAN="no"
 DO_VERIFY="no"
 
@@ -79,6 +83,7 @@ Parameters:
     [--infer-timeout,        -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
 
 Configuration:
+    [--features-path,        -f <path>]            ()
     [--intermediates-dir,    -i <path>]            (_log)
     [--log,                  -l <src>[,<src>...]]  ()\t\tsrc <- {process|record|infer|verify}
     [--stats-file,           -S <path>]            ()
@@ -102,6 +107,7 @@ for opt in "$@"; do
     "--max-states-per-fork")  set -- "$@" "-s" ;;
     "--infer-timeout")        set -- "$@" "-t" ;;
 
+    "--features-path")        set -- "$@" "-f" ;;
     "--intermediates-path")   set -- "$@" "-i" ;;
     "--log")                  set -- "$@" "-l" ;;
     "--stats-file")           set -- "$@" "-S" ;;
@@ -119,7 +125,7 @@ for opt in "$@"; do
 done
 
 OPTIND=1
-while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
+while getopts ':P:R:I:V:cvf:l:L:p:s:S:t:z:' OPTION ; do
   case "$OPTION" in
     "c" ) DO_CLEAN="yes" ;;
     "v" ) DO_VERIFY="yes" ;;
@@ -137,6 +143,9 @@ while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
           INFER_TIMEOUT="$OPTARG"
           ;;
 
+    "f" ) [ -f "$OPTARG" ] || usage "Features file [$OPTARG] not found."
+          FEATURES_ARG="$OPTARG"
+          ;;
     "i" ) INTERMEDIATES_DIR="$OPTARG"
           ;;
     "l" ) for LOG_SRC in `echo "$OPTARG" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
@@ -146,9 +155,9 @@ while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
             esac
           done
           ;;
-    "S" ) [ -d "$OPT_ARG" ] && usage "Stats file [$OPT_ARG] is a directory!"
-          [ -f "$OPT_ARG" ] && rm -rf $OPTARG
-          STATS_ARG="-t $OPTARG"
+    "S" ) [ -d "$OPTARG" ] && usage "Stats file [$OPTARG] is a directory!"
+          [ -f "$OPTARG" ] && rm -rf $OPTARG
+          STATS_ARG="-report-path $OPTARG"
           ;;
     "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
           Z3_PATH="$OPTARG"
@@ -175,6 +184,7 @@ TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
 
+TESTCASE_FEATURES="$TESTCASE_PREFIX.feat"
 TESTCASE_PROCESSED="$TESTCASE_PREFIX.bin"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
@@ -204,6 +214,10 @@ rm -rf "$TESTCASE_REC_STATES"* "$TESTCASE_ALL_STATES" "$TESTCASE_INVARIANT" "$TE
 
 show_status "(processsing)"
 
+if [ -n "$FEATURES_ARG" ]; then
+  $FEATURE_PARSER "$FEATURES_ARG" | sort -u > "$TESTCASE_FEATURES" &
+fi
+
 $PROCESS -o "$TESTCASE_PROCESSED" ${DO_LOG[process]} $PROCESS_ARGS "$TESTCASE" > "$TESTCASE_INVARIANT"
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
 
@@ -226,9 +240,12 @@ else
 
   show_status "(inferring)"
 
+  [ -n "$FEATURES_ARG" ] && FEATURES_ARG="-features-path $TESTCASE_FEATURES"
+
   timeout --foreground $INFER_TIMEOUT \
           $INFER -s "$TESTCASE_ALL_STATES" -max-expressiveness-level "$EXPRESSIVENESS_LEVEL" \
-                 $STATS_ARG ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+                 $FEATURES_ARG $STATS_ARG ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" \
+                 > "$TESTCASE_INVARIANT"
   INFER_RESULT_CODE=$?
 fi
 
