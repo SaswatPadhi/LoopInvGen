@@ -2,6 +2,14 @@ open Base
 
 open Expr
 
+let is_constant expr =
+  let rec helper = function
+    | Const _ -> ()
+    | Var _ -> raise Caml.Exit
+    | FCall (_, exprs) -> List.iter ~f:helper exprs
+  in try helper expr ; true
+     with Caml.Exit -> false
+
 let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
   {
     name = "int-add";
@@ -42,11 +50,10 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
     codomain = Type.INT;
     domain = [Type.INT; Type.INT];
     is_argument_valid = (function
-                         | [(Const _) as x ; (Const _) as y]
+                         | [x ; y]
                            -> (x =/= Const (Value.Int 0)) && (x =/= Const (Value.Int 1))
                            && (y =/= Const (Value.Int 0)) && (y =/= Const (Value.Int 1))
-                         | [(Const _) as x ; _] | [_ ; (Const _) as x]
-                           -> (x =/= Const (Value.Int 0)) && (x =/= Const (Value.Int 1))
+                           && (is_constant x || is_constant y)
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x * y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")");
