@@ -9,8 +9,11 @@ trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 SYGUS_EXT=".sl"
 RESULT_EXT=".res"
-RERUN_CACHED=""
+RERUN_PASSED=""
+REVERIFY_FAILED=""
 
+SKIP_MARK=""
+CONTINUE_FROM="1"
 BENCHMARKS_DIR=""
 LOGS_DIR="$SELF_DIR/_log"
 Z3_PATH="$SELF_DIR/_dep/z3"
@@ -30,10 +33,13 @@ usage() {
 Usage: $0 [options] -b <benchmarks_path> -- [tool specific options]
 
 Flags:
-    [--rerun-cached, -r]
+    [--rerun-passed, -r]
+    [--reverify-failed, -y]
+    [--mark-skipped, -s]
 
 Configuration:
     --benchmarks, -b <path>
+    [--continue-from, -c <int>]       ($CONTINUE_FROM)
     [--logs-dir, -l <path>]           ($LOGS_DIR)
     [--time-out, -t <seconds>]        ($TIMEOUT)
     [--tool, -T <path>]               ($TOOL)
@@ -41,7 +47,7 @@ Configuration:
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:l:t:rT:z: --long benchmarks:,logs-dir:,time-out:,rerun-cached,tool:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :b:c:l:t:rsT:yz: --long benchmarks:,continue-from:,logs-dir:,time-out:,rerun-passed,mark-skipped,tool:,reverify-failed,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -52,19 +58,29 @@ while true ; do
          [ -d "$2" ] || usage "Benchmarks directory [$2] not found."
          BENCHMARKS_DIR="`realpath "$2"`"
          shift ; shift ;;
+    -c | --continue-from )
+         [ "$2" -gt "0" ] || usage "$2 is not a positive index.."
+         CONTINUE_FROM="$2"
+         shift ; shift ;;
     -l | --logs-dir )
          LOGS_DIR="`realpath "$2"`"
          shift ; shift ;;
     -t | --time-out )
          TIMEOUT="$2"
          shift ; shift ;;
-    -r | --rerun-cached )
-         RERUN_CACHED="YES"
+    -r | --rerun-passed )
+         RERUN_PASSED="YES"
+         shift ;;
+    -s | --mark-skipped )
+         SKIP_MARK="[SKIPPED] "
          shift ;;
     -T | --tool )
          [ -f "$2" ] || usage "Tool [$2] not found."
          TOOL="$2"
          shift ; shift ;;
+    -y | --reverify-failed )
+         REVERIFY_FAILED="YES"
+         shift ;;
     -z | --z3-path )
          [ -f "$2" ] || usage "Z3 [$2] not found."
          Z3_PATH="$2"
@@ -108,33 +124,45 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   (( COUNTER++ ))
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
 
-  if [ -z "$RERUN_CACHED" ] && [ -f "$TESTCASE_RES" ] ; then
+  if [ -f "$TESTCASE_RES" ]; then
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
-    if [[ "$OLD_VERDICT" =~ .*PASS.* ]] ; then
-      TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
-      printf "%8.3fs  @  [SKIPPED] $OLD_VERDICT\n" $TESTCASE_REAL_TIME
-      echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME" >> "$CSV_SUMMARY"
-      continue
-    fi
   fi
 
-  echo > $TESTCASE_INV ; echo > $TESTCASE_RES
+  if [ "$CONTINUE_FROM" -gt "$COUNTER" ] || ( \
+       [ -z "$RERUN_PASSED" ] && [ -f "$TESTCASE_RES" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
+     ); then
+    TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
+    TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
+    TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
+    printf "%8.3fs [%5.0f MB]  @  $SKIP_MARK$OLD_VERDICT\n" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
+    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY" >> "$CSV_SUMMARY"
+    continue
+  fi
 
-  show_status "(inferring)"
-  (\time --format "\nreal(s)\t%e\nuser(s)\t%U\n sys(s)\t%S\n   cpu%%\t%P\nrss(kb)\t%M\n" \
-         timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
-  INFER_PID=$!
-  wait $INFER_PID
-  INFER_RESULT_CODE=$?
+  if [ -z "$REVERIFY_FAILED" ] || [ ! -f "$TESTCASE_INV" ]; then
+    echo > $TESTCASE_INV ; echo > $TESTCASE_RES
+
+    show_status "(inferring)"
+    (\time --format "\nreal(s)\t%e\nuser(s)\t%U\n sys(s)\t%S\n   cpu%%\t%P\nrss(kb)\t%M\n" \
+          timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
+    INFER_PID=$!
+    wait $INFER_PID
+    INFER_RESULT_CODE=$?
+
+    if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
+      echo -n "[TIMEOUT] " >> $TESTCASE_RES
+    fi
+  else
+    head -n -1 "$TESTCASE_RES" > /tmp/tmp ; mv /tmp/tmp "$TESTCASE_RES"
+    if [[ "$OLD_VERDICT" =~ .*TIMEOUT.* ]]; then
+      echo -n "[TIMEOUT] " >> $TESTCASE_RES
+    fi
+  fi
 
   TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
   TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
   TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
   printf "%8.3fs [%5.0f MB]  @  " $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
-
-  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
-    echo -n "[TIMEOUT] " >> $TESTCASE_RES
-  fi
 
   show_status "(verifying)"
   RESULT_CODE=0

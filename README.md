@@ -195,7 +195,7 @@ For each benchmark, the `test_all.sh` script generates one of the verdicts menti
 
 Since `test_all.sh` caches results from previous runs, it skips benchmarks that are known to be passing.  
 This may be disabled by:
-- using the `-r` or `--rerun-cached` switch with `test_all.sh`, or
+- using the `-r` or `--rerun-passed` switch with `test_all.sh`, or
 - deleting the previous log directory (default: `_log`), or
 - specifying a new log directory (`-l _new_log`).
 

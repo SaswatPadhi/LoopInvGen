@@ -80,7 +80,7 @@ let func_definition (f : func) : string =
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
-let parse (chan : Stdio.In_channel.t) : t =
+let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in
   let consts : Value.t list ref = ref [] in
   let funcs : func list ref = ref [] in
@@ -90,7 +90,7 @@ let parse (chan : Stdio.In_channel.t) : t =
   let transf_name : string ref = ref "" in
   let variables : var list ref = ref [] in
   let invf_vars : var list ref = ref []
-   in List.iter (Sexplib.Sexp.input_sexps chan)
+   in List.iter sexps
         ~f:(function
               | List([Atom("check-synth")]) -> ()
               | List([Atom("set-logic"); Atom(_logic)])
@@ -142,6 +142,9 @@ let parse (chan : Stdio.In_channel.t) : t =
         ; return = Type.BOOL
         }
       }
+
+let parse (chan : Stdio.In_channel.t) : t =
+  parse_sexps (Sexplib.Sexp.input_sexps chan)
 
 let write_to (filename : string) (sygus : t) : unit =
   let out_chan = Stdio.Out_channel.create filename
