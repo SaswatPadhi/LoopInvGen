@@ -2,7 +2,7 @@
 
 (set-logic LIA)
 
-(synth-inv inv-f ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)))
+(synth-inv inv_fun ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)))
 
 (declare-primed-var x1 Int)
 (declare-primed-var x2 Int)
@@ -13,7 +13,7 @@
 (declare-primed-var t Int)
 (declare-primed-var RETURN Int)
 
-(define-fun pre-f ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)) Bool
+(define-fun pre_fun ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)) Bool
   (and (= RETURN 0)
        (= x1 100)
        (= x2 75)
@@ -26,7 +26,7 @@
        (>= (+ v2 5) 0)
        (<= v2 5)))
 
-(define-fun trans-f ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)
+(define-fun trans_fun ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)
                      (x1! Int) (x2! Int) (x3! Int) (v1! Int) (v2! Int) (v3! Int) (t! Int) (RETURN! Int)) Bool
   (and (= RETURN 0)
        (or (and (not (>= (+ v2 5) 0)) (= RETURN! 1))
@@ -52,7 +52,7 @@
                 (= v3! v3)
                 (= t! (+ t 1))))))
 
-(define-fun post-f ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)) Bool
+(define-fun post_fun ((x1 Int) (x2 Int) (x3 Int) (v1 Int) (v2 Int) (v3 Int) (t Int) (RETURN Int)) Bool
   (=> (= RETURN 0)
       (and (<= v1 5)
            (>= (+ (* 2 v2) (* 2 t)) (+ v1 v3))
@@ -64,6 +64,6 @@
            (>= (- (+ v1 v3 (* 2 t)) (* 2 v2)) 0)
            (>= (- v1 v3) 0))))
 
-(inv-constraint inv-f pre-f trans-f post-f)
+(inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)

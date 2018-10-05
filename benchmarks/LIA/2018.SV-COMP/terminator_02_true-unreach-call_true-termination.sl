@@ -2,24 +2,24 @@
 
 (set-logic LIA)
 
-(synth-inv inv-f ((x Int) (z Int)))
+(synth-inv inv_fun ((x Int) (z Int)))
 
 (declare-primed-var x Int)
 (declare-primed-var z Int)
 
-(define-fun pre-f ((x Int) (z Int)) Bool
+(define-fun pre_fun ((x Int) (z Int)) Bool
   (and (> x (- 0 100)) (< x 200)
        (> z 100) (< z 200)))
 
-(define-fun trans-f ((x Int) (z Int) (x! Int) (z! Int)) Bool
+(define-fun trans_fun ((x Int) (z Int) (x! Int) (z! Int)) Bool
   (and (< x 100) (> z 100)
        (or (and (= x! (+ x 1)) (= z! z))
            (and (= x! (- x 1)) (= z! (- z 1))))))
 
-(define-fun post-f ((x Int) (z Int)) Bool
+(define-fun post_fun ((x Int) (z Int)) Bool
   (or (and (< x 100) (> z 100))
       (or (>= x 100) (<= z 100))))
 
-(inv-constraint inv-f pre-f trans-f post-f)
+(inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)

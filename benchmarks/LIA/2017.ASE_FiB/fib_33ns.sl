@@ -1,6 +1,6 @@
 (set-logic LIA)
 
-(synth-inv inv-f ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int)))
+(synth-inv inv_fun ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int)))
 
 (declare-primed-var x Int)
 (declare-primed-var y Int)
@@ -9,10 +9,10 @@
 (declare-primed-var k Int)
 (declare-primed-var turn Int)
 
-(define-fun pre-f ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int)) Bool
+(define-fun pre_fun ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int)) Bool
 (and (= z k) (= x 0) (= y 0) (= turn 0)))
 
-(define-fun trans-f ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int) (x! Int) (y! Int) (z! Int) (c! Int) (k! Int) (turn! Int)) Bool
+(define-fun trans_fun ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int) (x! Int) (y! Int) (z! Int) (c! Int) (k! Int) (turn! Int)) Bool
 (or 
 (and (= turn 0) (= x! x) (= y! y) (= z! z) (= c! 0) (= k! k) (= turn! 1))
 (and (= turn 0) (= x! x) (= y! y) (= z! z) (= c! 0) (= k! k) (= turn! 2))
@@ -25,9 +25,9 @@
 (and (or (> turn 2) (< turn 0)) (= x! x) (= y! y) (= z! (+ x y)) (= c! c) (= k! k) (= turn! 0))
 ))
 
-(define-fun post-f ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int)) Bool
+(define-fun post_fun ((x Int) (y Int) (z Int) (c Int) (k Int) (turn Int)) Bool
 (= x y))
 
-(inv-constraint inv-f pre-f trans-f post-f)
+(inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)

@@ -2,28 +2,28 @@
 
 (set-logic LIA)
 
-(synth-inv inv-f ((a Int) (b Int) (res Int) (cnt Int)))
+(synth-inv inv_fun ((a Int) (b Int) (res Int) (cnt Int)))
 
 (declare-primed-var a Int)
 (declare-primed-var b Int)
 (declare-primed-var res Int)
 (declare-primed-var cnt Int)
 
-(define-fun pre-f ((a Int) (b Int) (res Int) (cnt Int)) Bool
+(define-fun pre_fun ((a Int) (b Int) (res Int) (cnt Int)) Bool
   (and (<= a 1000000)
        (<= 0 b) (<= b 1000000)
        (= res a) (= cnt b)))
 
-(define-fun trans-f ((a Int) (b Int) (res Int) (cnt Int)
+(define-fun trans_fun ((a Int) (b Int) (res Int) (cnt Int)
                      (a! Int) (b! Int) (res! Int) (cnt! Int)) Bool
   (and (> cnt 0)
        (= cnt! (- cnt 1))
        (= res! (+ res 1))
        (= a! a) (= b! b)))
 
-(define-fun post-f ((a Int) (b Int) (res Int) (cnt Int)) Bool
+(define-fun post_fun ((a Int) (b Int) (res Int) (cnt Int)) Bool
   (or (> cnt 0) (= res (+ a b))))
 
-(inv-constraint inv-f pre-f trans-f post-f)
+(inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)
