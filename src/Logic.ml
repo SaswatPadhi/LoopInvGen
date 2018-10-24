@@ -13,7 +13,7 @@ let all_supported =
    in List.iter ~f:(fun component -> String.Table.set table ~key:component.name ~data:component)
         [{
            name = "LIA" ;
-           components = Th_Bool.components @ Th_LIA.components ;
+           components = Th_Bool.components @ Th_LIA.components @ Th_List.components;
            conflict_group_size_multiplier = 1
          } ; {
            name = "NIA" ;

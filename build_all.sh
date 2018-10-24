@@ -21,7 +21,7 @@ if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
 
-JOBS="`cat /proc/cpuinfo | grep processor | wc -l`"
+JOBS="$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.logicalcpu_max || lscpu -p | egrep -v '^#' | wc -l)"
 
 WITH_LOGGING=""
 MAKE_Z3_AT=""

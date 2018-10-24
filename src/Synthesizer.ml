@@ -47,14 +47,17 @@ end
 let solve_impl consts task =
   let int_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.INT) task.logic.components in
   let bool_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.BOOL) task.logic.components in
+  let list_components = List.filter ~f:(fun c -> Type.is_list c.codomain) task.logic.components in
 
   let int_candidates = Array.create ~len:max_size (Set.empty (module SynthesizedWithUniqueOutput)) in
   let bool_candidates = Array.create ~len:max_size (Set.empty (module SynthesizedWithUniqueOutput)) in
+  let list_candidates = Array.create ~len:max_size (Set.empty (module SynthesizedWithUniqueOutput)) in
 
   let constants =
     (List.dedup_and_sort ~compare:Value.compare
        ((List.map ~f:(function Value.Int x -> Value.Int (abs x) | x -> x) consts)
-        @ [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ]))
+        @ [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ;
+            Value.List ([], Type.TVAR "a") ]))
   in
 
   let add_constant_candidate value =
@@ -64,6 +67,8 @@ let solve_impl consts task =
     } in match Value.typeof value with
          | Type.BOOL -> bool_candidates.(1) <- Set.add bool_candidates.(1) candidate
          | Type.INT -> int_candidates.(1) <- Set.add int_candidates.(1) candidate
+         | Type.LIST _ -> list_candidates.(1) <- Set.add list_candidates.(1) candidate
+         | _ -> ()
   in
 
   (* Log.debug (lazy ("  + Loaded Constants: [" ^ (List.to_string_map constants ~sep:"; " ~f:Value.to_string) ^ "]")); *)
@@ -73,6 +78,8 @@ let solve_impl consts task =
     let candidates = match Value.typeof input.(1) with
       | Type.INT -> int_candidates
       | Type.BOOL -> bool_candidates
+      | Type.LIST _ -> list_candidates
+      | _ -> failwith "cannot find matching candidate"
     in candidates.(1) <- Set.add candidates.(1) { expr = Expr.Var i ; outputs = input })
   ;
 
@@ -91,31 +98,45 @@ let solve_impl consts task =
   begin match task_codomain with
   | Type.INT -> Set.iter ~f:check int_candidates.(1);
   | Type.BOOL -> Set.iter ~f:check bool_candidates.(1);
+  | Type.LIST _ -> Set.iter ~f:check list_candidates.(1);
+  | _ -> ()
   end ;
 
   let apply_component size arg_types applier =
     let rec apply_cells acc types locations =
       match types, locations with
       | (typ :: typs , i :: locs)
-        -> Set.iter ~f:(fun x -> apply_cells (x :: acc) typs locs)
-                    begin match typ with
-                      | Type.INT -> int_candidates.(i)
-                      | Type.BOOL -> bool_candidates.(i)
-                    end
+        -> let apply_next = Set.iter ~f:(fun x -> apply_cells (x :: acc) typs locs) in
+        begin match typ with
+          | Type.INT -> apply_next int_candidates.(i)
+          | Type.BOOL -> apply_next bool_candidates.(i)
+          (* Since lists of different types are all present in this basket we'll typecheck for our own element type here *)
+          | Type.LIST _ -> apply_next
+          (Set.filter ~f:(fun s -> Unify.unifiable [typ] [Value.typeof s.outputs.(0)]) list_candidates.(i))
+          | Type.TVAR _ -> List.iter ~f:apply_next [int_candidates.(i); bool_candidates.(i); list_candidates.(i)]
+        end
       | ([], []) -> applier (List.rev acc)
       | _ -> raise (Internal_Exn "Impossible case!")
     in divide (apply_cells [] arg_types) (List.length arg_types) (size - 1) []
   in
-  let expand_component size candidates component =
-    let applier args =
+  let expand_component size candidates (component:Expr.component) =
+    let applier (args : Expr.synthesized list) =
       explored := !explored + 1;
-      match Expr.apply component args with
-      | None -> rejected := !rejected + 1
-      | Some result
-        -> let h_value = Expr.size result.expr
-            in if h_value < max_size
-               then (if Poly.equal task_codomain component.codomain then check result)
-                  ; candidates.(h_value) <- Set.add candidates.(h_value) result
+      (* Unify component's codomain with the types from the args to typecheck the typevars *)
+      let typs = List.map ~f:(fun arg -> Value.typeof arg.outputs.(0)) args in
+      try
+        let renamed_domain = Unify.rename (Unify.collect_varnames typs) component.domain in
+        let substitution = Unify.unify typs renamed_domain in
+        let codomain = Unify.apply substitution component.codomain in
+        let component = {component with codomain = codomain} in
+        match Expr.apply component args with
+        | None -> rejected := !rejected + 1
+        | Some result
+          -> let h_value = Expr.size result.expr
+          in if h_value < max_size
+          then (if Poly.equal task_codomain component.codomain then check result)
+           ; candidates.(h_value) <- Set.add candidates.(h_value) result
+      with Unify.UnifyError _ -> rejected := !rejected + 1;
     in apply_component size component.domain applier
   in
   let expand_type size candidates components =
@@ -123,8 +144,8 @@ let solve_impl consts task =
   in
   let expand size =
     List.iter2_exn ~f:(expand_type size)
-                   [bool_candidates ; int_candidates]
-                   [bool_components ; int_components]
+                   [bool_candidates ; int_candidates; list_candidates]
+                   [bool_components ; int_components; list_components]
   in
 
   for size = 2 to max_size-1 ; do expand size done

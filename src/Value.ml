@@ -2,9 +2,12 @@ open Base
 
 open Exceptions
 
+open Utils
+
 module T = struct
   type t = Int of int
          | Bool of bool
+         | List of t list * Type.t
          [@@deriving compare,sexp]
 end
 
@@ -15,12 +18,14 @@ let typeof (v : t) : Type.t =
   match v with
   | Int _  -> Type.INT
   | Bool _ -> Type.BOOL
+  | List (_,t) -> Type.LIST t
 [@@inline always]
 
-let to_string (v : t) : string =
+let rec to_string (v : t) : string =
   match v with
   | Int i  -> Int.to_string i
   | Bool b -> Bool.to_string b
+  | List (l, _) -> "(" ^ List.to_string_map l ~sep:" " ~f:to_string ^ ")"
 [@@inline always]
 
 let of_string (s : string) : t =
