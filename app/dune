@@ -1,0 +1,7 @@
+(env
+    (debug (ocamlopt_flags (:standard -g -Oclassic)))
+    (_ (ocamlopt_flags (:standard -O3 -rounds 6))))
+
+(executable
+    (name App)
+    (libraries LoopInvGen base))

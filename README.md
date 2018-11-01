@@ -9,13 +9,13 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 ---
 
-[**Docker Hub**][docker-hub]
+[**Installation**](#installation)
 &nbsp; &nbsp; &vert; &nbsp; &nbsp;
-[Installation](#installation)
-&nbsp;&middot;&nbsp;
 [Invariant Inference](#invariant-inference)
 &nbsp;&middot;&nbsp;
 [Batch Verification](#batch-verification)
+&nbsp; &nbsp; &vert; &nbsp; &nbsp;
+[_Within Your App_](#within-your-app)
 &nbsp; &nbsp; &vert; &nbsp; &nbsp;
 [Citing `LoopInvGen`](#citing-loopinvgen)
 &nbsp;&middot;&nbsp;
