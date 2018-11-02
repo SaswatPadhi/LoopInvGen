@@ -4,7 +4,7 @@ This directory shows how to build an app (our example app is called `App`),
 using `LoopInvGen` as an OCaml library.
 
 The dummy source file ([`App.ml`](App.ml)),
-simply tries to print the default synthesis logic used by the `PIE` module.
+simply infers a precondition to ensure that the absolute value function returns its argument value.
 
 ### Building `App.exe`
 
@@ -18,5 +18,5 @@ To build `App`, you may either:
 To run `App`, execute `dune exec app/App.exe` within `LoopInvGen` directory.
 It should generate the following output:
 ```
-The default synthesis logic is: LIA
+The precondition is: (<= 0 x)
 ```
