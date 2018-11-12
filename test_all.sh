@@ -12,7 +12,7 @@ RESULT_EXT=".res"
 RERUN_PASSED=""
 REVERIFY_FAILED=""
 
-SKIP_MARK=""
+SKIP_MARK="[SKIPPED] "
 CONTINUE_FROM="1"
 BENCHMARKS_DIR=""
 LOGS_DIR="$SELF_DIR/_log"
@@ -21,6 +21,7 @@ Z3_PATH="$SELF_DIR/_dep/z3"
 TIMEOUT="60"
 TOOL="$SELF_DIR/loopinvgen.sh"
 VERIFY="$SELF_DIR/_build/install/default/bin/lig-verify"
+VERIFY_ARGS=""
 
 show_status() {
   printf "%s%16s" "$1" >&2
@@ -35,7 +36,7 @@ Usage: $0 [options] -b <benchmarks_path> -- [tool specific options]
 Flags:
     [--rerun-passed, -r]
     [--reverify-failed, -y]
-    [--mark-skipped, -s]
+    [--no-skipped-mark, -s]
 
 Configuration:
     --benchmarks, -b <path>
@@ -44,10 +45,13 @@ Configuration:
     [--time-out, -t <seconds>]        ($TIMEOUT)
     [--tool, -T <path>]               ($TOOL)
     [--z3-path, -z <path>]            ($Z3_PATH)
+
+Arguments to Internal Programs (@ `dirname $VERIFY`):
+    [--Verify-args, -V \"<args>\"]    see \``basename "$VERIFY"` -h\` for details
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:c:l:t:rsT:yz: --long benchmarks:,continue-from:,logs-dir:,time-out:,rerun-passed,mark-skipped,tool:,reverify-failed,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :b:c:l:t:rsT:V:yz: --long benchmarks:,continue-from:,logs-dir:,time-out:,rerun-passed,no-skipped-mark,tool:,Verify-args:,reverify-failed,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -71,12 +75,15 @@ while true ; do
     -r | --rerun-passed )
          RERUN_PASSED="YES"
          shift ;;
-    -s | --mark-skipped )
-         SKIP_MARK="[SKIPPED] "
+    -s | --no-skipped-mark )
+         SKIP_MARK=""
          shift ;;
     -T | --tool )
          [ -f "$2" ] || usage "Tool [$2] not found."
          TOOL="$2"
+         shift ; shift ;;
+    -V | --Verify-args )
+         VERIFY_ARGS="$2"
          shift ; shift ;;
     -y | --reverify-failed )
          REVERIFY_FAILED="YES"
@@ -166,7 +173,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   show_status "(verifying)"
   RESULT_CODE=0
-  timeout 120 $VERIFY -s $TESTCASE $TESTCASE_INV >> $TESTCASE_RES
+  timeout 300 $VERIFY -s $TESTCASE $VERIFY_ARGS $TESTCASE_INV >> $TESTCASE_RES
   RESULT_CODE=$?
   if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ]; then
     echo "PASS (UNVERIFIED)" >> $TESTCASE_RES

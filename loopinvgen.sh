@@ -66,11 +66,11 @@ Flags:
     [--verify, -v]
 
 Configuration:
-    [--intermediates-dir, -p <path>]  (_log)
-    [--log, -l [<src_1>[,<src_2>...]] ()\tsrc <- {process|record|infer|verify}
-    [--states-to-record, -s <count>]  ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
-    [--infer-timeout, -t <seconds>]   ($INFER_TIMEOUT)\t{> $MIN_INFER_TIMEOUT}
-    [--z3-path, -z <path>]            (_dep/z3)
+    [--intermediates-dir, -p <path>]    (_log)
+    [--log, -l [<src_1>[,<src_2>...]]   ()\t    src <- {process|record|infer|verify}
+    [--states-to-record, -s <count>]    ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
+    [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
+    [--z3-path, -z <path>]              (_dep/z3)
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
     [--Process-args, -P \"<args>\"]   see \``basename "$PROCESS"` -h\` for details

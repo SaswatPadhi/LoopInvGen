@@ -5,9 +5,9 @@ FROM ubuntu:18.04
 LABEL maintainer="padhi@cs.ucla.edu"
 
 
-ENV OPAM_VERSION  2.0.0-rc4
-ENV OCAML_VERSION 4.07.0+flambda
-ENV Z3_VERSION    4.7.1
+ENV OPAM_VERSION  2.0.0
+ENV OCAML_VERSION 4.07.1+flambda
+ENV Z3_VERSION    4.8.1
 
 ENV HOME /home/opam
 
@@ -34,7 +34,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.3 core.v0.11.3 core_extended.v0.11.0 dune.1.2.1
+RUN opam install --yes alcotest.0.8.4 core.v0.11.3 core_extended.v0.11.0 dune.1.5.1
 RUN opam clean --yes
 
 

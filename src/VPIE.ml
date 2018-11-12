@@ -42,29 +42,29 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
                                                         pre_desc post_desc with
                 | None -> let pre_desc =
                             if conf.simplify then ZProc.simplify z3 pre_desc
-                                              else pre_desc
-                          in Log.info (lazy ("Verified Precondition: " ^ pre_desc))
+                                             else pre_desc
+                           in Log.info (lazy ("Verified Precondition: " ^ pre_desc))
                             ; pre_desc
                 | Some model
                   -> let model = Hashtbl.Poly.of_alist_exn model in
-                      let test =
-                        List.map2_exn job.farg_names job.farg_types
-                          ~f:(fun n t -> match Hashtbl.find model n with
-                                        | Some v -> v
-                                        | None
-                                          -> let open Quickcheck
-                                              in random_value (TestGen.for_type t)
-                                                  ~size:1
-                                                  ~seed:(`Deterministic (
-                                                    conf.base_random_seed ^
-                                                    (string_of_int tries_left))))
-                      in Log.info (lazy ("Counter example: {"
-                                        ^ (List.to_string_map2
-                                             test job.farg_names ~sep:", "
-                                             ~f:(fun v n -> n ^ " = " ^
+                       let test =
+                         List.map2_exn job.farg_names job.farg_types
+                           ~f:(fun n t -> match Hashtbl.find model n with
+                                         | Some v -> v
+                                         | None
+                                           -> let open Quickcheck
+                                               in random_value (TestGen.for_type t)
+                                                    ~size:1
+                                                    ~seed:(`Deterministic (
+                                                      conf.base_random_seed ^
+                                                      (string_of_int tries_left))))
+                        in Log.info (lazy ("Counter example: {"
+                                          ^ (List.to_string_map2
+                                               test job.farg_names ~sep:", "
+                                               ~f:(fun v n -> n ^ " = " ^
                                                             (Value.to_string v)))
-                                        ^ "}"))
-                      ; helper (tries_left - 1) (Job.add_neg_test ~job test)
+                                          ^ "}"))
+                         ; helper (tries_left - 1) (Job.add_neg_test ~job test)
                 end
     end
   in try helper conf.max_tries job with _ -> "false"
