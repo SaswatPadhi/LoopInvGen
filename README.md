@@ -5,7 +5,12 @@ LoopInvGen
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
 
-<p align="center"><img src="docs/architecture.png" width="400"/></p>
+<p align="center">
+  <img src="docs/architecture.png" width="400"/>
+  <br><br>
+  <small>[<code>LoopInvGen</code> is the successor of the <a href="https://github.com/SaswatPadhi/PIE"><s>old PIE project</s></a> (now deactivated).]</small>
+</p>
+
 
 ---
 
@@ -15,7 +20,7 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 &nbsp;&middot;&nbsp;
 [Batch Verification](#batch-verification)
 &nbsp; &nbsp; &vert; &nbsp; &nbsp;
-[_Within Your App_](#within-your-app)
+[_Use as a Library_](app/)
 &nbsp; &nbsp; &vert; &nbsp; &nbsp;
 [Citing `LoopInvGen`](#citing-loopinvgen)
 &nbsp;&middot;&nbsp;
@@ -237,7 +242,6 @@ Try `./test_all.sh -h` for more options.
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 ```
-
 
 [flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
 [z3]:             https://github.com/Z3Prover/z3
