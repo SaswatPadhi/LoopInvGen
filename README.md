@@ -8,7 +8,7 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 <p align="center">
   <img src="docs/architecture.png" width="400"/>
   <br><br>
-  <small>[<code>LoopInvGen</code> is the successor of the <a href="https://github.com/SaswatPadhi/PIE"><s>old PIE project</s></a> (now deactivated).]</small>
+  <small>[<code>LoopInvGen</code> is the successor of our old project, <a href="https://github.com/SaswatPadhi/PIE"><s>PIE</s></a> (now deactivated), on precondition inference.]</small>
 </p>
 
 
@@ -40,8 +40,8 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 #### :trophy: Awards and Honors
 
-- :1st_place_medal: [SyGuS-COMP 2018][SyGuSCOMP18] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp18.pdf))
-- :1st_place_medal: [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf) and [Report](http://sygus.seas.upenn.edu/files/SyGuSComp2017.pdf))
+- [SyGuS-COMP 2018][SyGuSCOMP18] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp18.pdf))
+- [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf) and [Report](http://sygus.seas.upenn.edu/files/SyGuSComp2017.pdf))
 
 ## Installation
 
@@ -95,19 +95,19 @@ except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 #### 1. Install `ocaml` >= 4.04.2.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enabled.
 For example, with [`opam`](https://opam.ocaml.org/), you could:
-- run `opam switch 4.07.0+flambda` for opam 1.x
-- run `opam switch create 4.07.0+flambda` for opam 2.x
+- run `opam switch 4.07.1+flambda` for opam 1.x
+- run `opam switch create 4.07.1+flambda` for opam 2.x
 
 #### 2. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.3 core.v0.11.3 core_extended.v0.11.2 dune.1.2.1
+$ opam install alcotest.0.8.4 core.v0.11.3 core_extended.v0.11.0 dune.1.6.3
 ```
 
 #### 3. Get the [Z3 project][z3].
-We have tested LoopInvGen with the latest stable version of Z3 (4.7.1).
+We have tested LoopInvGen with the latest stable version of Z3 (4.8.4).
 You could either:
 - `git checkout https://github.com/Z3Prover/z3.git` for the bleeding edge version, or
-- `wget https://github.com/Z3Prover/z3/archive/z3-4.7.1.zip && unzip z3-4.7.1.zip` for the stable version
+- `wget https://github.com/Z3Prover/z3/archive/z3-4.8.4.zip && unzip z3-4.8.4.zip` for the stable version
 
 #### 4. `git clone` this project, and build everything.
 ```bash
@@ -226,20 +226,16 @@ Try `./test_all.sh -h` for more options.
 ## Citing `LoopInvGen`
 
 ```
-@inproceedings{DBLP:conf/pldi/PadhiSM16,
+@inproceedings{pldi/2016/PadhiSM,
   author    = {Saswat Padhi and Rahul Sharma and Todd D. Millstein},
-  title     = {Data-driven precondition inference with learned features},
+  title     = {Data-Driven Precondition Inference with Learned Features},
   booktitle = {Proceedings of the 37th {ACM} {SIGPLAN} Conference on Programming
                Language Design and Implementation, {PLDI} 2016, Santa Barbara, CA,
                USA, June 13-17, 2016},
   pages     = {42--56},
   year      = {2016},
-  crossref  = {DBLP:conf/pldi/2016},
   url       = {http://doi.acm.org/10.1145/2908080.2908099},
-  doi       = {10.1145/2908080.2908099},
-  timestamp = {Mon, 27 Jun 2016 07:33:52 +0200},
-  biburl    = {https://dblp.org/rec/bib/conf/pldi/PadhiSM16},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
+  doi       = {10.1145/2908080.2908099}
 }
 ```
 
@@ -251,4 +247,4 @@ Try `./test_all.sh -h` for more options.
 [SyGuSCOMP18]:    http://www.sygus.org/SyGuS-COMP2018.html
 
 [travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
-[docker-hub]:      https://hub.docker.com/r/padhi/loopinvgen
+[docker-hub]:     https://hub.docker.com/r/padhi/loopinvgen
