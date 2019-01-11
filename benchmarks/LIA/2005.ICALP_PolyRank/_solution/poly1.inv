@@ -1,0 +1,11 @@
+(define-fun inv_fun ((c Int) (i Int) (j Int) (i0 Int) (j0 Int) (an Int) (bn Int)) Bool
+  (and (>= i i0)
+       (>= j j0)
+       (or (and (>= an i0) (>= bn j0)
+                (<= c (+ (- i i0) (- j j0))))
+           (and (>= an i0) (< bn j0)
+                (<= c (- i i0)))
+           (and (< an i0) (>= bn j0)
+                (<= c (- j j0)))
+           (and (< an i0) (< bn j0)
+                (= c 0)))))

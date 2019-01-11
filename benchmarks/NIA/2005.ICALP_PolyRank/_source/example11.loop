@@ -1,0 +1,25 @@
+initially
+
+{ p >= 0, q >= 1, x == 0, y == 0, N >= 0 }
+
+loop
+
+{ x + y <= N } ->
+{ x + e - q <= x', x' <= x + e + q, 
+  y + n - q <= y', y' <= y + n + q,
+  n + e + 1 <= n' + e', n' + e' <= n + e + p,
+  p' == p, q' == q, N' == N
+}
+
+{ x + y <= N, n + e >= 2 * q + 1 } ->
+{ x + e - q <= x', x' <= x + e + q, 
+  y + n - q <= y', y' <= y + n + q,
+  n == n', e' == e, p' == p, q' == q, N' == N
+}
+
+{ p >= 0 } ->
+{ n' + e' <= -(n + e),
+  p' == p - 1,
+  q' == 1/2 * q,
+  x' == x, y' == y, N' == N
+}

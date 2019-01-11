@@ -1,0 +1,2 @@
+(define-fun inv-f ((i Int) (j Int) (k Int) (l Int)) Bool
+  (= i (+ l (* k j))))

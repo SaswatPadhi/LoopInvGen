@@ -1,0 +1,2 @@
+(define-fun inv_fun ((c Int) (y1 Int) (y2 Int) (y1i Int) (y2i Int)) Bool
+  ())

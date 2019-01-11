@@ -1,0 +1,46 @@
+(set-logic LIA)
+
+(synth-inv inv_fun ((c Int) (x Int) (y Int) (w Int) (z Int)
+                    (x0 Int) (y0 Int) (w0 Int) (z0 Int)))
+
+(declare-primed-var c Int)
+(declare-primed-var x Int)
+(declare-primed-var y Int)
+(declare-primed-var w Int)
+(declare-primed-var z Int)
+(declare-primed-var x0 Int)
+(declare-primed-var y0 Int)
+(declare-primed-var w0 Int)
+(declare-primed-var z0 Int)
+
+(define-fun pre_fun ((c Int) (x Int) (y Int) (w Int) (z Int)
+                     (x0 Int) (y0 Int) (w0 Int) (z0 Int)) Bool
+  (and (= c 0) (>= x 0) (>= y 0) (>= z 0) (>= x y)
+               (= x x0) (= y y0) (= z z0) (= w w0)))
+
+(define-fun trans_fun ((c Int) (x Int) (y Int) (w Int) (z Int)
+                       (x0 Int) (y0 Int) (w0 Int) (z0 Int)
+                       (c! Int) (x! Int) (y! Int) (w! Int) (z! Int)
+                       (x0! Int) (y0! Int) (w0! Int) (z0! Int)) Bool
+  (and (= w0! w0) (= x0! x0) (= y0! y0) (= z0! z0)
+       (or (and (< y 1) (< z 1)
+                (= w! w) (= x! x) (= y! y) (= z! z))
+           (and (>= y 1)
+                (>= x! (- (* 2 x) y))
+                (0 <= y!) (<= y! (- y 1))
+                (= z! z) (= w! w))
+           (and (>= z 1)
+                (<= (- x y) (+ x! (* 2 y!))) (<= (+ x! (* 2 y!)) x)
+                (<= (+ y 1) y!) (<= y! x!)
+                (<= z! (+ z w))
+                (<= w! (- w y!))))
+  ))
+
+(define-fun post_fun ((c Int) (x Int) (y Int) (w Int) (z Int)
+                      (x0 Int) (y0 Int) (w0 Int) (z0 Int)) Bool
+  (=> (or (>= y 1) (>= z 1))
+      ()))
+
+(inv-constraint inv_fun pre_fun trans_fun post_fun)
+
+(check-synth)

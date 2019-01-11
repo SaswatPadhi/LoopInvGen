@@ -1,0 +1,3 @@
+(define-fun inv-f ((i Int) (a Int) (c Int)) Bool
+  (and (= (* i (+ i 1)) (* 2 a))
+	     (= c (* i i i))))

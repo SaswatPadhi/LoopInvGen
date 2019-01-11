@@ -1,0 +1,8 @@
+(define-fun inv_fun ((c Int) (x Int) (y Int) (z Int) (x0 Int) (y0 Int) (z0 Int)) Bool
+  (and (>= y y0)
+       (>= z0 0) (<= z z0)
+       (>= x x0)
+       (>= x0 y0)
+       (<= (* 2 x) (- (+ (* 2 x0) z0 (* z0 z0))
+                      (+ z (* z z))))
+            (<= c (+ (- z0 z) (- y y0)))))

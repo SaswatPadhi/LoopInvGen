@@ -1,0 +1,2 @@
+(define-fun inv-f ((a Int) (b Int) (x Int) (y Int) (z Int)) Bool
+  (= (* a b) (+ z (* x y))))

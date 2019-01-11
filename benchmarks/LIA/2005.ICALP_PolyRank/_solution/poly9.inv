@@ -1,0 +1,4 @@
+(define-fun inv_fun ((c Int) (y1 Int) (y2 Int) (y1i Int) (y2i Int)) Bool
+  (and (<= y1 y1i) (> y1 0)
+       (<= y2 y2i) (> y2 0)
+       (<= c (- (+ y1i y2i) (+ y1 y2)))))

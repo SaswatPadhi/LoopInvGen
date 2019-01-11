@@ -1,0 +1,13 @@
+loop
+
+{an >= i, bn >= j} ->
+  {j' == 1 + j, an' == an, bn' == bn, i' == i}
+
+{an >= i, bn >= j} ->
+  {i' == 1 + i, an' == an, bn' == bn, j' == j}
+
+{an >= i, bn <= j} ->
+  {i' == 1 + i, an' == an, bn' == bn, j' == j}
+
+{an <= i, bn >= j} ->
+  {j' == 1 + j, an' == an, bn' == bn, i' == i}

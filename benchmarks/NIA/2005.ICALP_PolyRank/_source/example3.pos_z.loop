@@ -1,0 +1,8 @@
+initially
+
+{ z >= 0 }
+
+loop
+
+{ x >= y } -> { x' <= x + z, y' == y, z' <= z - 1 }
+{ x >= y } -> { y' >= y + 1, x' == x, z' == z }

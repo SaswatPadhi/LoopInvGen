@@ -1,0 +1,2 @@
+(define-fun inv-f ((i Int) (k Int)) Bool
+  (and (<= (* i i) k) (<= i 1000)))

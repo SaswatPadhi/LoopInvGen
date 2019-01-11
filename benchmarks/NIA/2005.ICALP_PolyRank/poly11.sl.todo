@@ -1,0 +1,56 @@
+(set-logic NIA)
+
+(synth-inv inv_fun ((c Int) (e Int) (x Int) (y Int) (n Int) (p Int) (q Int) (e Int)
+                    (e0 Int) (x0 Int) (y0 Int) (n0 Int) (p0 Int) (q0 Int)))
+
+(declare-primed-var c Int)
+(declare-primed-var e Int)
+(declare-primed-var x Int)
+(declare-primed-var y Int)
+(declare-primed-var n Int)
+(declare-primed-var p Int)
+(declare-primed-var q Int)
+(declare-primed-var N Int)
+(declare-primed-var e0 Int)
+(declare-primed-var x0 Int)
+(declare-primed-var y0 Int)
+(declare-primed-var n0 Int)
+(declare-primed-var p0 Int)
+(declare-primed-var q0 Int)
+
+(define-fun pre_fun ((c Int) (e Int) (x Int) (y Int) (n Int) (p Int) (q Int) (N Int)
+                     (e0 Int) (x0 Int) (y0 Int) (n0 Int) (p0 Int) (q0 Int)) Bool
+  (and (= c 0) (= x 0) (= y 0) (>= q 1) (>= p 0) (>= N 0)
+               (= e e0) (= x x0) (= y y0) (= q q0) (= p p0)))
+
+(define-fun trans_fun ((c Int) (e Int) (x Int) (y Int) (n Int) (p Int) (q Int) (N Int)
+                       (e0! Int) (x0 Int) (y0 Int) (n0 Int) (p0 Int) (q0 Int)
+                       (c! Int) (e! Int) (x! Int) (y! Int) (n! Int) (p! Int) (q! Int) (N! Int)
+                       (e0! Int) (x0! Int) (y0! Int) (n0! Int) (p0! Int) (q0! Int)) Bool
+  (and (= e0! e0) (= x0! x0) (= y0! y0) (= n0! n0) (= p0! p0) (= q0! q0) (= N! N)
+       (or (and (not (or (<= (+ x y) N) (>= p 0)))
+                (= x! x) (= y! y) (= n! n) (= e! e) (= p! p) (= q! q))
+           (and (<= (+ x y) N)
+                (<= (- (+ x e) q) x!) (<= x! (+ x e q))
+                (<= (- (+ y n) q) y!) (<= y! (+ y n q))
+                (<= (+ n e 1) (+ n! e!)) (<= (+ n! e!) (+ n e p))
+                (= p! p) (= q! q))
+           (and (<= (+ x y) N) (>= (+ n e) (+ (* 2 q) 1))
+                (<= (- (+ x e) q) x!) (<= x! (+ x e q))
+                (<= (- (+ y n) q) y!) (<= y! (+ y n q))
+                (= n! n) (= e! e) (= p! p) (= q! q))
+           (and (>= p 0)
+                (<= (+ n! e!) (- 0 (+ n e)))
+                (= p! (- p 1))
+                (= q! (/ q 2))
+                (= x! x) (= y! y)))
+  ))
+
+(define-fun post_fun ((c Int) (e Int) (x Int) (y Int) (n Int) (p Int) (q Int) (N Int)
+                      (e0 Int) (x0 Int) (y0 Int) (n0 Int) (p0 Int) (q0 Int)) Bool
+  (=> (or (>= y 1) (>= q 1))
+      ()))
+
+(inv-constraint inv_fun pre_fun trans_fun post_fun)
+
+(check-synth)

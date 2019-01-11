@@ -10,7 +10,7 @@
   (and (= p 0) (= c cl)))
 
 (define-fun trans_fun ((p Int) (c Int) (cl Int)
-                     (p! Int) (c! Int) (cl! Int)) Bool
+                       (p! Int) (c! Int) (cl! Int)) Bool
   (and (and (< p 4) (> cl 0))
        (and (= cl! (- cl 1))
             (= p! (+ p 1))
