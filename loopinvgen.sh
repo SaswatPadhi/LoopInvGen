@@ -67,7 +67,7 @@ Flags:
 
 Configuration:
     [--intermediates-dir, -p <path>]    (_log)
-    [--log, -l [<src_1>[,<src_2>...]]   ()\t    src <- {process|record|infer|verify}
+    [--log, -l <src_1>[,<src_2>...]]    ()\t    src <- {process|record|infer|verify}
     [--states-to-record, -s <count>]    ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]              (_dep/z3)
@@ -153,6 +153,7 @@ TESTCASE_REC_LOG="$TESTCASE_PREFIX.rlog"
 
 TESTCASE_REC_STATES="$TESTCASE_PREFIX.rstates"
 TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
+TESTCASE_STATISTICS="$TESTCASE_PREFIX.stats"
 
 RECORD="$RECORD -z $Z3_PATH"
 INFER="$INFER -z $Z3_PATH"
@@ -165,7 +166,7 @@ INFER_TIMEOUT="${INFER_TIMEOUT}s"
 [ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_ALL_LOG"
 [ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_ALL_LOG"
 
-rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES &
+rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES $TESTCASE_STATISTICS &
 echo -en '' > "$TESTCASE_INVARIANT" &
 echo -en '' > "$TESTCASE_ALL_LOG"
 
@@ -196,7 +197,7 @@ show_status "(inferring)"
 
 timeout --foreground $INFER_TIMEOUT \
         $INFER -s "$TESTCASE_ALL_STATES" ${DO_LOG[infer]} $INFER_ARGS \
-               "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+               -t "$TESTCASE_STATISTICS" "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
 INFER_RESULT_CODE=$?
 
 
@@ -216,7 +217,7 @@ elif [ $INFER_RESULT_CODE == 0 ] ; then
   cat "$TESTCASE_INVARIANT" ; echo
   RESULT_CODE=0
 else
-  show_status "(failure)"
+  show_status "(fail)"
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
     show_status "(timeout)"
   fi

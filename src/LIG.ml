@@ -27,6 +27,7 @@ let default_config = {
 let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                  ~(states : Value.t list list) (inv : Job.desc)
                  : (Job.desc * ZProc.model option) =
+  Stats.add_candidate () ;
   let invf_call =
        "(invf " ^ (List.to_string_map sygus.inv_func.args ~sep:" " ~f:fst) ^ ")" in
   let invf'_call =
@@ -57,13 +58,13 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                                    | _ -> false))
       in ZProc.close_scope z3
        ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
-       ; if String.equal pre_inv "true" then (inv, None)
+       ; if String.equal pre_inv "true" then ((Stats.add_candidate ()) ; (inv, None))
          else begin
            let new_inv = "(and " ^ pre_inv ^ " " ^ inv ^ ")"
             in Log.info (lazy ("PRE >> Checking if the following candidate is weaker than precond:"
                         ^ (Log.indented_sep 4) ^ new_inv)) ;
                let ce = (ZProc.implication_counter_example z3 sygus.pre_func.expr new_inv)
-               in if ce = None then helper new_inv else (new_inv, ce)
+               in if ce = None then helper new_inv else ((Stats.add_candidate ()) ; (new_inv, ce))
          end
   end in helper inv
 

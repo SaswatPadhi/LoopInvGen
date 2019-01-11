@@ -1,4 +1,4 @@
-open Base
+open Core_kernel
 
 open Exceptions
 open Utils
@@ -17,8 +17,8 @@ type result = {
   constraints : string list
 }
 
-let explored = ref 0
-let rejected = ref 0
+let enumerated = ref 0
+let pruned = ref 0
 
 let max_size = 25
 
@@ -76,8 +76,8 @@ let solve_impl consts task =
     in candidates.(1) <- Set.add candidates.(1) { expr = Expr.Var i ; outputs = input })
   ;
 
-  explored := 0 ;
-  rejected := 0 ;
+  enumerated := 0 ;
+  pruned := 0 ;
 
   let check (candidate : Expr.synthesized) =
     (* Log.debug (lazy ("  > Now checking (@ size " ^ (Int.to_string (Expr.size candidate.expr)) ^ "): "
@@ -108,9 +108,9 @@ let solve_impl consts task =
   in
   let expand_component size candidates component =
     let applier args =
-      explored := !explored + 1;
+      enumerated := !enumerated + 1;
       match Expr.apply component args with
-      | None -> rejected := !rejected + 1
+      | None -> pruned := !pruned + 1
       | Some result
         -> let h_value = Expr.size result.expr
             in if h_value < max_size
@@ -131,18 +131,32 @@ let solve_impl consts task =
 
 let solve (consts : Value.t list) (task : task) : result =
   Log.debug (lazy ("Running enumerative synthesis:"));
-  try solve_impl consts task ; raise NoSuchFunction
+  let start_time = Time.now () in
+  try solve_impl consts task
+    ; let elapsed_time = Time.Span.to_ms (Time.diff (Time.now ()) start_time)
+       in Stats.add_synth {
+            enumerated = !enumerated ;
+            pruned = !pruned ;
+            time_ms = elapsed_time
+          }
+    ; raise NoSuchFunction
   with Success solution
-       -> let arg_names_array = Array.of_list task.arg_names
+       -> let elapsed_time = Time.Span.to_ms (Time.diff (Time.now ()) start_time) in
+          let arg_names_array = Array.of_list task.arg_names
            in let solution_string = Expr.to_string arg_names_array solution
            in let solution_constraints = Expr.get_constraints arg_names_array solution
-           in Log.debug (lazy ("  # Explored " ^ (Int.to_string !explored) ^ " expressions ("
-                              ^ (Int.to_string !rejected) ^ " rejections)"))
+           in Log.debug (lazy ("  # Enumerated " ^ (Int.to_string !enumerated) ^ " expressions ("
+                              ^ (Int.to_string !pruned) ^ " pruned)"))
             ; Log.debug (lazy ("  # Solution (@ size " ^ (Int.to_string (Expr.size solution))
                               ^ "): " ^ solution_string))
             ; Log.debug (lazy ("  # Constraints: "
                               ^ (if (List.length solution_constraints = 0) then "()"
                                  else String.concat ~sep:" " solution_constraints ^ ")")))
+            ; Stats.add_synth {
+                enumerated = !enumerated ;
+                pruned = !pruned ;
+                time_ms = elapsed_time
+              }
             ; { expr = solution
               ; string = solution_string
               ; func = Expr.to_function solution

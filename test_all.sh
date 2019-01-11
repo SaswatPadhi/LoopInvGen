@@ -10,7 +10,7 @@ trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 SYGUS_EXT=".sl"
 RESULT_EXT=".res"
 RERUN_PASSED=""
-REVERIFY_FAILED=""
+REVERIFY=""
 
 SKIP_MARK="[SKIPPED] "
 CONTINUE_FROM="1"
@@ -35,7 +35,7 @@ Usage: $0 [options] -b <benchmarks_path> -- [tool specific options]
 
 Flags:
     [--rerun-passed, -r]
-    [--reverify-failed, -y]
+    [--reverify-only, -y]
     [--no-skipped-mark, -s]
 
 Configuration:
@@ -51,7 +51,7 @@ Arguments to Internal Programs (@ `dirname $VERIFY`):
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:c:l:t:rsT:V:yz: --long benchmarks:,continue-from:,logs-dir:,time-out:,rerun-passed,no-skipped-mark,tool:,Verify-args:,reverify-failed,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :b:c:l:t:rsT:V:yz: --long benchmarks:,continue-from:,logs-dir:,time-out:,rerun-passed,no-skipped-mark,tool:,Verify-args:,reverify-only,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -85,8 +85,8 @@ while true ; do
     -V | --Verify-args )
          VERIFY_ARGS="$2"
          shift ; shift ;;
-    -y | --reverify-failed )
-         REVERIFY_FAILED="YES"
+    -y | --reverify-only )
+         REVERIFY="YES"
          shift ;;
     -z | --z3-path )
          [ -f "$2" ] || usage "Z3 [$2] not found."
@@ -115,7 +115,7 @@ CSV_SUMMARY="$LOGS_DIR/summary.csv"
 TXT_SUMMARY="$LOGS_DIR/summary.txt"
 
 echo -n "" > "$TXT_SUMMARY"
-echo "Benchmark,Verdict,Wall_Time(s),Max_Memory(MB)" > "$CSV_SUMMARY"
+echo "Benchmark,Verdict,Wall_Time(s),Max_Memory(MB),CounterExamples,SynthesisTime(ms)" > "$CSV_SUMMARY"
 
 COUNTER=0
 for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
@@ -127,6 +127,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   TESTCASE_RES="$TESTCASE_PREFIX$RESULT_EXT"
   TESTCASE_INV="$TESTCASE_PREFIX.inv"
+  TESTCASE_STATS="_log/`basename $TESTCASE_NAME`.stats"
 
   (( COUNTER++ ))
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
@@ -141,12 +142,18 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
     TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
     TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
+    TESTCASE_COUNTEREXAMPLES="-"
+    TESTCASE_SYNTHESIS_TIME="-"
+    if [ -f "$TESTCASE_STATS" ]; then
+      TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
+      TESTCASE_SYNTHESIS_TIME=`cut -d'=' -f2 $TESTCASE_STATS | head -n 4 | tail -n 1 | xargs`
+    fi
     printf "%8.3fs [%5.0f MB]  @  $SKIP_MARK$OLD_VERDICT\n" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
-    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY" >> "$CSV_SUMMARY"
+    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIME" >> "$CSV_SUMMARY"
     continue
   fi
 
-  if [ -z "$REVERIFY_FAILED" ] || [ ! -f "$TESTCASE_INV" ]; then
+  if [ -z "$REVERIFY" ] || [ ! -f "$TESTCASE_INV" ]; then
     echo > $TESTCASE_INV ; echo > $TESTCASE_RES
 
     show_status "(inferring)"
@@ -171,6 +178,13 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
   printf "%8.3fs [%5.0f MB]  @  " $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
 
+  TESTCASE_COUNTEREXAMPLES="-"
+  TESTCASE_SYNTHESIS_TIME="-"
+  if [ -f "$TESTCASE_STATS" ]; then
+    TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
+    TESTCASE_SYNTHESIS_TIME=`cut -d'=' -f2 $TESTCASE_STATS | head -n 4 | tail -n 1 | xargs`
+  fi
+
   show_status "(verifying)"
   RESULT_CODE=0
   timeout 300 $VERIFY -s $TESTCASE $VERIFY_ARGS $TESTCASE_INV >> $TESTCASE_RES
@@ -180,7 +194,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   fi
   show_status "" ; tail -n 1 $TESTCASE_RES ; echo ""
 
-  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY" >> "$CSV_SUMMARY"
+  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIME" >> "$CSV_SUMMARY"
 done
 
 print_counts () {

@@ -23,12 +23,18 @@ let default_config = {
 
 let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
                   ?(consts = []) ~(post_desc : Job.desc) (job : Job.t) : Job.desc =
+  let start_time = Time.now () in
+  let cexamples = ref 0 in
   let rec helper tries_left job =
     if conf.max_tries > 0 && tries_left < 1
-    then (Log.error (lazy ("VPIE Reached MAX attempts ("
-                          ^ (Int.to_string conf.max_tries)
-                          ^ "). Giving up ..."))
-         ; conf.describe None)
+    then (Stats.add_infer {
+            guesses = !cexamples;
+            time_ms = Time.Span.to_ms (Time.diff (Time.now ()) start_time)
+          }
+          ; Log.error (lazy ("VPIE Reached MAX attempts ("
+                            ^ (Int.to_string conf.max_tries)
+                            ^ "). Giving up ..."))
+          ; conf.describe None)
     else begin
       Log.info (lazy ("VPIE Attempt "
                       ^ (Int.to_string (1 + conf.max_tries - tries_left))
@@ -40,9 +46,13 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
             in Log.info (lazy ("Candidate Precondition: " ^ pre_desc))
               ; begin match ZProc.implication_counter_example ~eval_term z3
                                                         pre_desc post_desc with
-                | None -> let pre_desc =
-                            if conf.simplify then ZProc.simplify z3 pre_desc
-                                             else pre_desc
+                | None -> Stats.add_infer {
+                            guesses = !cexamples;
+                            time_ms = Time.Span.to_ms (Time.diff (Time.now ()) start_time)
+                          } ;
+                          let pre_desc = if conf.simplify
+                                         then ZProc.simplify z3 pre_desc
+                                         else pre_desc
                            in Log.info (lazy ("Verified Precondition: " ^ pre_desc))
                             ; pre_desc
                 | Some model
@@ -64,6 +74,7 @@ let learnVPreCond ?(conf = default_config) ?(eval_term = "true") ~(z3 : ZProc.t)
                                                ~f:(fun v n -> n ^ " = " ^
                                                             (Value.to_string v)))
                                           ^ "}"))
+                         ; cexamples := (!cexamples) + 1
                          ; helper (tries_left - 1) (Job.add_neg_test ~job test)
                 end
     end

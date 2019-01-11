@@ -1,8 +1,10 @@
 open Core
 open LoopInvGen
 
-let main zpath statefile logfile max_conflicts max_strengthening_attempts
-         max_restarts max_steps_on_restart filename () =
+let main zpath statefile logfile statsfile
+         max_conflicts max_strengthening_attempts
+         max_restarts max_steps_on_restart
+         filename () =
   Log.enable ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
   let states = List.(permute
@@ -33,6 +35,7 @@ let main zpath statefile logfile max_conflicts max_strengthening_attempts
      in let inv = LIG.learnInvariant ~conf ~zpath ~states sygus
      in Stdio.Out_channel.output_string Stdio.Out_channel.stdout
           SyGuS.(func_definition {sygus.inv_func with expr=(translate_smtlib_expr inv)})
+      ; Stats.output_to statsfile
       ; Caml.exit (if String.equal inv "false" then 1 else 0)
 
 let spec =
@@ -44,6 +47,8 @@ let spec =
          ~doc:"FILENAME states file, containing program states"
       +> flag "-l" (optional string)
          ~doc:"FILENAME enable logging"
+      +> flag "-t" (optional string)
+         ~doc:"FILENAME output statistics"
 
       +> flag "-max-conflicts" (optional_with_default 0 int)
          ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
