@@ -27,20 +27,6 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
     global_constraints = (fun _ -> [])
   } ;
   {
-    name = "lin-int-mult";
-    codomain = Type.INT;
-    domain = [Type.INT; Type.INT];
-    is_argument_valid = (function
-                         | [x ; y]
-                           -> (x =/= Const (Value.Int 0)) && (x =/= Const (Value.Int 1))
-                           && (y =/= Const (Value.Int 0)) && (y =/= Const (Value.Int 1))
-                           && (is_constant x || is_constant y)
-                         | _ -> false);
-    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x * y));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")");
-    global_constraints = (fun _ -> [])
-  } ;
-  {
     name = "int-sub";
     codomain = Type.INT;
     domain = [Type.INT; Type.INT];
@@ -60,15 +46,17 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
     global_constraints = (fun _ -> [])
   } ;
   {
-    name = "int-geq";
-    codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
+    name = "lin-int-mult";
+    codomain = Type.INT;
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
-                         | [(Const _) ; (Const _)] -> false
-                         | [x ; y] -> x =/= y
+                         | [x ; y]
+                           -> (x =/= Const (Value.Int 0)) && (x =/= Const (Value.Int 1))
+                           && (y =/= Const (Value.Int 0)) && (y =/= Const (Value.Int 1))
+                           && (is_constant x || is_constant y)
                          | _ -> false);
-    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x >= y));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")");
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Int (x * y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
@@ -81,6 +69,30 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x <= y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(<= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
+  } ;
+  {
+    name = "int-geq";
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x >= y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
+  } ;
+  {
+    name = "int-eq";
+    codomain = Type.BOOL;
+    domain = [Type.INT;Type.INT];
+    is_argument_valid = (function
+                         | [(Const _) ; (Const _)] -> false
+                         | [x ; y] -> x =/= y
+                         | _ -> false);
+    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x = y));
+    to_string = (fun [@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
@@ -105,18 +117,6 @@ let components = let (=/=) = (fun x y -> (not (Expr.equal x y))) in [
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x > y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(> " ^ a ^ " " ^ b ^ ")");
-    global_constraints = (fun _ -> [])
-  } ;
-  {
-    name = "int-eq";
-    codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
-    is_argument_valid = (function
-                         | [(Const _) ; (Const _)] -> false
-                         | [x ; y] -> x =/= y
-                         | _ -> false);
-    evaluate = (function [@warning "-8"] [Value.Int x ; Value.Int y] -> Value.Bool (x = y));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   }
 ]
