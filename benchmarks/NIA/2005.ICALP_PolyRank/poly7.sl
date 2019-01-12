@@ -1,4 +1,4 @@
-(set-logic LIA)
+(set-logic NIA)
 
 (synth-inv inv_fun ((c Int) (y1 Int) (y2 Int) (y1i Int) (y2i Int)))
 
@@ -23,8 +23,10 @@
                 (= c! (+ c 1)) (= y1! (+ y1 11)) (= y2! (+ y2 1))))))
 
 (define-fun post_fun ((c Int) (y1 Int) (y2 Int) (y1i Int) (y2i Int)) Bool
-  (=> (=> (= y2 1) (<= y1 100))
-      (<= c (* 10 y2i))))
+  (=> (not (and (= y2 1) (>= y1 101)))
+      (<= c (+ (* y2i y2i)
+               (* (+ (- 101 y1i) (* 10 y2i))
+                  (+ (- 101 y1i) (* 10 y2i)))))))
 
 (inv-constraint inv_fun pre_fun trans_fun post_fun)
 
