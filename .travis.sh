@@ -27,7 +27,8 @@ opam config report
 ### Pin `LoopInvGen` package, install deps
 
 opam pin add LoopInvGen . --no-action --yes --kind=path
-opam install LoopInvGen --deps-only  --with-test
+opam install LoopInvGen --deps-only
+opam install LoopInvGen --with-test
 
 opam list
 ls -lah
