@@ -17,7 +17,7 @@
     (= i! (+ i 2))
     (= n! n)
     (= j! j))
-       (and (> i n)
+       (and (>= i n)
     (< j (/ n 2))
     (= k! (- k 1))
     (= j! (+ j 1))
@@ -26,7 +26,7 @@
   ))
 
 (define-fun PostF ((n Int) (i Int) (k Int) (j Int)) Bool
-   (or (not (>= i n) (< j (/ n 2))) (> k 0)))
+   (or (not (and (>= i n) (< j (/ n 2)))) (> k 0)))
 
 (inv-constraint InvF PreF TransF PostF)
 
