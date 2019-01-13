@@ -13,13 +13,15 @@ license: "MIT"
 dev-repo: "git+https://github.com:SaswatPadhi/LoopInvGen.git"
 
 build: [
-  [ "dune" "build" "-p" name "-j" jobs ]
+  [ "dune" "build" "@NoLog" ]
+  [ "dune" "build" "-p" name "-j" jobs "--profile" "optimize" ]
+	[ "dune" "build" "test/Runner.exe" ]
 ]
 
 depends: [
   "ocaml"         {>= "4.04.2"}
-  "dune"          {build & >= "1.1.1"}
-  "alcotest"      {test & >= "0.7"}
+  "dune"          {>= "1.1.1" & build}
+  "alcotest"      {>= "0.7" & with-test}
   "core"          {>= "0.11"}
   "core_extended" {>= "0.11"}
 ]
