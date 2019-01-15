@@ -134,7 +134,9 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   TESTCASE_RES="$TESTCASE_PREFIX$RESULT_EXT"
   TESTCASE_INV="$TESTCASE_PREFIX.inv"
-  TESTCASE_STATS="_log/`basename $TESTCASE_NAME`.stats"
+
+  TESTCASE_STATS_SRC="_log/`basename $TESTCASE_NAME`.stats"
+  TESTCASE_STATS="$TESTCASE_PREFIX.stats"
 
   (( COUNTER++ ))
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
@@ -172,6 +174,9 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
     if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
       echo -n "[TIMEOUT] " >> $TESTCASE_RES
+    fi
+    if [ -f "$TESTCASE_STATS_SRC" ]; then
+      cp "$TESTCASE_STATS_SRC" "$TESTCASE_STATS"
     fi
   else
     head -n -1 "$TESTCASE_RES" > /tmp/tmp ; mv /tmp/tmp "$TESTCASE_RES"
