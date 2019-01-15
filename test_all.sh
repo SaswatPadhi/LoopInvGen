@@ -14,8 +14,9 @@ REVERIFY=""
 
 SKIP_MARK="[SKIPPED] "
 CONTINUE_FROM="1"
+CONTINUE_TILL="1000000000"
 BENCHMARKS_DIR=""
-LOGS_DIR="$SELF_DIR/_log"
+LOGS_DIR="$SELF_DIR/_log_all.$(date -d today +%Y.%m.%d-%H.%M)"
 Z3_PATH="$SELF_DIR/_dep/z3"
 
 TIMEOUT="60"
@@ -41,6 +42,7 @@ Flags:
 Configuration:
     --benchmarks, -b <path>
     [--continue-from, -c <int>]       ($CONTINUE_FROM)
+    [--continue-till, -C <int>]       ($CONTINUE_TILL)
     [--logs-dir, -l <path>]           ($LOGS_DIR)
     [--time-out, -t <seconds>]        ($TIMEOUT)
     [--tool, -T <path>]               ($TOOL)
@@ -51,7 +53,7 @@ Arguments to Internal Programs (@ `dirname $VERIFY`):
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:c:l:t:rsT:V:yz: --long benchmarks:,continue-from:,logs-dir:,time-out:,rerun-passed,no-skipped-mark,tool:,Verify-args:,reverify-only,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :b:c:C:l:t:rsT:V:yz: --long benchmarks:,continue-from:,continue-till:,logs-dir:,time-out:,rerun-passed,no-skipped-mark,tool:,Verify-args:,reverify-only,z3-path: -- "$@"`
 if [ $? != 0 ] ; then usage ; fi
 
 eval set -- "$OPTS"
@@ -63,8 +65,12 @@ while true ; do
          BENCHMARKS_DIR="`realpath "$2"`"
          shift ; shift ;;
     -c | --continue-from )
-         [ "$2" -gt "0" ] || usage "$2 is not a positive index.."
+         [ "$2" -gt "0" ] || usage "$2 is not a positive index."
          CONTINUE_FROM="$2"
+         shift ; shift ;;
+    -C | --continue-till )
+         [ "$2" -gt "0" ] || usage "$2 is not a positive index."
+         CONTINUE_TILL="$2"
          shift ; shift ;;
     -l | --logs-dir )
          LOGS_DIR="`realpath "$2"`"
@@ -97,6 +103,7 @@ while true ; do
   esac
 done
 
+[ "$CONTINUE_TILL" -ge "$CONTINUE_FROM" ] || usage "Start index ($CONTINUE_FROM) >= End Index ($CONTINUE_TILL)!"
 [ -d "$BENCHMARKS_DIR" ] || usage "Benchmarks directory [$BENCHMARKS_DIR] not found."
 
 [ -d "$LOGS_DIR" ] || mkdir -p "$LOGS_DIR"
@@ -136,7 +143,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
   fi
 
-  if [ "$CONTINUE_FROM" -gt "$COUNTER" ] || ( \
+  if [ "$CONTINUE_FROM" -gt "$COUNTER" ] || [ "$COUNTER" -gt "$CONTINUE_TILL" ] || ( \
        [ -z "$RERUN_PASSED" ] && [ -f "$TESTCASE_RES" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
      ); then
     TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
