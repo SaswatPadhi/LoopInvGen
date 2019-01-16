@@ -42,7 +42,7 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : Value.t list)
   gen_state_from_model s (
     try begin
       match ZProc.sat_model_for_asserts z3
-              ~db:[ ("(assert " ^ s.trans_func.expr ^ ")")
+              ~db:[ ("(assert " ^ s.trans_func.body ^ ")")
                   ; ( "(assert (and "
                     ^ (Utils.List.to_string_map2 ~sep:" " vals s.synth_variables
                         ~f:(fun d (v, _) -> ("(= " ^ v ^ " " ^
@@ -56,8 +56,8 @@ let gen_pre_state ?(avoid = []) ?(use_trans = false) (s : SyGuS.t)
   Log.info (lazy "Generating an initial state:");
   gen_state_from_model s
     (ZProc.sat_model_for_asserts z3
-          ~db:[ "(assert (and " ^ s.pre_func.expr ^ " "
-              ^ (if use_trans then s.trans_func.expr else "true") ^ " "
+          ~db:[ "(assert (and " ^ s.pre_func.body ^ " "
+              ^ (if use_trans then s.trans_func.body else "true") ^ " "
               ^ (String.concat avoid ~sep:" ") ^ "))" ])
 
 let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : Value.t list option)

@@ -34,7 +34,7 @@ let main zpath statefile logfile statsfile
      }
      in let inv = LIG.learnInvariant ~conf ~zpath ~states sygus
      in Stdio.Out_channel.output_string Stdio.Out_channel.stdout
-          SyGuS.(func_definition {sygus.inv_func with expr=(translate_smtlib_expr inv)})
+          SyGuS.(func_definition {sygus.inv_func with body = (translate_smtlib_expr inv)})
       ; Stats.output_to statsfile
       ; Caml.exit (if String.equal inv "false" then 1 else 0)
 

@@ -18,6 +18,9 @@ module Bitarray = Core_extended.Bitarray
  * ultimately unconstrained.
  * * *)
 
+(* FIXME: Check if the postcondition and the functions it depends on are
+ *        `expressible` in the provided grammar. *)
+
 type func_info
  = { callees : string list
    ; used_args : Bitarray.t
@@ -38,7 +41,7 @@ let make_call_table (sygus : t) : func_info String.Table.t =
   in let table = String.Table.create () ~size:(List.length sygus.functions) ~growth_allowed:false
       in List.iter sygus.functions ~f:(fun func -> String.Table.set table ~key:func.name ~data:(init_info func))
        ; List.iter sygus.functions ~f:(fun func ->
-           let parsed_expr = Parsexp.Single.parse_string_exn func.expr in
+           let parsed_expr = Parsexp.Single.parse_string_exn func.body in
            let ops =  extract_operators parsed_expr in
            let callees = List.filter ops ~f:(fun op -> String.Table.find table op <> None)
             in String.Table.update table func.name

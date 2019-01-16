@@ -11,8 +11,9 @@ type var = string * Type.t
 type func = {
   args : var list ;
   name : string ;
-  expr : string ;
+  body : string ;
   return : Type.t ;
+  expressible : bool ;
 }
 
 type t = {
@@ -64,9 +65,10 @@ let parse_define_fun (sexp_list : Sexp.t list) : func * Value.t list =
     -> let args = List.map ~f:parse_variable_declaration args in
        let consts = extract_consts expr
        in ({ name = name
-           ; expr = (Sexp.to_string_hum expr)
+           ; body = (Sexp.to_string_hum expr)
            ; args = args
            ; return = (Type.of_string r_typ)
+           ; expressible = false
            }, consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: sexp_list)))))
@@ -75,7 +77,7 @@ let func_definition (f : func) : string =
   "(define-fun " ^ f.name ^ " ("
   ^ (List.to_string_map
        f.args ~sep:" " ~f:(fun (v, t) -> "(" ^ v ^ " " ^ (Type.to_string t) ^ ")"))
-  ^ ") " ^ (Type.to_string f.return) ^ " " ^ f.expr ^ ")"
+  ^ ") " ^ (Type.to_string f.return) ^ " " ^ f.body ^ ")"
 
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
@@ -99,7 +101,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
               | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars)])
                 -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars) ; _])
-                -> (* TODO *) Log.warn (lazy ("LoopInvGen currently does not allow custom grammars. The provided grammar will be ignored, and full SMTLIB2 will be used instead."))
+                -> (* FIXME *) Log.warn (lazy ("LoopInvGen currently does not allow custom grammars. The provided grammar will be ignored, and the entire background theory will be used instead."))
                  ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List(Atom("declare-var") :: sexps)
                 -> let new_var = parse_variable_declaration (List sexps)
@@ -138,8 +140,9 @@ let parse_sexps (sexps : Sexp.t list) : t =
       ; inv_func =
         { args = !invf_vars
         ; name = !invf_name
-        ; expr = ""
+        ; body = ""
         ; return = Type.BOOL
+        ; expressible = true
         }
       }
 
