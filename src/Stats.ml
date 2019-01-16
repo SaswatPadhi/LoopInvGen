@@ -41,10 +41,12 @@ let output_to (filename : string option) =
              ^ (Int.to_string (List.fold (!Stats_Internal.rev_infers) ~init:0 ~f:(fun a i -> a + i.guesses))))
            ; ("Total Number of Expressions Enumerated = "
              ^ (Int.to_string (List.fold (!Stats_Internal.rev_synths) ~init:0 ~f:(fun a s -> a + s.enumerated))))
-           ; ("Total Time Spent in Synthesis (ms) = "
-             ^ (Float.to_string (List.fold (!Stats_Internal.rev_synths) ~init:0.0 ~f:(fun a s -> a +. s.time_ms))))
-           ; "" ; "Detailed Stats for Precondition Inference: (VPIE calls)"
-           ]
+           ; ("Average Time Spent in Synthesis (ms) = "
+             ^ (Float.to_string ((List.fold (!Stats_Internal.rev_synths) ~init:0.0 ~f:(fun a s -> a +. s.time_ms))
+                                 /. (Int.to_float (List.length (!Stats_Internal.rev_synths))))))
+           ; ""
+           ; "Detailed Stats for Precondition Inference: (VPIE calls)"
+         ]
          ; output_lines stats_channel
                         (List.rev_map (!Stats_Internal.rev_infers)
                                       ~f:(fun i -> Sexp.to_string_hum ~indent:2 (Infer.sexp_of_t i)))
