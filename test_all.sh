@@ -122,7 +122,7 @@ CSV_SUMMARY="$LOGS_DIR/summary.csv"
 TXT_SUMMARY="$LOGS_DIR/summary.txt"
 
 echo -n "" > "$TXT_SUMMARY"
-echo "Benchmark,Verdict,Wall_Time(s),Max_Memory(MB),CounterExamples,SynthesisTime(ms)" > "$CSV_SUMMARY"
+echo "Benchmark,Verdict,Wall_Time(s),Max_Memory(MB),CounterExamples,SynthesisTimes(ms)" > "$CSV_SUMMARY"
 
 COUNTER=0
 for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
@@ -152,13 +152,18 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
     TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
     TESTCASE_COUNTEREXAMPLES="-"
-    TESTCASE_SYNTHESIS_TIME="-"
+    TESTCASE_SYNTHESIS_TIMES="-"
     if [ -f "$TESTCASE_STATS" ]; then
       TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-      TESTCASE_SYNTHESIS_TIME=`cut -d'=' -f2 $TESTCASE_STATS | head -n 4 | tail -n 1 | xargs`
+      TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | tr '\n' ';'`
+      if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
+        TESTCASE_SYNTHESIS_TIMES="0"
+      else
+        TESTCASE_SYNTHESIS_TIMES="${TESTCASE_SYNTHESIS_TIMES::-1}"
+      fi
     fi
     printf "%8.3fs [%5.0f MB]  @  $SKIP_MARK$OLD_VERDICT\n" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
-    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIME" >> "$CSV_SUMMARY"
+    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_SUMMARY"
     continue
   fi
 
@@ -191,10 +196,15 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   printf "%8.3fs [%5.0f MB]  @  " $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
 
   TESTCASE_COUNTEREXAMPLES="-"
-  TESTCASE_SYNTHESIS_TIME="-"
+  TESTCASE_SYNTHESIS_TIMES="-"
   if [ -f "$TESTCASE_STATS" ]; then
     TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-    TESTCASE_SYNTHESIS_TIME=`cut -d'=' -f2 $TESTCASE_STATS | head -n 4 | tail -n 1 | xargs`
+    TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | tr '\n' ';'`
+    if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
+      TESTCASE_SYNTHESIS_TIMES="0"
+    else
+      TESTCASE_SYNTHESIS_TIMES="${TESTCASE_SYNTHESIS_TIMES::-1}"
+    fi
   fi
 
   show_status "(verifying)"
@@ -206,7 +216,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   fi
   show_status "" ; tail -n 1 $TESTCASE_RES ; echo ""
 
-  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIME" >> "$CSV_SUMMARY"
+  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_SUMMARY"
 done
 
 print_counts () {
