@@ -112,7 +112,7 @@ _bin/lig-process -o $TESTCASE_NAME.pro $TESTCASE >&2 || exit 1
 for i in `seq 1 $RECORD_FORKS` ; do
   (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                      \
            _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i" \
-                           -o $TESTCASE_NAME.r$i $TESTCASE_NAME.pro) >&2 &
+                           $TESTCASE_NAME.pro) > $TESTCASE_NAME.r$i &
 done
 wait
 

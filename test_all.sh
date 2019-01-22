@@ -155,7 +155,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     TESTCASE_SYNTHESIS_TIMES="-"
     if [ -f "$TESTCASE_STATS" ]; then
       TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-      TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | tr '\n' ';'`
+      TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | xargs printf "%0.3f;"`
       if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
         TESTCASE_SYNTHESIS_TIMES="0"
       else
@@ -199,7 +199,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   TESTCASE_SYNTHESIS_TIMES="-"
   if [ -f "$TESTCASE_STATS" ]; then
     TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-    TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | tr '\n' ';'`
+    TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | xargs printf "%0.3f;"`
     if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
       TESTCASE_SYNTHESIS_TIMES="0"
     else
