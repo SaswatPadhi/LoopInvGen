@@ -61,7 +61,7 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
            let new_inv = "(and " ^ pre_inv ^ " " ^ inv ^ ")"
             in Log.info (lazy ("PRE >> Checking if the following candidate is weaker than precond:"
                         ^ (Log.indented_sep 4) ^ new_inv)) ;
-               let ce = (ZProc.implication_counter_example z3 sygus.pre_func.body new_inv)
+               let ce = ZProc.implication_counter_example z3 sygus.pre_func.body new_inv
                in if ce = None then helper new_inv else ((Stats.add_candidate ()) ; (new_inv, ce))
          end
   end in helper inv
@@ -96,9 +96,8 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
               VPIE.learnVPreCond
                 ~z3 ~conf:conf.for_VPIE ~consts:sygus.constants
                 ~post_desc:sygus.post_func.body
-                ~eval_term:(
-                  if not (conf.model_completion_mode = `UsingZ3)
-                  then "true" else sygus.post_func.body)
+                ~eval_term:(if not (conf.model_completion_mode = `UsingZ3)
+                            then "true" else sygus.post_func.body)
                 (Job.create_positive states
                    ~f:(ZProc.constraint_sat_function
                          (if String.is_prefix sygus.post_func.body ~prefix:"("
@@ -107,10 +106,16 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
                          ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
                    ~args: sygus.synth_variables
                    ~post: (fun _ res -> res = Ok (Value.Bool false)))
-      in ZProc.close_scope z3
-       ; Log.info (lazy ("Starting with the following initial invariant:"
-                        ^ (Log.indented_sep 4) ^ inv))
-       ; inv)
+             in ZProc.close_scope z3
+              ; match ZProc.implication_counter_example z3 sygus.pre_func.body inv with
+                  | Some ce
+                    -> restart_with_new_states
+                         (random_value ~seed:(`Deterministic seed_string)
+                                        (gen_state_from_model sygus (Some ce)))
+                  | None
+                    -> Log.info (lazy ("Starting with the following initial invariant:"
+                                      ^ (Log.indented_sep 4) ^ inv))
+                     ; inv)
   in match satisfyTrans ~conf ~sygus ~states ~z3 initial_candidate with
      | inv, None
        -> if inv <> "false" then ZProc.simplify z3 inv

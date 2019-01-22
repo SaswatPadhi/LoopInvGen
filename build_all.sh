@@ -89,7 +89,7 @@ rm -rf starexec && mkdir -p starexec/bin/_bin
 
 cp -rL _dep starexec/bin
 cp -L _build/install/default/bin/* starexec/bin/_bin
-rm -rf starexec/bin/_bin/lig-verify
+rm -rf starexec/bin/_bin/lig-verify starexec/bin/_bin/lig-score
 
 STAREXEC_ZERO_CONFIG_FILE="starexec/bin/starexec_run_zero"
 STAREXEC_DEFAULT_CONFIG_FILE="starexec/bin/starexec_run_default"
