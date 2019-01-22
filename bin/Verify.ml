@@ -67,7 +67,7 @@ let read_inv_from_chan weak_types in_chan ~(sygus : SyGuS.t) : Sexplib.Sexp.t =
                ~f:(fun [@warning "-8"] i cur_body (List [ (Atom v) ; _ ])
                    -> helper cur_body v (fst (List.nth_exn sygus.inv_func.args i)))
      | _ -> raise (Exceptions.Parse_Exn
-                     "Multiple Sexps detected, expecting a single invariant.")
+                     "Bad/multiple S-exprs detected, expecting invariant as a single valid S-expr.")
 
 let string_of_result res =
   match res with
@@ -90,7 +90,7 @@ let main zpath filename logfile weak_types invfile () =
   let res =
     try check_invariant ~zpath ~sygus (Sexplib.Sexp.to_string_hum inv)
     with _ -> FAIL [ "<parse>" ]
-   in Stdio.Out_channel.output_string Stdio.stdout (string_of_result res)
+   in Out_channel.output_string Stdio.stdout (string_of_result res)
     ; Caml.exit (exit_code_of_result res)
 
 let spec =

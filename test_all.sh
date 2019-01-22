@@ -22,6 +22,7 @@ Z3_PATH="$SELF_DIR/_dep/z3"
 TIMEOUT="60"
 TOOL="$SELF_DIR/loopinvgen.sh"
 VERIFY="$SELF_DIR/_build/install/default/bin/lig-verify"
+SCORE="$SELF_DIR/_build/install/default/bin/lig-score"
 VERIFY_ARGS=""
 
 show_status() {
@@ -118,11 +119,29 @@ mkdir -p "$LOGS_DIR"
 cd "`dirname "$TOOL"`"
 TOOL="./`basename "$TOOL"`"
 
-CSV_SUMMARY="$LOGS_DIR/summary.csv"
+CSV_STATISTICS="$LOGS_DIR/statistics.csv"
 TXT_SUMMARY="$LOGS_DIR/summary.txt"
 
 echo -n "" > "$TXT_SUMMARY"
-echo "Benchmark,Verdict,Wall_Time(s),Max_Memory(MB),CounterExamples,SynthesisTimes(ms)" > "$CSV_SUMMARY"
+echo "Benchmark,Verdict,Wall_Time(s),Time_Score,Size_score,Max_Memory(MB),CounterExamples,SynthesisTimes(ms)" > "$CSV_STATISTICS"
+
+function parse_stats() {
+  TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
+  TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
+  TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
+  TESTCASE_COUNTEREXAMPLES="-"
+  TESTCASE_SYNTHESIS_TIMES="-"
+  if [ -f "$TESTCASE_STATS" ]; then
+    TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
+    TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | xargs printf "%0.3f;"`
+    if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
+      TESTCASE_SYNTHESIS_TIMES="0"
+    else
+      TESTCASE_SYNTHESIS_TIMES="${TESTCASE_SYNTHESIS_TIMES::-1}"
+    fi
+  fi
+  printf "%8.3fs [%5.0f MB]  @  $1$2" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
+}
 
 COUNTER=0
 for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
@@ -137,6 +156,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   TESTCASE_STATS_SRC="_log/`basename $TESTCASE_NAME`.stats"
   TESTCASE_STATS="$TESTCASE_PREFIX.stats"
+  TESTCASE_SCORES_FILE="$TESTCASE_PREFIX.scores"
 
   (( COUNTER++ ))
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
@@ -148,22 +168,13 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   if [ "$CONTINUE_FROM" -gt "$COUNTER" ] || [ "$COUNTER" -gt "$CONTINUE_TILL" ] || ( \
        [ -z "$RERUN_PASSED" ] && [ -f "$TESTCASE_RES" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
      ); then
-    TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
-    TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
-    TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
-    TESTCASE_COUNTEREXAMPLES="-"
-    TESTCASE_SYNTHESIS_TIMES="-"
-    if [ -f "$TESTCASE_STATS" ]; then
-      TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-      TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | xargs printf "%0.3f;"`
-      if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
-        TESTCASE_SYNTHESIS_TIMES="0"
-      else
-        TESTCASE_SYNTHESIS_TIMES="${TESTCASE_SYNTHESIS_TIMES::-1}"
-      fi
+    parse_stats "$SKIP_MARK" "$OLD_VERDICT\n"
+    if [ -f "$TESTCASE_SCORES_FILE" ]; then
+      TESTCASE_SCORES=`cat "$TESTCASE_SCORES_FILE"`
+    else
+      TESTCASE_SCORES="-,-"
     fi
-    printf "%8.3fs [%5.0f MB]  @  $SKIP_MARK$OLD_VERDICT\n" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
-    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_SUMMARY"
+    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_SCORES,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_STATISTICS"
     continue
   fi
 
@@ -176,6 +187,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     INFER_PID=$!
     wait $INFER_PID
     INFER_RESULT_CODE=$?
+    echo "" >> $TESTCASE_RES
 
     if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
       echo -n "[TIMEOUT] " >> $TESTCASE_RES
@@ -190,39 +202,30 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     fi
   fi
 
-  TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
-  TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
-  TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
-  printf "%8.3fs [%5.0f MB]  @  " $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
-
-  TESTCASE_COUNTEREXAMPLES="-"
-  TESTCASE_SYNTHESIS_TIMES="-"
-  if [ -f "$TESTCASE_STATS" ]; then
-    TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-    TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | xargs printf "%0.3f;"`
-    if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
-      TESTCASE_SYNTHESIS_TIMES="0"
-    else
-      TESTCASE_SYNTHESIS_TIMES="${TESTCASE_SYNTHESIS_TIMES::-1}"
-    fi
-  fi
+  parse_stats "" ""
 
   show_status "(verifying)"
   RESULT_CODE=0
   timeout 300 $VERIFY -s $TESTCASE $VERIFY_ARGS $TESTCASE_INV >> $TESTCASE_RES
   RESULT_CODE=$?
   if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ]; then
-    echo "PASS (UNVERIFIED)" >> $TESTCASE_RES
+    echo "UNKNOWN" >> $TESTCASE_RES
   fi
-  show_status "" ; tail -n 1 $TESTCASE_RES ; echo ""
+  VERDICT=`tail -n 1 $TESTCASE_RES`
+  show_status "" ; echo "$VERDICT"
 
-  echo "$TESTCASE,`tail -n 1 $TESTCASE_RES`,$TESTCASE_REAL_TIME,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_SUMMARY"
+  if [ "$VERDICT" = "PASS" ]; then
+    TESTCASE_SCORES=`$SCORE -t "$TESTCASE_REAL_TIME" "$TESTCASE_INV" | tee "$TESTCASE_SCORES_FILE"`
+  else
+    TESTCASE_SCORES=`echo -n "0,0" | tee "$TESTCASE_SCORES_FILE"`
+  fi
+  echo "$TESTCASE,$VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_SCORES,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_STATISTICS"
 done
 
 print_counts () {
   while (( "$#" )) ; do
     echo -n "* $1 = " | tee -a "$TXT_SUMMARY"
-    grep -e ",$2," "$CSV_SUMMARY" | wc -l | tee -a "$TXT_SUMMARY"
+    grep -e ",$2," "$CSV_STATISTICS" | wc -l | tee -a "$TXT_SUMMARY"
     shift ; shift
   done
 }
@@ -231,10 +234,18 @@ echo ""
 print_counts TOTAL_PASS ".*PASS.*" TOTAL_FAIL ".*FAIL.*"
 
 echo "" | tee -a "$TXT_SUMMARY"
-print_counts PASS "PASS" "PASS (NO SOLUTION)" "PASS (NO SOLUTION)" "[TIMEOUT] PASS (NO SOLUTION)" "\\[TIMEOUT\\] PASS (NO SOLUTION)" "PASS (UNVERIFIED)"
+print_counts "PASS" "PASS" \
+             "PASS (NO SOLUTION)" "PASS (NO SOLUTION)" \
+             "[TIMEOUT] PASS (NO SOLUTION)" "\\[TIMEOUT\\] PASS (NO SOLUTION)"
 
 echo "" | tee -a "$TXT_SUMMARY"
-print_counts FAIL "FAIL {.*}" "FAIL (NO SOLUTION)" "FAIL (NO SOLUTION)" "[TIMEOUT] FAIL" "\\[TIMEOUT\\] FAIL {.*}" "[TIMEOUT] FAIL (NO SOLUTION)" "\\[TIMEOUT\\] FAIL (NO SOLUTION)"
+print_counts "UNKNOWN" ".*UNKNOWN.*"
+
+echo "" | tee -a "$TXT_SUMMARY"
+print_counts "FAIL" "FAIL {.*}" \
+             "FAIL (NO SOLUTION)" "FAIL (NO SOLUTION)" \
+             "[TIMEOUT] FAIL" "\\[TIMEOUT\\] FAIL {.*}" \
+             "[TIMEOUT] FAIL (NO SOLUTION)" "\\[TIMEOUT\\] FAIL (NO SOLUTION)"
 
 echo -e "\nPASS Stats:" | tee -a "$TXT_SUMMARY"
 awk -F',' '{
@@ -255,6 +266,6 @@ awk -F',' '{
   printf "AVG(%s) = %0.3f\n", header, sum/i
   printf "MAX(%s) = %0.3f  [%s]\n", header, max, max_file
   printf "SUM(%s) = %0.3f\n", header, sum
-}' "$CSV_SUMMARY" | tee -a "$TXT_SUMMARY"
+}' "$CSV_STATISTICS" | tee -a "$TXT_SUMMARY"
 
-echo -e "\nA CSV summary has been saved to: $CSV_SUMMARY.\nA TXT summary has been saved to: $TXT_SUMMARY."
+echo -e "\n# Detailed stats have been saved to: $CSV_STATISTICS.\n# A text summary has been saved to:  $TXT_SUMMARY."

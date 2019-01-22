@@ -91,14 +91,12 @@ cp -rL _dep starexec/bin
 cp -L _build/install/default/bin/* starexec/bin/_bin
 rm -rf starexec/bin/_bin/lig-verify
 
+STAREXEC_ZERO_CONFIG_FILE="starexec/bin/starexec_run_zero"
 STAREXEC_DEFAULT_CONFIG_FILE="starexec/bin/starexec_run_default"
 STAREXEC_DEBUG_CONFIG_FILE="starexec/bin/starexec_run_IGNORE-debug"
 
 cat > "$STAREXEC_DEFAULT_CONFIG_FILE" << "EOF"
 #!/bin/bash
-
-trap 'jobs -p | xargs kill -INT > /dev/null 2> /dev/null' INT
-trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
@@ -121,6 +119,20 @@ grep -hv "^[[:space:]]*$" $TESTCASE_NAME.r* | sort -u > $TESTCASE_NAME.states
 _bin/lig-infer -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro
 EOF
 chmod +x "$STAREXEC_DEFAULT_CONFIG_FILE"
+
+cat > "$STAREXEC_ZERO_CONFIG_FILE" << "EOF"
+#!/bin/bash
+
+TESTCASE="$1"
+TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
+
+_bin/lig-process -o $TESTCASE_NAME.pro $TESTCASE >&2 || exit 1
+
+echo -n '' > $TESTCASE_NAME.states
+
+_bin/lig-infer -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro
+EOF
+chmod +x "$STAREXEC_ZERO_CONFIG_FILE"
 
 cat > "$STAREXEC_DEBUG_CONFIG_FILE" << "EOF"
 #!/bin/bash
