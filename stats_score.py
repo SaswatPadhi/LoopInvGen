@@ -16,15 +16,21 @@ def main(args):
                 'pass': 1 if field[1].endswith('PASS') else 0,
                 'time': int(field[3]),
                 'size': int(field[4]),
+                'rtime': float(field[2]) if len(field[2]) > 0 else 0
             }
         full_maps.append(file_map)
 
     num_stats = len(full_maps)
     sum_maps = [[] for i in range(num_stats)]
+
+    passed_list = [0 for i in range(num_stats)]
+    times_list = [0 for i in range(num_stats)]
     scores_list = [0 for i in range(num_stats)]
 
+    benchmarks = 0
     for file in glob('%s/**/*.sl' % args.benchmarks_dir, recursive=True):
         records = []
+        found_any = False
         for i in range(num_stats):
             found = [v for k,v in full_maps[i].items() if k.endswith(file)]
             if len(found) < 1:
@@ -32,7 +38,12 @@ def main(args):
             elif len(found) > 1:
                 raise Exception('Conflicting statistics for %s.' % file)
             else:
+                found_any = True
                 records.append(found[0])
+                times_list[i] += found[0]['rtime'] if found[0]['pass'] == 1 else 0
+                passed_list[i] += found[0]['pass']
+        if found_any:
+            benchmarks += 1
         max_time_score = max([r['time'] for r in records])
         max_size_score = max([r['size'] for r in records])
         for i in range(num_stats):
@@ -50,7 +61,10 @@ def main(args):
                 'size': size_score,
             })
 
-    pprint(scores_list)
+    print(' Benchmarks: %d' % benchmarks)
+    print(' Total PASS: %s' % passed_list)
+    print(' Total Time: %s' % times_list)
+    print('Final Score: %s' % scores_list)
     #pprint(sum_maps)
 
 if __name__ == '__main__':
