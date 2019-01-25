@@ -123,7 +123,7 @@ while true ; do
          STATES="$2"
          shift ; shift ;;
     -S | --stats-path )
-         STATS_PATH="$2"
+         STATS_ARG="-t $2"
          shift ; shift ;;
     -t | --infer-timeout )
          [ "$2" -gt "$MIN_INFER_TIMEOUT" ] \
@@ -200,7 +200,7 @@ show_status "(inferring)"
 
 timeout --foreground $INFER_TIMEOUT \
         $INFER -s "$TESTCASE_ALL_STATES" ${DO_LOG[infer]} $INFER_ARGS \
-               -t "$STATS_PATH" "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+               ${STATS_ARG} "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
 INFER_RESULT_CODE=$?
 
 
