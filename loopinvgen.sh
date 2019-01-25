@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if (( ${BASH_VERSION%%.*} < 4 )) ; then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
 
 EXIT_CODE_USAGE_ERROR=-2
 EXIT_CODE_BUILD_ERROR=-3
@@ -15,7 +15,7 @@ RECORD="$BIN_DIR/lig-record"
 INFER="$BIN_DIR/lig-infer"
 VERIFY="$BIN_DIR/lig-verify"
 
-if [ ! -f $PROCESS ] || [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ] ; then
+if [ ! -f $PROCESS ] || [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ]; then
   echo -en "
 One or more dependencies not found. Building OCaml modules ...
 " >&2 ; dune build || exit $EXIT_CODE_BUILD_ERROR
@@ -57,7 +57,7 @@ show_status() {
 }
 
 usage() {
-  if [ -n "$1" ] ; then echo -e "\nERROR: $1" >&2 ; fi
+  if [ -n "$1" ]; then echo -e "\nERROR: $1" >&2 ; fi
   echo -en "
 Usage: $0 [options] <benchmark.sl>
 
@@ -71,6 +71,7 @@ Configuration:
     [--states-to-record, -s <count>]    ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
     [--z3-path, -z <path>]              (_dep/z3)
+    [--stats-path, -S <path>]           ()
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
     [--Process-args, -P \"<args>\"]   see \``basename "$PROCESS"` -h\` for details
@@ -80,8 +81,8 @@ Arguments to Internal Programs (@ `dirname $RECORD`):
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
-OPTS=`getopt -n 'parse-options' -o :P:R:I:V:cvl:p:s:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,clean-intermediates,verify,log:,intermediates-dir:,states-to-record:,infer-timeout:,z3-path: -- "$@"`
-if [ $? != 0 ] ; then usage ; fi
+OPTS=`getopt -n 'parse-options' -o :P:R:I:V:cvl:p:s:S:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,clean-intermediates,verify,log:,intermediates-dir:,states-to-record:,stats-path:,infer-timeout:,z3-path: -- "$@"`
+if [ $? != 0 ]; then usage ; fi
 
 eval set -- "$OPTS"
 
@@ -121,6 +122,9 @@ while true ; do
            || usage "$2 must be > $MIN_RECORD_STATES_PER_FORK."
          STATES="$2"
          shift ; shift ;;
+    -S | --stats-path )
+         STATS_PATH="$2"
+         shift ; shift ;;
     -t | --infer-timeout )
          [ "$2" -gt "$MIN_INFER_TIMEOUT" ] \
            || usage "$2 must be > $MIN_INFER_TIMEOUT."
@@ -153,7 +157,6 @@ TESTCASE_REC_LOG="$TESTCASE_PREFIX.rlog"
 
 TESTCASE_REC_STATES="$TESTCASE_PREFIX.rstates"
 TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
-TESTCASE_STATISTICS="$TESTCASE_PREFIX.stats"
 
 RECORD="$RECORD -z $Z3_PATH"
 INFER="$INFER -z $Z3_PATH"
@@ -197,12 +200,12 @@ show_status "(inferring)"
 
 timeout --foreground $INFER_TIMEOUT \
         $INFER -s "$TESTCASE_ALL_STATES" ${DO_LOG[infer]} $INFER_ARGS \
-               -t "$TESTCASE_STATISTICS" "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+               -t "$STATS_PATH" "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
 INFER_RESULT_CODE=$?
 
 
-if [ "$DO_VERIFY" = "yes" ] ; then
-  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
+if [ "$DO_VERIFY" = "yes" ]; then
+  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
     echo > "$TESTCASE_INVARIANT" ; echo -n "[TIMEOUT] "
   fi
 
@@ -213,21 +216,21 @@ if [ "$DO_VERIFY" = "yes" ] ; then
   RESULT_CODE=$?
 
   show_status "" ; cat "$TESTCASE_PREFIX.result"
-elif [ $INFER_RESULT_CODE == 0 ] ; then
+elif [ $INFER_RESULT_CODE == 0 ]; then
   cat "$TESTCASE_INVARIANT" ; echo
   RESULT_CODE=0
 else
   show_status "(fail)"
-  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
+  if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
     show_status "(timeout)"
   fi
   echo ""
 fi
 
 
-if [ "$DO_CLEAN" == "yes" ] ; then
+if [ "$DO_CLEAN" == "yes" ]; then
   rm -rf "$TESTCASE_REC_STATES"? "$TESTCASE_REC_LOG"?
-  if [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ] ; then
+  if [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ]; then
     rm -rf "$TESTCASE_PROCESSED" "$TESTCASE_ALL_STATES"
   fi
 fi

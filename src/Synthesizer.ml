@@ -10,15 +10,19 @@ type task = {
   outputs : Value.t array
 }
 
+type stats = {
+  mutable synth_time_ms : float ;
+  mutable enumerated : int ;
+  mutable pruned : int ;
+} [@@deriving sexp]
+
 type result = {
   expr : Expr.t ;
   string : string ;
   func : Value.t list -> Value.t ;
-  constraints : string list
+  constraints : string list ;
+  stats : stats
 }
-
-let enumerated = ref 0
-let pruned = ref 0
 
 let max_size = 25
 
@@ -44,7 +48,7 @@ module SynthesizedWithUniqueOutput = struct
   include Comparable.Make (T)
 end
 
-let solve_impl consts task =
+let solve_impl consts task stats =
   let int_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.INT) task.logic.components in
   let bool_components = List.filter ~f:(fun c -> Poly.equal c.codomain Type.BOOL) task.logic.components in
 
@@ -76,9 +80,6 @@ let solve_impl consts task =
     in candidates.(1) <- Set.add candidates.(1) { expr = Expr.Var i ; outputs = input })
   ;
 
-  enumerated := 0 ;
-  pruned := 0 ;
-
   let check (candidate : Expr.synthesized) =
     (* Log.debug (lazy ("  > Now checking (@ size " ^ (Int.to_string (Expr.size candidate.expr)) ^ "): "
                     ^ (Expr.to_string (Array.of_list task.arg_names) candidate.expr))); *)
@@ -108,9 +109,9 @@ let solve_impl consts task =
   in
   let expand_component size candidates component =
     let applier args =
-      enumerated := !enumerated + 1;
+      stats.enumerated <- stats.enumerated + 1;
       match Expr.apply component args with
-      | None -> pruned := !pruned + 1
+      | None -> stats.pruned <- stats.pruned + 1
       | Some result
         -> let h_value = Expr.size result.expr
             in if h_value < max_size
@@ -126,39 +127,29 @@ let solve_impl consts task =
                    [bool_candidates ; int_candidates]
                    [bool_components ; int_components]
   in
-
   for size = 2 to max_size-1 ; do expand size done
 
 let solve (consts : Value.t list) (task : task) : result =
-  Log.debug (lazy ("Running enumerative synthesis:"));
+  Log.debug (lazy ("Running enumerative synthesis:")) ;
   let start_time = Time.now () in
-  try solve_impl consts task
-    ; let elapsed_time = Time.Span.to_ms (Time.diff (Time.now ()) start_time)
-       in Stats.add_synth {
-            enumerated = !enumerated ;
-            pruned = !pruned ;
-            time_ms = elapsed_time
-          }
+  let stats = { enumerated = 0 ; pruned = 0 ; synth_time_ms = 0.0 } in
+  try solve_impl consts task stats
+    ; stats.synth_time_ms <- Time.(Span.(to_ms (diff (now ()) start_time)))
     ; raise NoSuchFunction
   with Success solution
-       -> let elapsed_time = Time.Span.to_ms (Time.diff (Time.now ()) start_time) in
-          let arg_names_array = Array.of_list task.arg_names
-           in let solution_string = Expr.to_string arg_names_array solution
-           in let solution_constraints = Expr.get_constraints arg_names_array solution
-           in Log.debug (lazy ("  # Enumerated " ^ (Int.to_string !enumerated) ^ " expressions ("
-                              ^ (Int.to_string !pruned) ^ " pruned)"))
+       -> let arg_names_array = Array.of_list task.arg_names in
+          let solution_string = Expr.to_string arg_names_array solution in
+          let solution_constraints = Expr.get_constraints arg_names_array solution
+           in Log.debug (lazy ("  # Enumerated " ^ (Int.to_string stats.enumerated) ^ " expressions ("
+                              ^ (Int.to_string stats.pruned) ^ " pruned)"))
             ; Log.debug (lazy ("  # Solution (@ size " ^ (Int.to_string (Expr.size solution))
                               ^ "): " ^ solution_string))
             ; Log.debug (lazy ("  # Constraints: "
                               ^ (if (List.length solution_constraints = 0) then "()"
                                  else String.concat ~sep:" " solution_constraints ^ ")")))
-            ; Stats.add_synth {
-                enumerated = !enumerated ;
-                pruned = !pruned ;
-                time_ms = elapsed_time
-              }
             ; { expr = solution
               ; string = solution_string
               ; func = Expr.to_function solution
               ; constraints = solution_constraints
+              ; stats = stats
               }

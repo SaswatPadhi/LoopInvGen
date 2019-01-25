@@ -29,7 +29,7 @@ let main running_time invfile () =
   let open Sexplib.Sexp in
   let size_score = match input_rev_sexps (Utils.get_in_channel invfile) with
     | [] | [ (List [Atom "fail"]) ] -> size_pseudolog 1
-    | [ List [ (Atom "define-fun") ; (Atom name) ; (List vars) ; (Atom "Bool") ; body ] ]
+    | [ List [ (Atom "define-fun") ; (Atom _) ; (List _) ; (Atom "Bool") ; body ] ]
       -> size_pseudolog (count_nodes body)
     | _ -> raise (Exceptions.Parse_Exn
                     "Bad/multiple S-exprs detected, expecting invariant as a single valid S-expr.")
@@ -47,4 +47,4 @@ let spec =
 let () =
   Command.run
     (Command.basic_spec spec main
-       ~summary: "Check sufficiency of a generated invariant for proving correctness.")
+       ~summary: "Compute scores for an invariant based on the pseudolog scale for size and time.")

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if (( ${BASH_VERSION%%.*} < 4 )) ; then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
 
 SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
@@ -9,8 +9,7 @@ trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 SYGUS_EXT=".sl"
 RESULT_EXT=".res"
-RERUN_PASSED=""
-REVERIFY=""
+MODE="rerun-failed"
 
 SKIP_MARK="[SKIPPED] "
 CONTINUE_FROM="1"
@@ -23,7 +22,7 @@ TIMEOUT="60"
 TOOL="$SELF_DIR/loopinvgen.sh"
 VERIFY="$SELF_DIR/_build/install/default/bin/lig-verify"
 SCORE="$SELF_DIR/_build/install/default/bin/lig-score"
-VERIFY_ARGS=""
+ORIGINAL_VERIFY_ARGS=""
 
 show_status() {
   printf "%s%16s" "$1" >&2
@@ -31,17 +30,17 @@ show_status() {
 }
 
 usage() {
-  if [ -n "$1" ] ; then echo -e "\nERROR: $1" >&2 ; fi
+  if [ -n "$1" ]; then echo -e "\nERROR: $1" >&2 ; fi
   echo -en "
 Usage: $0 [options] -b <benchmarks_path> -- [tool specific options]
 
+
 Flags:
-    [--rerun-passed, -r]
-    [--reverify-only, -y]
-    [--no-skipped-mark, -s]
+    [--no-skipped-mark, -n]
 
 Configuration:
     --benchmarks, -b <path>
+    [--mode, -m <mode>]               (rerun-failed)\t mode <- {rerun-failed|rerun-all|reverify}
     [--continue-from, -c <int>]       ($CONTINUE_FROM)
     [--continue-till, -C <int>]       ($CONTINUE_TILL)
     [--logs-dir, -l <path>]           ($LOGS_DIR)
@@ -51,11 +50,17 @@ Configuration:
 
 Arguments to Internal Programs (@ `dirname $VERIFY`):
     [--Verify-args, -V \"<args>\"]    see \``basename "$VERIFY"` -h\` for details
+
+
+Substitutions supported within [tool specific options] and [--Verify-args]:
+
+#BENCHMARK_PATH       -> The original path to a benchmark.
+#BENCHMARK_OUT_PREFIX -> The path prefix for a benchmark within [--logs-dir].
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:c:C:l:t:rsT:V:yz: --long benchmarks:,continue-from:,continue-till:,logs-dir:,time-out:,rerun-passed,no-skipped-mark,tool:,Verify-args:,reverify-only,z3-path: -- "$@"`
-if [ $? != 0 ] ; then usage ; fi
+OPTS=`getopt -n 'parse-options' -o :b:c:C:l:m:nt:T:V:z: --long benchmarks:,continue-from:,continue-till:,logs-dir:,mode:,no-skipped-mark,time-out:,tool:,Verify-args:,z3-path: -- "$@"`
+if [ $? != 0 ]; then usage ; fi
 
 eval set -- "$OPTS"
 
@@ -76,25 +81,25 @@ while true ; do
     -l | --logs-dir )
          LOGS_DIR="`realpath "$2"`"
          shift ; shift ;;
+    -m | --mode )
+         case "$2" in
+           rerun-failed | rerun-all | reverify ) MODE="$2" ;;
+           * ) usage "Invalid mode [$2]."
+         esac
+         shift ; shift ;;
+    -n | --no-skipped-mark )
+         SKIP_MARK=""
+         shift ;;
     -t | --time-out )
          TIMEOUT="$2"
          shift ; shift ;;
-    -r | --rerun-passed )
-         RERUN_PASSED="YES"
-         shift ;;
-    -s | --no-skipped-mark )
-         SKIP_MARK=""
-         shift ;;
     -T | --tool )
          [ -f "$2" ] || usage "Tool [$2] not found."
          TOOL="$2"
          shift ; shift ;;
     -V | --Verify-args )
-         VERIFY_ARGS="$2"
+         ORIGINAL_VERIFY_ARGS="$2"
          shift ; shift ;;
-    -y | --reverify-only )
-         REVERIFY="YES"
-         shift ;;
     -z | --z3-path )
          [ -f "$2" ] || usage "Z3 [$2] not found."
          Z3_PATH="$2"
@@ -104,42 +109,34 @@ while true ; do
   esac
 done
 
-[ "$CONTINUE_TILL" -ge "$CONTINUE_FROM" ] || usage "Start index ($CONTINUE_FROM) >= End Index ($CONTINUE_TILL)!"
 [ -d "$BENCHMARKS_DIR" ] || usage "Benchmarks directory [$BENCHMARKS_DIR] not found."
+if [ "$CONTINUE_TILL" -lt "$CONTINUE_FROM" ]; then
+  usage "Start index ($CONTINUE_FROM) >= End Index ($CONTINUE_TILL)!"
+fi
 
 [ -d "$LOGS_DIR" ] || mkdir -p "$LOGS_DIR"
 [ -d "$LOGS_DIR" ] || usage "Logs directory [$LOGS_DIR] not found."
 
 VERIFY="$VERIFY -z $Z3_PATH"
-TOOL_ARGS="$@"
 TIMEOUT="${TIMEOUT}s"
+
+ORIGINAL_TOOL_ARGS="$@"
 
 mkdir -p "$LOGS_DIR"
 
 cd "`dirname "$TOOL"`"
 TOOL="./`basename "$TOOL"`"
 
-CSV_STATISTICS="$LOGS_DIR/statistics.csv"
+CSV_RESULTS="$LOGS_DIR/results.csv"
 TXT_SUMMARY="$LOGS_DIR/summary.txt"
 
 echo -n "" > "$TXT_SUMMARY"
-echo "Benchmark,Verdict,Wall_Time(s),Time_Score,Size_score,Max_Memory(MB),CounterExamples,SynthesisTimes(ms)" > "$CSV_STATISTICS"
+echo "Benchmark,Verdict,Wall_Time(s),Time_Score,Size_score,Max_Memory(MB)" > "$CSV_RESULTS"
 
 function parse_stats() {
   TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
   TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
   TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
-  TESTCASE_COUNTEREXAMPLES="-"
-  TESTCASE_SYNTHESIS_TIMES="-"
-  if [ -f "$TESTCASE_STATS" ]; then
-    TESTCASE_COUNTEREXAMPLES=`cut -d'=' -f2 $TESTCASE_STATS | head -n 2 | tail -n 1 | xargs`
-    TESTCASE_SYNTHESIS_TIMES=`grep '((enumerated' $TESTCASE_STATS | grep -oP 'time_ms \K([0-9.]+)' | xargs printf "%0.3f;"`
-    if [ -z "$TESTCASE_SYNTHESIS_TIMES" ]; then
-      TESTCASE_SYNTHESIS_TIMES="0"
-    else
-      TESTCASE_SYNTHESIS_TIMES="${TESTCASE_SYNTHESIS_TIMES::-1}"
-    fi
-  fi
   printf "%8.3fs [%5.0f MB]  @  $1$2" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
 }
 
@@ -147,16 +144,19 @@ COUNTER=0
 for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   TESTCASE_NAME=${TESTCASE#$BENCHMARKS_DIR/}
   TESTCASE_NAME=${TESTCASE_NAME%$SYGUS_EXT}
-  TESTCASE_PREFIX="$LOGS_DIR/$TESTCASE_NAME.t_all"
+  TESTCASE_PREFIX="$LOGS_DIR/$TESTCASE_NAME"
 
   mkdir -p "`dirname \"$TESTCASE_PREFIX\"`"
 
   TESTCASE_RES="$TESTCASE_PREFIX$RESULT_EXT"
   TESTCASE_INV="$TESTCASE_PREFIX.inv"
-
-  TESTCASE_STATS_SRC="_log/`basename $TESTCASE_NAME`.stats"
-  TESTCASE_STATS="$TESTCASE_PREFIX.stats"
   TESTCASE_SCORES_FILE="$TESTCASE_PREFIX.scores"
+
+  TOOL_ARGS="${ORIGINAL_TOOL_ARGS//\#BENCHMARK_PATH/$TESTCASE}"
+  TOOL_ARGS="${ORIGINAL_TOOL_ARGS//\#BENCHMARK_OUT_PREFIX/$TESTCASE_PREFIX}"
+
+  VERIFY_ARGS="${ORIGINAL_VERIFY_ARGS//\#BENCHMARK_PATH/$TESTCASE}"
+  VERIFY_ARGS="${ORIGINAL_VERIFY_ARGS//\#BENCHMARK_OUT_PREFIX/$TESTCASE_PREFIX}"
 
   (( COUNTER++ ))
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
@@ -166,7 +166,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   fi
 
   if [ "$CONTINUE_FROM" -gt "$COUNTER" ] || [ "$COUNTER" -gt "$CONTINUE_TILL" ] || ( \
-       [ -z "$RERUN_PASSED" ] && [ -f "$TESTCASE_RES" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
+       [ "$MODE" != "rerun-all" ] && [ -f "$TESTCASE_RES" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
      ); then
     parse_stats "$SKIP_MARK" "$OLD_VERDICT\n"
     if [ -f "$TESTCASE_SCORES_FILE" ]; then
@@ -174,11 +174,11 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     else
       TESTCASE_SCORES="-,-"
     fi
-    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_SCORES,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_STATISTICS"
+    echo "$TESTCASE,$OLD_VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_SCORES,$TESTCASE_MAX_MEMORY" >> "$CSV_RESULTS"
     continue
   fi
 
-  if [ -z "$REVERIFY" ] || [ ! -f "$TESTCASE_INV" ]; then
+  if [ "$MODE" != "reverify" ] || [ ! -f "$TESTCASE_INV" ]; then
     echo > $TESTCASE_INV ; echo > $TESTCASE_RES
 
     show_status "(inferring)"
@@ -189,11 +189,8 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     INFER_RESULT_CODE=$?
     echo "" >> $TESTCASE_RES
 
-    if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ] ; then
+    if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
       echo -n "[TIMEOUT] " >> $TESTCASE_RES
-    fi
-    if [ -f "$TESTCASE_STATS_SRC" ]; then
-      cp "$TESTCASE_STATS_SRC" "$TESTCASE_STATS"
     fi
   else
     head -n -1 "$TESTCASE_RES" > /tmp/tmp ; mv /tmp/tmp "$TESTCASE_RES"
@@ -219,13 +216,13 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   else
     TESTCASE_SCORES=`echo -n "0,0" | tee "$TESTCASE_SCORES_FILE"`
   fi
-  echo "$TESTCASE,$VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_SCORES,$TESTCASE_MAX_MEMORY,$TESTCASE_COUNTEREXAMPLES,$TESTCASE_SYNTHESIS_TIMES" >> "$CSV_STATISTICS"
+  echo "$TESTCASE,$VERDICT,$TESTCASE_REAL_TIME,$TESTCASE_SCORES,$TESTCASE_MAX_MEMORY" >> "$CSV_RESULTS"
 done
 
 print_counts () {
   while (( "$#" )) ; do
     echo -n "* $1 = " | tee -a "$TXT_SUMMARY"
-    grep -e ",$2," "$CSV_STATISTICS" | wc -l | tee -a "$TXT_SUMMARY"
+    grep -e ",$2," "$CSV_RESULTS" | wc -l | tee -a "$TXT_SUMMARY"
     shift ; shift
   done
 }
@@ -266,6 +263,6 @@ awk -F',' '{
   printf "AVG(%s) = %0.3f\n", header, sum/i
   printf "MAX(%s) = %0.3f  [%s]\n", header, max, max_file
   printf "SUM(%s) = %0.3f\n", header, sum
-}' "$CSV_STATISTICS" | tee -a "$TXT_SUMMARY"
+}' "$CSV_RESULTS" | tee -a "$TXT_SUMMARY"
 
-echo -e "\n# Detailed stats have been saved to: $CSV_STATISTICS.\n# A text summary has been saved to:  $TXT_SUMMARY."
+echo -e "\n# Detailed results have been saved to: $CSV_RESULTS.\n# A text summary has been saved to:    $TXT_SUMMARY."

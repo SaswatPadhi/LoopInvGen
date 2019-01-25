@@ -11,17 +11,22 @@ type 'a conflict = {
 }
 
 type config = {
-  for_BFL : BFL.config ;
+  _BFL : BFL.config ;
 
   synth_logic : Logic.t ;
   disable_synth : bool ;
   max_conflict_group_size : int ;
 }
 
+type stats = {
+  mutable pi_time_ms : float ;
+  mutable _Synthesizer : Synthesizer.stats list ;
+} [@@deriving sexp]
+
 let base_max_conflict_group_size = 32
 
 let default_config : config = {
-  for_BFL = BFL.default_config ;
+  _BFL = BFL.default_config ;
 
   synth_logic = Logic.of_string "LIA" ;
   disable_synth = false ;
@@ -44,7 +49,8 @@ let conflictingTests (job : Job.t) : 'a conflict list =
                                    ; fvec = pfv }))
 
 let synthFeature ?(consts = []) ~(job : Job.t) ~(logic : Logic.t)
-                 (conflict_group : Value.t list conflict) : Value.t list Job.feature Job.with_desc =
+                 (conflict_group : Value.t list conflict) stats
+                 : Value.t list Job.feature Job.with_desc =
   let open Synthesizer in
   let result = solve consts {
     logic ;
@@ -54,12 +60,14 @@ let synthFeature ?(consts = []) ~(job : Job.t) ~(logic : Logic.t)
                 ~f:(fun i _ -> Array.of_list List.(map all_inputs ~f:(fun l -> nth_exn l i))));
     outputs = Array.of_list ((List.map conflict_group.pos ~f:(fun _ -> Value.Bool true))
                             @ (List.map conflict_group.neg ~f:(fun _ -> Value.Bool false)))
-  } in ((fun values -> try Value.equal (result.func values) (Value.Bool true) with _ -> false),
+  } in stats._Synthesizer <- result.stats :: stats._Synthesizer
+     ; stats.pi_time_ms <- stats.pi_time_ms +. result.stats.synth_time_ms
+     ; ((fun values -> try Value.equal (result.func values) (Value.Bool true) with _ -> false),
         (if result.constraints = [] then result.string
          else "(and " ^ result.string ^ (String.concat ~sep:" " result.constraints) ^ ")"))
 
 let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
-                     (conflict_group' : Value.t list conflict)
+                     (conflict_group' : Value.t list conflict) stats
                      : Value.t list Job.feature Job.with_desc =
   let group_size = List.((length conflict_group'.pos) + (length conflict_group'.neg))
   in let group_size = group_size * (conf.synth_logic.conflict_group_size_multiplier)
@@ -79,43 +87,56 @@ let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
           ^ "NEG (" ^ (Int.to_string (List.length conflict_group.neg)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map conflict_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (List.to_string_map vl ~f:Value.to_string ~sep:" , ") ^ ")"))))
-   ; let new_feature = synthFeature conflict_group ~logic:conf.synth_logic ~consts ~job
+   ; let new_feature = synthFeature conflict_group ~logic:conf.synth_logic ~consts ~job stats
      in Log.debug (lazy ("Synthesized feature:" ^ (Log.indented_sep 4) ^ (snd new_feature)))
       ; new_feature
 
 let rec resolveSomeConflicts ?(conf = default_config) ?(consts = []) ~(job : Job.t)
-                             (conflict_groups : Value.t list conflict list)
+                             (conflict_groups : Value.t list conflict list) stats
                              : Value.t list Job.feature Job.with_desc option =
   if conflict_groups = [] then None
-  else try Some (resolveAConflict (List.hd_exn conflict_groups) ~conf ~consts ~job)
+  else try Some (resolveAConflict (List.hd_exn conflict_groups) ~conf ~consts ~job stats)
        with e -> Log.error (lazy ((Exn.to_string e) ^ (Printexc.get_backtrace ())))
-               ; resolveSomeConflicts (List.tl_exn conflict_groups) ~conf ~consts ~job
+               ; resolveSomeConflicts (List.tl_exn conflict_groups) ~conf ~consts ~job stats
 
-let rec augmentFeatures ?(conf = default_config) ?(consts = []) (job : Job.t) : Job.t =
+let rec augmentFeatures ?(conf = default_config) ?(consts = []) (job : Job.t)
+                        stats : Job.t =
   let conflict_groups = conflictingTests job
-  in if conflict_groups = [] then job
-     else if conf.disable_synth
-          then (Log.error (lazy ("CONFLICT RESOLUTION FAILED")) ; raise NoSuchFunction)
-     else match resolveSomeConflicts conflict_groups ~job ~conf ~consts with
-          | None -> Log.error (lazy ("CONFLICT RESOLUTION FAILED")) ; raise NoSuchFunction
-          | Some new_feature -> augmentFeatures (Job.add_feature ~job new_feature) ~conf ~consts
+   in if conflict_groups = [] then job
+      else if conf.disable_synth
+           then (Log.error (lazy ("CONFLICT RESOLUTION FAILED")) ; raise NoSuchFunction)
+      else match resolveSomeConflicts conflict_groups ~job ~conf ~consts stats with
+           | None -> Log.error (lazy ("CONFLICT RESOLUTION FAILED"))
+                   ; raise NoSuchFunction
+           | Some new_feature
+             -> augmentFeatures (Job.add_feature ~job new_feature) ~conf ~consts stats
 
 let learnPreCond ?(conf = default_config) ?(consts = []) (job : Job.t)
-                 : ('a Job.feature Job.with_desc) CNF.t option =
+                 : ('a Job.feature Job.with_desc) CNF.t option * stats =
   Log.info (lazy ("New PI task with "
-                  ^ (Int.to_string (List.length job.pos_tests))
-                  ^ " POS + "
-                  ^ (Int.to_string (List.length job.neg_tests))
-                  ^ " NEG tests")) ;
-  try let job = augmentFeatures ~conf ~consts job
-      in let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec)
-      in let (pos_vecs, neg_vecs) = List.(dedup_and_sort ~compare:(List.compare Bool.compare) (make_f_vecs job.pos_tests),
-                                          dedup_and_sort ~compare:(List.compare Bool.compare) (make_f_vecs job.neg_tests))
-      in try let cnf = learnCNF pos_vecs neg_vecs ~n:(List.length job.features)
-                                ~conf:conf.for_BFL
-             in Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i-1)))
-         with ClauseEncodingError -> None
-  with _ -> None
+                 ^ (Int.to_string (List.length job.pos_tests)) ^ " POS + "
+                 ^ (Int.to_string (List.length job.neg_tests)) ^ " NEG tests")) ;
+  let start_time = Time.now () in
+  let stats = { _Synthesizer = [] ; pi_time_ms = 0.0 }
+   in try let job = augmentFeatures ~conf ~consts job stats
+           in let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec)
+           in let (pos_vecs, neg_vecs) =
+                List.(dedup_and_sort ~compare:(List.compare Bool.compare)
+                                     (make_f_vecs job.pos_tests),
+                      dedup_and_sort ~compare:(List.compare Bool.compare)
+                                     (make_f_vecs job.neg_tests))
+           in try let cnf = learnCNF pos_vecs neg_vecs ~conf:conf._BFL
+                                     ~n:(List.length job.features)
+                   in stats.pi_time_ms <- stats.pi_time_ms
+                                       +. Time.(Span.(to_ms (diff (now ()) start_time)))
+                    ; ((Some (CNF.map cnf ~f:(fun i -> List.nth_exn job.features (i-1)))), stats)
+              with ClauseEncodingError
+                   -> stats.pi_time_ms <- stats.pi_time_ms
+                                       +. Time.(Span.(to_ms (diff (now ()) start_time)))
+                    ; (None, stats)
+      with _ -> stats.pi_time_ms <- stats.pi_time_ms
+                                 +. Time.(Span.(to_ms (diff (now ()) start_time)))
+              ; (None, stats)
 
 let cnf_opt_to_desc (pred : ('a Job.feature Job.with_desc) CNF.t option) : Job.desc =
   match pred with

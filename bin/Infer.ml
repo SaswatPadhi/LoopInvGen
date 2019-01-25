@@ -1,9 +1,16 @@
 open Core
 open LoopInvGen
 
-let main zpath statefile logfile statsfile
-         max_conflicts max_strengthening_attempts
-         max_restarts max_steps_on_restart
+let output_stats stats = function
+  | None -> ()
+  | Some statsfile
+    -> let stats_chan = Out_channel.create statsfile
+        in Out_channel.output_string stats_chan
+             (Sexplib.Sexp.to_string_hum ~indent:4 (LIG.sexp_of_stats stats))
+         ; Out_channel.close stats_chan
+
+let main zpath statefile logfile statsfile max_conflicts
+         max_strengthening_attempts max_restarts max_steps_on_restart
          filename () =
   Log.enable ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
@@ -18,11 +25,11 @@ let main zpath statefile logfile statsfile
      in let logic = Logic.of_string sygus.logic
      in let conf = {
        LIG.default_config with
-       for_VPIE = {
-         LIG.default_config.for_VPIE with
-         for_PIE = {
-           LIG.default_config.for_VPIE.for_PIE with
-           synth_logic = logic;
+       _VPIE = {
+         LIG.default_config._VPIE with
+         _PIE = {
+           LIG.default_config._VPIE._PIE with
+           synth_logic = logic ;
            max_conflict_group_size = (if max_conflicts > 0 then max_conflicts
                                       else (logic.conflict_group_size_multiplier
                                             * PIE.base_max_conflict_group_size)) ;
@@ -32,11 +39,12 @@ let main zpath statefile logfile statsfile
      ; max_restarts
      ; max_steps_on_restart
      }
-     in let inv = LIG.learnInvariant ~conf ~zpath ~states sygus
-     in Stdio.Out_channel.output_string Stdio.Out_channel.stdout
-          SyGuS.(func_definition {sygus.inv_func with body = (translate_smtlib_expr inv)})
-      ; Stats.output_to statsfile
-      ; Caml.exit (if String.equal inv "false" then 1 else 0)
+     in let inv, stats = LIG.learnInvariant ~conf ~zpath ~states sygus
+     in Out_channel.output_string Stdio.stdout
+          SyGuS.(func_definition {
+            sygus.inv_func with body = (translate_smtlib_expr inv)
+          })
+      ; output_stats stats statsfile
 
 let spec =
   let open Command.Spec in (
@@ -52,7 +60,7 @@ let spec =
 
       +> flag "-max-conflicts" (optional_with_default 0 int)
          ~doc:"NUMBER max size of the conflict group (POS+NEG). 0 = auto"
-      +> flag "-max-strengthening-attempts" (optional_with_default (LIG.default_config.for_VPIE.max_tries) int)
+      +> flag "-max-strengthening-attempts" (optional_with_default (LIG.default_config._VPIE.max_tries) int)
          ~doc:"NUMBER max candidates to consider, per strengthening. 0 = unlimited"
       +> flag "-max-restarts" (optional_with_default (LIG.default_config.max_restarts) int)
          ~doc:"NUMBER number of times the inference engine may restart"
