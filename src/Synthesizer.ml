@@ -24,7 +24,8 @@ let default_config : config = {
 type task = {
   arg_names : string list ;
   inputs : Value.t array list ;
-  outputs : Value.t array
+  outputs : Value.t array ;
+  constants : Value.t list
 }
 
 type stats = {
@@ -144,39 +145,39 @@ let subtract ~(from : Expr.component list) (comps : Expr.component list) =
   List.filter from ~f:(fun c -> not (List.mem comps c
                                        ~equal:(fun c1 c2 -> String.equal c1.name c2.name)))
 
-let solve_impl consts config task stats=
-  let int_components = Array.append
+let solve_impl config task stats=
+  let typed_components t_type = Array.append
     (Array.create ~len:1 [])
     (Array.mapi (Array.init (Int.min config.max_level (Array.length config.logic.components_per_level))
                             ~f:(fun i -> config.logic.components_per_level.(i)))
                 ~f:(fun level comps
-                    -> List.filter ~f:(fun c -> Poly.equal c.codomain Type.INT)
-                                   (if level < 1 then comps
-                                    else subtract ~from:comps (config.logic.components_per_level.(level - 1))))) in
-  let bool_components = Array.append
-    (Array.create ~len:1 [])
-    (Array.mapi (Array.init (Int.min config.max_level (Array.length config.logic.components_per_level))
-                            ~f:(fun i -> config.logic.components_per_level.(i)))
-                ~f:(fun level comps
-                    -> List.filter ~f:(fun c -> Poly.equal c.codomain Type.BOOL)
+                    -> List.filter ~f:(fun c -> Poly.equal c.codomain t_type)
                                    (if level < 1 then comps
                                     else subtract ~from:comps (config.logic.components_per_level.(level - 1))))) in
 
-  Log.debug (lazy ( "  $ INT Components:"
-                  ^ (Array.fold ~init:"" int_components
-                       ~f:(fun s l -> s ^ (Log.indented_sep 2) ^ "[" ^ (List.to_string_map l  ~sep:", " ~f:(fun (c : Expr.component) -> c.name)) ^ "]"))))
-  ;
-  Log.debug (lazy ( "  $ BOOL Components:"
-                  ^ (Array.fold ~init:"" bool_components
-                       ~f:(fun s l -> s ^ (Log.indented_sep 2) ^ "[" ^ (List.to_string_map l  ~sep:", " ~f:(fun (c : Expr.component) -> c.name)) ^ "]"))))
-  ;
+  let int_components = typed_components Type.INT in
+  let bool_components = typed_components Type.BOOL in
+  let char_components = typed_components Type.CHAR in
+  let string_components = typed_components Type.STRING in
+  let list_components = typed_components Type.LIST in
 
-  let int_candidates =
+  let empty_candidates () =
     Array.init ((Array.length config.logic.components_per_level) + 1)
       ~f:(fun _ -> Array.init config.cost_limit ~f:(fun _ -> DList.create ())) in
-  let bool_candidates =
-    Array.init ((Array.length config.logic.components_per_level) + 1)
-      ~f:(fun _ -> Array.init config.cost_limit ~f:(fun _ -> DList.create ())) in
+
+  let int_candidates = empty_candidates () in
+  let bool_candidates = empty_candidates () in
+  let char_candidates = empty_candidates () in
+  let string_candidates = empty_candidates () in
+  let list_candidates = empty_candidates () in
+
+  let typed_candidates = function
+    | Type.INT -> int_candidates
+    | Type.BOOL -> bool_candidates
+    | Type.CHAR -> char_candidates
+    | Type.STRING -> string_candidates
+    | Type.LIST -> list_candidates
+  in
 
   let seen_outputs = ref (Set.empty (module Output)) in
   let add_candidate candidates_set level cost (candidate : Expr.synthesized) =
@@ -189,23 +190,20 @@ let solve_impl consts config task stats=
   let constants =
     (List.dedup_and_sort ~compare:Value.compare
        ( [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ]
-       @ (List.map ~f:(function Value.Int x -> Value.Int (abs x) | x -> x) consts)))
+       @ (List.map ~f:(function Value.Int x -> Value.Int (abs x) | x -> x)
+                   task.constants)))
   in
   let add_constant_candidate value =
     let candidate : Expr.synthesized = {
       expr = Expr.Const value;
       outputs = Array.create ~len:(Array.length task.outputs) value;
-    } in match Value.typeof value with
-         | Type.BOOL -> ignore (add_candidate bool_candidates 0 1 candidate)
-         | Type.INT -> ignore (add_candidate int_candidates 0 1 candidate)
-  in List.(iter (rev constants) ~f:add_constant_candidate)
+    } in ignore (add_candidate (typed_candidates (Value.typeof value)) 0 1 candidate)
+  in List.iter constants ~f:add_constant_candidate
   ;
 
   List.iteri task.inputs ~f:(fun i input ->
-    let candidates = match Value.typeof input.(1) with
-      | Type.INT -> int_candidates
-      | Type.BOOL -> bool_candidates
-    in ignore (add_candidate candidates 0 1 { expr = Expr.Var i ; outputs = input }))
+    ignore (add_candidate (typed_candidates (Value.typeof input.(1))) 0 1
+                          { expr = Expr.Var i ; outputs = input }))
   ;
 
   let f_cost = match config.cost_attribute with Height -> Expr.height | Size -> Expr.size in
@@ -218,21 +216,16 @@ let solve_impl consts config task stats=
     then raise (Success candidate.expr)
   in
 
-  let task_codomain = Value.typeof task.outputs.(1) in
-  begin match task_codomain with
-    | Type.INT -> DList.iter ~f:check int_candidates.(0).(1);
-    | Type.BOOL -> DList.iter ~f:check bool_candidates.(0).(1);
-  end ;
+  let task_codomain = Value.typeof task.outputs.(1)
+   in DList.iter ~f:check (typed_candidates task_codomain).(0).(1)
+  ;
 
   let apply_component op_level expr_level cost arg_types applier =
     let rec apply_cells acc types locations =
       match types, locations with
       | (typ :: types, (lvl,loc) :: locations)
         -> DList.iter ~f:(fun x -> apply_cells (x :: acc) types locations)
-                      begin match typ with
-                        | Type.INT -> int_candidates.(lvl).(loc)
-                        | Type.BOOL -> bool_candidates.(lvl).(loc)
-                      end
+                      (typed_candidates typ).(lvl).(loc)
       | ([], []) -> applier (List.rev acc)
       | _ -> raise (Internal_Exn "Impossible case!")
     in f_divide (apply_cells [] arg_types) (List.length arg_types) op_level expr_level (cost - 1)
@@ -277,16 +270,16 @@ let solve_impl consts config task stats=
          ; seen_level_cost := (Set.add !seen_level_cost (level, cost))
          ; List.iter (List.range 1 ~stop:`inclusive level)
              ~f:(fun l -> List.iter2_exn
-                            [bool_candidates ; int_candidates]
-                            [bool_components.(l) ; int_components.(l)]
+                            [bool_candidates ; int_candidates ; char_candidates ; string_candidates ; list_candidates]
+                            [bool_components.(l) ; int_components.(l) ; char_components.(l) ; string_components.(l) ; list_components.(l)]
                             ~f:(fun cands comps
                                 -> List.iter comps ~f:(expand_component l level cost cands))))
 
-let solve (consts : Value.t list) ~(config : config) (task : task) : result =
+let solve ?(config = default_config) (task : task) : result =
   Log.debug (lazy ("Running enumerative synthesis:"));
   let start_time = Time.now () in
   let stats = { enumerated = 0 ; pruned = 0 ; synth_time_ms = 0.0 } in
-  try solve_impl consts config task stats
+  try solve_impl config task stats
     ; stats.synth_time_ms <- Time.(Span.(to_ms (diff (now ()) start_time)))
     ; raise NoSuchFunction
   with Success solution

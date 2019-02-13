@@ -1,10 +1,8 @@
 ## Example App
 
-This directory shows how to build an app (our example app is called `App`),
-using `LoopInvGen` as an OCaml library.
+This directory shows how to build an app using `LoopInvGen` as an OCaml library.
+Our example app, called `App`, resides in the [`App.ml`](App.ml) file.
 
-The dummy source file ([`App.ml`](App.ml)),
-simply infers a precondition to ensure that the absolute value function returns its argument value.
 
 ### Building `App.exe`
 
@@ -16,7 +14,16 @@ To build `App`, you may either:
 2. Execute `dune build app/App.exe` within `LoopInvGen` directory
 
 To run `App`, execute `dune exec app/App.exe` within `LoopInvGen` directory.
-It should generate the following output:
+It should generate an output similar to the following:
+
 ```
-The precondition is: (<= 0 x)
+PI for { x = abs(x) } with feature learning:
+The precondition is: (>= x 0)
+  > Total time (ms): 0.30517578125
+  > Synth time (ms): [0.]
+
+PI for { append(l1,l2) = [] } without feature learning:
+The precondition is: (and (= y []) (= x []))
+  > Total time (ms): 0.0152587890625
+  > Synth time (ms): []
 ```

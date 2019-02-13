@@ -52,7 +52,8 @@ let synthFeature ?(consts = []) ~(job : Job.t) ~(conf : Synthesizer.config)
                  (conflict_group : Value.t list conflict) stats
                  : Value.t list Job.feature Job.with_desc =
   let open Synthesizer in
-  let result = solve consts ~config:conf {
+  let result = solve ~config:conf {
+    constants = consts ;
     arg_names = job.farg_names ;
     inputs = (let all_inputs = conflict_group.pos @ conflict_group.neg in
       List.mapi job.farg_names

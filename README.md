@@ -100,7 +100,7 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 
 #### 2. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.4 core.v0.11.3 core_extended.v0.11.0 dune.1.6.3
+$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.7.0
 ```
 
 #### 3. Get the [Z3 project][z3].
