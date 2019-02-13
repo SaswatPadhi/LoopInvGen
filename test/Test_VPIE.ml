@@ -16,7 +16,7 @@ let abs_post_desc = "(or (and (>= x 0) (= x x))
 let abs_equal_precondition ~(zpath : string) () =
   ZProc.(process ~zpath (fun z3 ->
     ignore (run_queries ~scoped:false z3 ~db:[ "(declare-var x Int)" ] []);
-    let res = VPIE.learnVPreCond ~z3 ~post_desc:abs_post_desc abs_job in
+    let (res, _) = VPIE.learnVPreCond ~z3 ~post_desc:abs_post_desc abs_job in
     let counter = equivalence_counter_example z3 res "(>= x 0)"
     in Alcotest.(check string) "identical" "false" (Test_ZProc.model_to_string counter)))
 
