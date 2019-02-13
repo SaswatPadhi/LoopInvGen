@@ -22,19 +22,15 @@ script: |
 after_script: docker stop opam
 
 env:
-  - OCAML_VERSION=4.04.2          PROFILE="optimize"
-  - OCAML_VERSION=4.04.2+flambda  PROFILE="optimize"
   - OCAML_VERSION=4.05.0          PROFILE="optimize"
   - OCAML_VERSION=4.05.0+flambda  PROFILE="optimize"
   - OCAML_VERSION=4.06.1          PROFILE="optimize"
   - OCAML_VERSION=4.06.1+flambda  PROFILE="optimize"
-  - OCAML_VERSION=4.07.0          PROFILE="optimize"
-  - OCAML_VERSION=4.07.0+flambda  PROFILE="optimize"
-  - OCAML_VERSION=4.04.2          PROFILE="debug"
-  - OCAML_VERSION=4.04.2+flambda  PROFILE="debug"
+  - OCAML_VERSION=4.07.1          PROFILE="optimize"
+  - OCAML_VERSION=4.07.1+flambda  PROFILE="optimize"
   - OCAML_VERSION=4.05.0          PROFILE="debug"
   - OCAML_VERSION=4.05.0+flambda  PROFILE="debug"
   - OCAML_VERSION=4.06.1          PROFILE="debug"
   - OCAML_VERSION=4.06.1+flambda  PROFILE="debug"
-  - OCAML_VERSION=4.07.0          PROFILE="debug"
-  - OCAML_VERSION=4.07.0+flambda  PROFILE="debug"
+  - OCAML_VERSION=4.07.1          PROFILE="debug"
+  - OCAML_VERSION=4.07.1+flambda  PROFILE="debug"

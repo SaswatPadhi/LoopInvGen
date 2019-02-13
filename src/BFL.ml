@@ -199,7 +199,7 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
              (neg : bool list list) : int CNF.t =
   let rec helper k =
   begin
-    Log.debug (lazy ("Attempting BFL with K = " ^ (Int.to_string k))) ;
+    Log.debug (lazy ("  > max literals per clause = " ^ (Int.to_string k))) ;
     (* create one variable per possible k-clause over the given variables *)
     let varEncoding = cnfVarsToClauseVars k n in
     let augmentExamples =
@@ -232,4 +232,5 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
        with NoSuchFunction
             -> if not conf.auto_incr_k then raise NoSuchFunction
                                        else helper (k + 1)
-  end in helper conf.k
+  end in Log.debug (lazy ("Attempting BFL with " ^ (Int.to_string n) ^ " features"))
+       ; helper conf.k

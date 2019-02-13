@@ -25,6 +25,16 @@ let rec equal e1 e2 =
     && List.fold2_exn l1 l2 ~init:true ~f:(fun acc x y -> acc && (equal x y))
   | _ -> false
 
+let (=/=) = fun x y -> (not (equal x y))
+
+let is_constant expr =
+  let rec helper = function
+    | Const _ -> ()
+    | Var _ -> raise Caml.Exit
+    | FCall (_, exprs) -> List.iter ~f:helper exprs
+  in try helper expr ; true
+     with Caml.Exit -> false
+
 let rec to_string arg_names = function
   | FCall (comp, comp_args) -> comp.to_string (List.map ~f:(to_string arg_names) comp_args)
   | Const v -> Value.to_string v

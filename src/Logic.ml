@@ -2,24 +2,32 @@ open Core_kernel
 
 type t = {
   name : string ;
-  components : Expr.component list ;
+  components_per_level : Expr.component list array ;
   conflict_group_size_multiplier : int
 }
 
 let all_supported =
-  let table = String.Table.create () ~size:2 in
-  let except (with_name : string) (component : Expr.component)
-      = not (String.equal component.name with_name)
+   let table = String.Table.create () ~size:2
    in List.iter ~f:(fun component -> String.Table.set table ~key:component.name ~data:component)
         [{
            name = "LIA" ;
-           components = Th_Bool.components @ Th_LIA.components ;
+           components_per_level = [|
+             (BooleanComponents.all @ IntegerComponents.equality) ;
+             (BooleanComponents.all @ IntegerComponents.intervals) ;
+             (BooleanComponents.all @ IntegerComponents.octagons) ;
+             (BooleanComponents.all @ IntegerComponents.polyhedra) ;
+           |] ;
            conflict_group_size_multiplier = 1
          } ; {
            name = "NIA" ;
-           components = Th_Bool.components
-                      @ (List.filter Th_LIA.components ~f:(except "lin-int-mult"))
-                      @ Th_NIA.components ;
+           components_per_level = [|
+             (BooleanComponents.all @ IntegerComponents.equality) ;
+             (BooleanComponents.all @ IntegerComponents.intervals) ;
+             (BooleanComponents.all @ IntegerComponents.octagons) ;
+             (BooleanComponents.all @ IntegerComponents.polyhedra) ;
+             (BooleanComponents.all @ IntegerComponents.polynomials) ;
+             (BooleanComponents.all @ IntegerComponents.peano) ;
+           |] ;
            conflict_group_size_multiplier = 2
          }]
     ; table

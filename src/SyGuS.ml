@@ -68,7 +68,7 @@ let parse_define_fun (sexp_list : Sexp.t list) : func * Value.t list =
            ; body = (Sexp.to_string_hum expr)
            ; args = args
            ; return = (Type.of_string r_typ)
-           ; expressible = false
+           ; expressible = true (* TODO: Check! *)
            }, consts)
   | _ -> raise (Parse_Exn ("Invalid function definition: "
                           ^ (Sexp.to_string_hum (List(Atom("define-fun") :: sexp_list)))))

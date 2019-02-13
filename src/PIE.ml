@@ -12,8 +12,8 @@ type 'a conflict = {
 
 type config = {
   _BFL : BFL.config ;
+  _Synthesizer : Synthesizer.config ;
 
-  synth_logic : Logic.t ;
   disable_synth : bool ;
   max_conflict_group_size : int ;
 }
@@ -27,8 +27,8 @@ let base_max_conflict_group_size = 32
 
 let default_config : config = {
   _BFL = BFL.default_config ;
+  _Synthesizer = Synthesizer.default_config ;
 
-  synth_logic = Logic.of_string "LIA" ;
   disable_synth = false ;
   max_conflict_group_size = base_max_conflict_group_size ;
 }
@@ -48,12 +48,11 @@ let conflictingTests (job : Job.t) : 'a conflict list =
                                    ; neg = map ~f:fst ntests
                                    ; fvec = pfv }))
 
-let synthFeature ?(consts = []) ~(job : Job.t) ~(logic : Logic.t)
+let synthFeature ?(consts = []) ~(job : Job.t) ~(conf : Synthesizer.config)
                  (conflict_group : Value.t list conflict) stats
                  : Value.t list Job.feature Job.with_desc =
   let open Synthesizer in
-  let result = solve consts {
-    logic ;
+  let result = solve consts ~config:conf {
     arg_names = job.farg_names ;
     inputs = (let all_inputs = conflict_group.pos @ conflict_group.neg in
       List.mapi job.farg_names
@@ -70,14 +69,14 @@ let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
                      (conflict_group' : Value.t list conflict) stats
                      : Value.t list Job.feature Job.with_desc =
   let group_size = List.((length conflict_group'.pos) + (length conflict_group'.neg))
-  in let group_size = group_size * (conf.synth_logic.conflict_group_size_multiplier)
+  in let group_size = group_size * (conf._Synthesizer.logic.conflict_group_size_multiplier)
   in let conflict_group = if group_size < conf.max_conflict_group_size then conflict_group'
                    else { conflict_group' with
                           pos = List.take conflict_group'.pos (conf.max_conflict_group_size / 2);
                           neg = List.take conflict_group'.neg (conf.max_conflict_group_size / 2)
                         }
   in Log.debug (lazy ("Invoking synthesizer with "
-                      ^ (conf.synth_logic.name) ^ " logic."
+                      ^ (conf._Synthesizer.logic.name) ^ " logic."
                       ^ (Log.indented_sep 0) ^ "Conflict group ("
                       ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
                            ~f:(fun n t -> n ^ " :" ^ (Type.to_string t))) ^ "):" ^ (Log.indented_sep 2)
@@ -87,7 +86,7 @@ let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
           ^ "NEG (" ^ (Int.to_string (List.length conflict_group.neg)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map conflict_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (List.to_string_map vl ~f:Value.to_string ~sep:" , ") ^ ")"))))
-   ; let new_feature = synthFeature conflict_group ~logic:conf.synth_logic ~consts ~job stats
+   ; let new_feature = synthFeature conflict_group ~conf:conf._Synthesizer ~consts ~job stats
      in Log.debug (lazy ("Synthesized feature:" ^ (Log.indented_sep 4) ^ (snd new_feature)))
       ; new_feature
 
