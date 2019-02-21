@@ -8,9 +8,8 @@ let abs_job = Job.create
   ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
   ~args:([ "x", Type.INT ])
   ~post:(fun inp res ->
-           match inp , res with
-           | [ Value.Int x ], Ok (Value.Int y) -> x = y
-           | _ -> false)
+    match [@warning "-8"] inp , res with
+           | [ Value.Int x ], Ok (Value.Int y) -> x = y)
   ~features:[
     ((fun [@warning "-8"] [Value.Int x] -> x > 0), "(> x 0)")
   ]
@@ -40,8 +39,8 @@ let abs_precond_1_cnf () =
   let (res, _) = learnPreCond (Job.add_feature ~job:abs_job
                                  ((fun [@warning "-8"] [Value.Int x] -> x + x = x),
                                  "(= x (+ x x))"))
-                              ~conf:{ PIE.default_config with
-                                      disable_synth = true
+                              ~conf:{ PIE.default_config
+                                      with disable_synth = true
                                     ; _BFL = { BFL.default_config
                                                with k = 1
                                              ; auto_incr_k = false }}
@@ -60,15 +59,15 @@ let abs_precond_auto_1 () =
                              (cnf_opt_to_desc res)
 
 let abs_zero_initial_features () =
-  let (res, _) = learnPreCond (
-                   Job.create
-                   ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
-                   ~args:([ "x", Type.INT ])
-                   ~post:(fun inp res -> match inp , res with
-                                         | [ Value.Int x ], Ok (Value.Int y) -> x = y
-                                         | _ -> false)
-                   (List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [Value.Int i])))
-  in Alcotest.(check string) "identical" "(<= 0 x)" (cnf_opt_to_desc res)
+  let (res, _) = learnPreCond (Job.create
+    ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
+    ~args:([ "x", Type.INT ])
+    ~post:(fun inp res ->
+      match [@warning "-8"] inp , res with
+            | [ Value.Int x ], Ok (Value.Int y) -> x = y)
+    ~features:[]
+    (List.map [(-1) ; 3 ; 0 ; (-2) ; 6] ~f:(fun i -> [Value.Int i])))
+  in Alcotest.(check string) "identical" "(>= x 0)" (cnf_opt_to_desc res)
 
 let all = [
   "Abs Conflict Failure",    `Quick, abs_conflict_failure  ;

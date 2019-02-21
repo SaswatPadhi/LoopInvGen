@@ -10,7 +10,7 @@ let y_PLUS_x () =
                ; [| 3 ; 2 ; 13 ; 11 |] ];
     outputs = Array.map ~f:(fun i -> Value.Int i) [| 6 ; 9 ; 12 ; 7 |];
     constants = []
-  } in Alcotest.(check string) "identical" "(+ y x)" result.string
+  } in Alcotest.(check string) "identical" "(+ x y)" result.string
 
 let y_MINUS_z_LE_x () =
   let open Synthesizer in
@@ -23,7 +23,7 @@ let y_MINUS_z_LE_x () =
     outputs = Array.map ~f:(fun b -> Value.Bool b)
                         [| true ; false ; false ; false ; true |];
     constants = []
-  } in Alcotest.(check string) "identical" "(<= (- y z) x)" result.string
+  } in Alcotest.(check string) "identical" "(>= (+ x z) y)" result.string
 
 let y_MINUS_x_MINUS_z_LE_x () =
   let open Synthesizer in
@@ -37,10 +37,10 @@ let y_MINUS_x_MINUS_z_LE_x () =
     outputs = Array.map ~f:(fun b -> Value.Bool b)
                         [| true ; true ; false ; false ; true ; false |];
     constants = []
-  } in Alcotest.(check string) "identical" "(<= (- (- y w) z) x)" result.string
+  } in Alcotest.(check string) "identical" "(not (or (= w x) (= y z)))" result.string
 
 let all = [
-  "(+ y x)",              `Quick, y_PLUS_x ;
-  "(<= (- y z) x)",       `Quick, y_MINUS_z_LE_x ;
-  "(<= (- (- y w) z) x)", `Quick, y_MINUS_x_MINUS_z_LE_x ;
+  "(+ x y)",              `Quick, y_PLUS_x ;
+  "(>= (+ x z) y)",       `Quick, y_MINUS_z_LE_x ;
+  "(not (= (= w x) (= y z)))", `Quick, y_MINUS_x_MINUS_z_LE_x ;
 ]
