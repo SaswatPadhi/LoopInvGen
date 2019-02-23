@@ -3,6 +3,7 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
 [%%import "config.h"]
 
 [%%if LOGGING = 0]
+  (* If logging has been entirely disabled during compilation *)
   let fatal _ = ()
   let error _ = ()
   let warn  _ = ()
@@ -12,11 +13,18 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
   let disable () = ()
 
   let [@warning "-27"] enable ?msg ?level _ = ()
+
 [%%else]
+  (* If logging has not been disabled, a user may still choose not to log
+   * during a particular execution. Logging functions therefore accept `lazy`
+   * strings that are forced only when they are actually logged. *)
+
   open Core_extended.Logger
 
   let logger = ref (create_default "")
-  let do_log level lstr = try log (!logger) (level , (Lazy.force lstr)) with _ -> ()
+  let do_log level lazy_str =
+    try log (!logger) (level , (Lazy.force lazy_str))
+    with _ -> ()
 
   let enabled = ref 0
 
