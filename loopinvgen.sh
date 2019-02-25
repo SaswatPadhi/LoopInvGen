@@ -2,9 +2,13 @@
 
 if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
 
-EXIT_CODE_USAGE_ERROR=-2
 EXIT_CODE_BUILD_ERROR=-3
+EXIT_CODE_USAGE_ERROR=-2
+
 EXIT_CODE_PROCESS_ERROR=1
+EXIT_CODE_RECORD_ERROR=2
+EXIT_CODE_INFER_ERROR=3
+EXIT_CODE_TIMEOUT=4
 
 SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
@@ -36,6 +40,8 @@ RECORD_FORKS=4
 RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
 
+EXPRESSIVENESS_LEVEL=4
+
 PROCESS_LOG=""
 RECORD_LOG=""
 INFER_LOG=""
@@ -66,12 +72,13 @@ Flags:
     [--verify, -v]
 
 Configuration:
+    [--expressiveness-level, -L <int>]  (4)\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
     [--intermediates-dir, -p <path>]    (_log)
     [--log, -l <src_1>[,<src_2>...]]    ()\t    src <- {process|record|infer|verify}
     [--states-to-record, -s <count>]    ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
-    [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
-    [--z3-path, -z <path>]              (_dep/z3)
     [--stats-path, -S <path>]           ()
+    [--z3-path, -z <path>]              (_dep/z3)
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
     [--Process-args, -P \"<args>\"]   see \``basename "$PROCESS"` -h\` for details
@@ -81,7 +88,7 @@ Arguments to Internal Programs (@ `dirname $RECORD`):
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
-OPTS=`getopt -n 'parse-options' -o :P:R:I:V:cvl:p:s:S:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,clean-intermediates,verify,log:,intermediates-dir:,states-to-record:,stats-path:,infer-timeout:,z3-path: -- "$@"`
+OPTS=`getopt -n 'parse-options' -o :P:R:I:V:cvl:L:p:s:S:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,clean-intermediates,verify,log:,expressiveness-level:,intermediates-dir:,states-to-record:,stats-path:,infer-timeout:,z3-path: -- "$@"`
 if [ $? != 0 ]; then usage ; fi
 
 eval set -- "$OPTS"
@@ -114,12 +121,17 @@ while true ; do
            esac
          done
          shift ; shift ;;
+    -L | --expressiveness-level )
+         [ "$2" -ge "1" ] && [ "$2" -le "6" ] \
+           || usage "The expressiveness level (= $2) must be between 1 and 6 (both inclusive)."
+         EXPRESSIVENESS_LEVEL="$2"
+         shift ; shift ;;
     -p | --intermediates-dir )
          INTERMEDIATES_DIR="$2"
          shift ; shift ;;
     -s | --states-to-record )
          [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
-           || usage "$2 must be > $MIN_RECORD_STATES_PER_FORK."
+           || usage "The number of states to record (= $2) must be > $MIN_RECORD_STATES_PER_FORK."
          STATES="$2"
          shift ; shift ;;
     -S | --stats-path )
@@ -127,7 +139,7 @@ while true ; do
          shift ; shift ;;
     -t | --infer-timeout )
          [ "$2" -gt "$MIN_INFER_TIMEOUT" ] \
-           || usage "$2 must be > $MIN_INFER_TIMEOUT."
+           || usage "The inference timeout (= $2) must be > $MIN_INFER_TIMEOUT."
          INFER_TIMEOUT="$2"
          shift ; shift ;;
     -z | --z3-path )
@@ -186,8 +198,8 @@ show_status "(recording)"
 for i in `seq 1 $RECORD_FORKS` ; do
   [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
   (timeout $RECORD_TIMEOUT \
-           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i" $LOG_PARAM \
-                   $RECORD_ARGS "$TESTCASE_PROCESSED") > "$TESTCASE_REC_STATES$i" &
+           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i" $LOG_PARAM $RECORD_ARGS \
+                   "$TESTCASE_PROCESSED") > "$TESTCASE_REC_STATES$i" &
 done
 wait
 
@@ -199,8 +211,8 @@ grep -hv "^[[:space:]]*$" "$TESTCASE_REC_STATES"? | sort -u > "$TESTCASE_ALL_STA
 show_status "(inferring)"
 
 timeout --foreground $INFER_TIMEOUT \
-        $INFER -s "$TESTCASE_ALL_STATES" ${DO_LOG[infer]} $INFER_ARGS \
-               ${STATS_ARG} "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+        $INFER -s "$TESTCASE_ALL_STATES" -e "$EXPRESSIVENESS_LEVEL" $INFER_ARGS \
+               ${DO_LOG[infer]} ${STATS_ARG} "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
 INFER_RESULT_CODE=$?
 
 
@@ -221,8 +233,9 @@ elif [ $INFER_RESULT_CODE == 0 ]; then
   RESULT_CODE=0
 else
   show_status "(fail)"
+  RESULT_CODE=$EXIT_CODE_INFER_ERROR
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
-    show_status "(timeout)"
+    RESULT_CODE=$EXIT_CODE_TIMEOUT
   fi
   echo ""
 fi

@@ -1,7 +1,7 @@
 opam-version: "2.0"
 
 name: "LoopInvGen"
-version: "0.6b"
+version: "1.0"
 synopsis: "A loop invariant generator for program verification"
 
 maintainer: "Saswat Padhi <saswat.sourav@gmail.com>"
@@ -19,7 +19,7 @@ build: [
 ]
 
 depends: [
-  "ocaml"         {>= "4.04.2"}
+  "ocaml"         {>= "4.05.0"}
   "dune"          {>= "1.1.1" & build}
   "alcotest"      {>= "0.7" & with-test}
   "core"          {>= "0.11"}

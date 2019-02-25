@@ -27,7 +27,12 @@ opam config report
 ### Pin `LoopInvGen` package and install deps
 
 opam pin add LoopInvGen . --no-action --yes --kind=path
-opam install LoopInvGen --deps-only --with-test
+
+if [ -z "${MIN_REQS_ONLY}" ]; then
+    opam install LoopInvGen --deps-only --with-test
+else
+    opam install --yes alcotest.0.7.0 core.v0.11.0 core_extended.v0.11.0 dune.1.1.1
+fi
 
 opam list
 ls -lah

@@ -96,7 +96,7 @@ except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 
 See <https://opam.ocaml.org/doc/Install.html>.
 
-#### 2. Install `ocaml` >= 4.04.2.
+#### 2. Install `ocaml` >= 4.05.0.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enable
 For example, with [`opam`](https://opam.ocaml.org/), you could:
 - run `opam switch 4.07.1+flambda` for opam 1.x

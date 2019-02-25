@@ -134,8 +134,7 @@ let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
   sat_model_for_asserts z3 ~eval_term
-                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") ::
-                             ("(assert (not (=> " ^ b ^ " " ^ a ^")))") :: db)
+    ~db:(("(assert (not (and (=> " ^ a ^ " " ^ b ^ ") (=> " ^ b ^ " " ^ a ^ "))))") :: db)
 
 let simplify (z3 : t) (q : string) : string =
   let open Sexp in

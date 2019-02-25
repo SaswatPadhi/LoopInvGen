@@ -27,45 +27,22 @@ let check_invariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result
                                  ~f:(fun i v -> if v = None then None
                                                 else Some [| "pre" ; "trans" ; "post" |].(i)))))
 
-let read_inv_from_chan weak_types in_chan ~(sygus : SyGuS.t) : Sexplib.Sexp.t =
+let read_inv_from_chan in_chan ~(sygus : SyGuS.t) : Sexplib.Sexp.t =
   let open Sexplib.Sexp in
   let sexps = input_rev_sexps in_chan
   in match sexps with
      | [] | [ (List [Atom "fail"]) ] -> Atom "false"
      | [ List [ (Atom "define-fun") ; (Atom name) ; (List vars) ; (Atom "Bool") ; body ] ]
        when String.equal name sygus.inv_func.name
-       -> let helper expr old_v new_v =
-           let rec internal_helper = function
+       -> let replace_var expr old_v new_v =
+           let rec helper = function
              | Atom s -> Atom (if String.equal s old_v then new_v else s)
-             | List s -> List (List.map ~f:internal_helper s)
-            in internal_helper expr
-          in let bstr = function "0" -> "false" | "1" -> "true" | s -> s
-          in let rec helper_2 = function
-               | List [ (Atom "ite") ; (Atom b) ; x ; y ]
-                 -> List [ (Atom "ite") ; (Atom (bstr b)) ; (helper_2 x) ; (helper_2 y) ]
-               | List [ (Atom "=>") ; (Atom x) ; (Atom y) ]
-                 -> List [ (Atom "=>") ; (Atom (bstr x)) ; (Atom (bstr y)) ]
-               | List [ (Atom "=>") ; (Atom x) ; (List _ as y) ]
-                 -> List [ (Atom "=>") ; (Atom (bstr x)) ; (helper_2 y) ]
-               | List [ (Atom "=>") ; (List _ as y) ; (Atom x) ]
-                 -> List [ (Atom "=>") ; (helper_2 y) ; (Atom (bstr x)) ]
-               | List [ (Atom "or") ; (Atom x) ; (Atom y) ]
-                 -> List [ (Atom "or") ; (Atom (bstr x)) ; (Atom (bstr y)) ]
-               | List [ (Atom "or") ; (Atom x) ; (List _ as y) ]
-               | List [ (Atom "or") ; (List _ as y) ; (Atom x) ]
-                 -> List [ (Atom "or") ; (Atom (bstr x)) ; (helper_2 y) ]
-               | List [ (Atom "and") ; (Atom x) ; (Atom y) ]
-                 -> List [ (Atom "and") ; (Atom (bstr x)) ; (Atom (bstr y)) ]
-               | List [ (Atom "and") ; (Atom x) ; (List _ as y) ]
-               | List [ (Atom "and") ; (List _ as y) ; (Atom x) ]
-                 -> List [ (Atom "and") ; (Atom (bstr x)) ; (helper_2 y) ]
-               | List [ (Atom "not") ; (Atom x) ]
-                 -> List [ (Atom "not") ; (Atom (bstr x)) ]
-               | List sexps -> List (List.map ~f:helper_2 sexps)
-               | sexp -> sexp
-          in List.foldi vars ~init:(if weak_types then helper_2 body else body)
-               ~f:(fun [@warning "-8"] i cur_body (List [ (Atom v) ; _ ])
-                   -> helper cur_body v (fst (List.nth_exn sygus.inv_func.args i)))
+             | List s -> List (List.map ~f:helper s)
+            in helper expr
+          in List.foldi vars ~init:body
+                        ~f:(fun [@warning "-8"] i cur_body (List [ (Atom v) ; _ ])
+                            -> replace_var cur_body v
+                                           (fst (List.nth_exn sygus.inv_func.args i)))
      | _ -> raise (Exceptions.Parse_Exn
                      "Bad/multiple S-exprs detected, expecting invariant as a single valid S-expr.")
 
@@ -79,14 +56,14 @@ let string_of_result res =
 let exit_code_of_result res =
   match res with
   | PASS -> 0
-  | FAIL _ -> 1
-  | NO_SOLUTION_PASS -> 2
-  | NO_SOLUTION_FAIL -> 3
+  | FAIL _ -> 10
+  | NO_SOLUTION_PASS -> 0
+  | NO_SOLUTION_FAIL -> 11
 
-let main zpath filename logfile weak_types invfile () =
+let main zpath filename logfile invfile () =
   Log.enable ~msg:"VERIFY" logfile ;
   let sygus = SyGuS.parse (get_in_channel filename) in
-  let inv = read_inv_from_chan weak_types (get_in_channel invfile) ~sygus in
+  let inv = read_inv_from_chan (get_in_channel invfile) ~sygus in
   let res =
     try check_invariant ~zpath ~sygus (Sexplib.Sexp.to_string_hum inv)
     with _ -> FAIL [ "<parse>" ]
@@ -102,8 +79,6 @@ let spec =
        ~doc:"FILENAME input file containing the SyGuS-INV problem"
     +> flag "-l" (optional string)
        ~doc:"FILENAME output file for logs, defaults to null"
-    +> flag "-t" no_arg
-       ~doc:"Weak type checking. Allow: 0 for false, 1 for true in invariant"
     +> anon (maybe_with_default "-" ("filename" %: file))
   )
 

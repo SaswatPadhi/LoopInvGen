@@ -16,12 +16,17 @@ before_install:
 install: docker exec opam bash -c "sudo apt -yqq install m4"
 
 script: |
-  docker exec -t -e OCAML_VERSION="$OCAML_VERSION" -e PROFILE="$PROFILE" \
+  docker exec -t \
+              -e OCAML_VERSION="$OCAML_VERSION" \
+              -e PROFILE="$PROFILE" \
+              -e MIN_REQS_ONLY="$MIN_REQS_ONLY" \
               opam bash -c "cd /travis && bash -ex .travis.sh"
 
 after_script: docker stop opam
 
 env:
+  - OCAML_VERSION=4.05.0          PROFILE="optimize"  MIN_REQS_ONLY="true"
+  - OCAML_VERSION=4.05.0+flambda  PROFILE="optimize"  MIN_REQS_ONLY="true"
   - OCAML_VERSION=4.05.0          PROFILE="optimize"
   - OCAML_VERSION=4.05.0+flambda  PROFILE="optimize"
   - OCAML_VERSION=4.06.1          PROFILE="optimize"
@@ -34,3 +39,4 @@ env:
   - OCAML_VERSION=4.06.1+flambda  PROFILE="debug"
   - OCAML_VERSION=4.07.1          PROFILE="debug"
   - OCAML_VERSION=4.07.1+flambda  PROFILE="debug"
+  

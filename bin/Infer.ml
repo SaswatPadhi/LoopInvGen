@@ -9,8 +9,8 @@ let output_stats stats = function
              (Sexplib.Sexp.to_string_hum ~indent:4 (LIG.sexp_of_stats stats))
          ; Out_channel.close stats_chan
 
-let main zpath statefile logfile statsfile max_conflicts
-         max_strengthening_attempts max_restarts max_steps_on_restart
+let main expressiveness logfile statefile statsfile zpath
+         max_conflicts max_strengthening_attempts max_restarts max_steps_on_restart
          filename () =
   Log.enable ~msg:"INFER" logfile ;
   let state_chan = Utils.get_in_channel statefile in
@@ -32,6 +32,7 @@ let main zpath statefile logfile statsfile max_conflicts
            _Synthesizer = {
              LIG.default_config._VPIE._PIE._Synthesizer with
              logic = logic
+           ; max_level = expressiveness
            }
            ; max_conflict_group_size = (if max_conflicts > 0 then max_conflicts
                                       else (logic.conflict_group_size_multiplier
@@ -52,23 +53,25 @@ let main zpath statefile logfile statsfile max_conflicts
 let spec =
   let open Command.Spec in (
       empty
-      +> flag "-z" (required string)
-         ~doc:"FILENAME path to the z3 executable"
-      +> flag "-s" (required string)
-         ~doc:"FILENAME states file, containing program states"
+      +> flag "-e" (optional_with_default 4 int)
+         ~doc:"INTEGER expressiveness level. 4 = Polyhedra"
       +> flag "-l" (optional string)
          ~doc:"FILENAME enable logging"
+      +> flag "-s" (required string)
+         ~doc:"FILENAME states file, containing program states"
       +> flag "-t" (optional string)
          ~doc:"FILENAME output statistics"
+      +> flag "-z" (required string)
+         ~doc:"FILENAME path to the z3 executable"
 
       +> flag "-max-conflicting" (optional_with_default 0 int)
-         ~doc:"INTEGER: max size of the conflict group (POS+NEG). 0 = auto"
+         ~doc:"INTEGER max size of the conflict group (POS+NEG). 0 = auto"
       +> flag "-max-strengthening" (optional_with_default (LIG.default_config._VPIE.max_tries) int)
-         ~doc:"INTEGER: max candidates to consider, per strengthening. 0 = unlimited"
+         ~doc:"INTEGER max candidates to consider, per strengthening. 0 = unlimited"
       +> flag "-max-restarts" (optional_with_default (LIG.default_config.max_restarts) int)
-         ~doc:"INTEGER: number of times the inference engine may restart"
+         ~doc:"INTEGER number of times the inference engine may restart"
       +> flag "-max-steps-on-restart" (optional_with_default (LIG.default_config.max_steps_on_restart) int)
-         ~doc:"INTEGER: number of states to collect after each restart"
+         ~doc:"INTEGER number of states to collect after each restart"
 
       +> anon ("filename" %: file)
     )
