@@ -115,12 +115,13 @@ You could either:
 
 #### 4. `git clone` this project, and build everything.
 ```bash
-$ ./build_all.sh -z /PATH/TO/z3_dir
+$ ./scripts/build_all.sh -z /PATH/TO/z3_dir
 ```
-The `build_all.sh` script would build Z3, copy it to `./_dep/`, and then build LoopInvGen.
-Alternatively, you can copy a precompiled version of Z3 to `./_dep/`, and simply run `./build_all.sh`.
+The `build_all.sh` script would build Z3, copy it to `_dep/`, and then build LoopInvGen.
+Alternatively, you can copy a precompiled version of Z3 to a `_dep` directory at the root of the repository,
+and simply run `./scripts/build_all.sh`.
 
-For debug builds, use the `-D` or `--debug` switch when invoking `./build_all.sh`.
+For debug builds, use the `-D` or `--debug` switch when invoking `build_all.sh`.
 
 For future builds after any changes to the source code, you only need to run `dune build`.
 You can configure the build profile to either `debug` or `optimize` (default),
@@ -182,7 +183,7 @@ Try `./loopinvgen.sh -h` for other options that allow more control over the infe
 
 ## Batch Verification
 
-Execute `./test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].  
+Execute `./scripts/test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].  
 The `test_all.sh` script invokes LoopInvGen for invariant inference,
 and then verifies that the generated invariant is sufficient to prove correctness of the SyGuS benchmark.
 
@@ -200,13 +201,12 @@ For each benchmark, the `test_all.sh` script generates one of the verdicts menti
                       <verdict> is one of the PASS verdicts above.
 ```
 
-#### Caching of Results
+#### Rerunning Failed Benchmarks
 
-Since `test_all.sh` caches results from previous runs, it skips benchmarks that are known to be passing.  
-This may be disabled by:
-- using the `-r` or `--rerun-passed` switch with `test_all.sh`, or
-- deleting the previous log directory (default: `_log`), or
-- specifying a new log directory (`-l _new_log`).
+The `test_all.sh` script creates a new log directory and tests all benchmarks each time it is run.
+However, one may want to rerun only the previously failed benchmarks, for example with a different timeout,
+from a previously failing run.
+This can be achieved by forcing `test_all.sh` to use a previous log directory, using `-l <old_log_dir>`.
 
 #### Benchmarking with Other Inference Tools
 
@@ -220,10 +220,10 @@ To use an invariant inference tool other than LoopInvGen, invoke it as:
 Just like `loopinvgen.sh`, the `test_all.sh` script allows users to limit the
 execution time for the invariant inference tools using the `-t` flag.
 ```bash
-$ ./test_all.sh -b benchmarks/LIA -t 10
+$ ./scripts/test_all.sh -b benchmarks/LIA -t 10
 ```
 
-Try `./test_all.sh -h` for more options.
+Try `./scripts/test_all.sh -h` for more options.
 
 </details>
 

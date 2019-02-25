@@ -2,7 +2,7 @@
 
 if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
 
-SELF_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+ROOT="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/.."
 
 trap 'kill -TERM -$INFER_PID > /dev/null 2> /dev/null' INT
 trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
@@ -15,13 +15,13 @@ SKIP_MARK="[SKIPPED] "
 CONTINUE_FROM="1"
 CONTINUE_TILL="1000000000"
 BENCHMARKS_DIR=""
-LOGS_DIR="$SELF_DIR/_log_all.$(date -d today +%Y.%m.%d-%H.%M)"
-Z3_PATH="$SELF_DIR/_dep/z3"
+LOGS_DIR="$ROOT/_log_all.$(date -d today +%Y.%m.%d-%H.%M.%S)"
+Z3_PATH="$ROOT/_dep/z3"
 
 TIMEOUT="60"
-TOOL="$SELF_DIR/loopinvgen.sh"
-VERIFY="$SELF_DIR/_build/install/default/bin/lig-verify"
-SCORE="$SELF_DIR/_build/install/default/bin/lig-score"
+TOOL="$ROOT/loopinvgen.sh"
+VERIFY="$ROOT/_build/install/default/bin/lig-verify"
+SCORE="$ROOT/_build/install/default/bin/lig-score"
 ORIGINAL_VERIFY_ARGS=""
 
 show_status() {
@@ -95,14 +95,14 @@ while true ; do
          shift ; shift ;;
     -T | --tool )
          [ -f "$2" ] || usage "Tool [$2] not found."
-         TOOL="$2"
+         TOOL="`realpath $2`"
          shift ; shift ;;
     -V | --Verify-args )
          ORIGINAL_VERIFY_ARGS="$2"
          shift ; shift ;;
     -z | --z3-path )
          [ -f "$2" ] || usage "Z3 [$2] not found."
-         Z3_PATH="$2"
+         Z3_PATH="`realpath $2`"
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -187,7 +187,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     INFER_PID=$!
     wait $INFER_PID
     INFER_RESULT_CODE=$?
-    echo "" >> $TESTCASE_RES
+    echo -e "\n----< END OF STDERR CAPTURE >----\n" >> $TESTCASE_RES
 
     if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
       echo -n "[TIMEOUT] " >> $TESTCASE_RES

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+
+ROOT="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/.."
+
 usage() {
   echo "
 Usage: $0 [flags]
@@ -45,7 +49,7 @@ while true ; do
          JOBS="$2" ;
          shift ; shift ;;
     -z | --build-z3 )
-         MAKE_Z3_AT="$2" ;
+         MAKE_Z3_AT="`realpath $2`" ;
          shift ; shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -53,8 +57,7 @@ while true ; do
 done
 
 if [ -n "$MAKE_Z3_AT" ] ; then
-  LIG_DIR=`pwd`
-  Z3_BUILD_DIR="build_for_pie"
+  Z3_BUILD_DIR="build_for_lig"
   cd "$MAKE_Z3_AT"
 
   rm -rf "$Z3_BUILD_DIR"
@@ -66,10 +69,11 @@ if [ -n "$MAKE_Z3_AT" ] ; then
   cd "$Z3_BUILD_DIR"
   make -j "$JOBS"
 
-  mkdir -p "$LIG_DIR/_dep"
-  cp z3 "$LIG_DIR/_dep/z3"
-  cd "$LIG_DIR"
+  mkdir -p "$ROOT/_dep"
+  cp z3 "$ROOT/_dep/z3"
 fi
+
+cd "$ROOT"
 
 if [ -n "$WITH_LOGGING" ] ; then
   dune build @Logging || exit $?

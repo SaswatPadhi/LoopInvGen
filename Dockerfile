@@ -5,7 +5,7 @@ FROM ubuntu:18.04
 LABEL maintainer="padhi@cs.ucla.edu"
 
 
-ENV OPAM_VERSION  2.0.0
+ENV OPAM_VERSION  2.0.3
 ENV OCAML_VERSION 4.07.1+flambda
 ENV Z3_VERSION    4.8.4
 
