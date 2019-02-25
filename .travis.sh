@@ -31,7 +31,7 @@ opam pin add LoopInvGen . --no-action --yes --kind=path
 if [ -z "${MIN_REQS_ONLY}" ]; then
     opam install LoopInvGen --deps-only --with-test
 else
-    opam install --yes alcotest.0.7.0 core.v0.11.0 core_extended.v0.11.0 dune.1.1.1
+    opam install --yes alcotest.0.7.0 core.v0.11.0 core_extended.v0.11.0 dune.1.6.0
 fi
 
 opam list

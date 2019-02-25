@@ -20,7 +20,7 @@ build: [
 
 depends: [
   "ocaml"         {>= "4.05.0"}
-  "dune"          {>= "1.1.1" & build}
+  "dune"          {>= "1.6" & build}
   "alcotest"      {>= "0.7" & with-test}
   "core"          {>= "0.11"}
   "core_extended" {>= "0.11"}
