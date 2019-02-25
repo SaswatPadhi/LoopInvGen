@@ -18,7 +18,8 @@ RUN apt update && \
     apt install -yq aspcud binutils cmake curl g++ git libgmp-dev libgomp1 libomp5 \
                     libomp-dev libx11-dev m4 make patch python2.7 sudo tzdata unzip
 RUN apt autoremove -y --purge && \
-    apt autoclean
+    apt clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 
 RUN adduser --disabled-password --home $HOME --shell /bin/bash --gecos '' opam && \
@@ -46,7 +47,7 @@ RUN git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 WORKDIR $HOME/LoopInvGen
 
 
-RUN opam config exec -- ./build_all.sh --with-logging --build-z3 $HOME/z3-$Z3_VERSION
+RUN opam config exec -- ./scripts/build_all.sh --with-logging --build-z3 $HOME/z3-$Z3_VERSION
 
 
 ENTRYPOINT [ "opam", "config", "exec", "--" ]
