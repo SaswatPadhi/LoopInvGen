@@ -16,10 +16,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     apt upgrade -yq && \
     apt install -yq aspcud binutils cmake curl g++ git libgmp-dev libgomp1 libomp5 \
-                    libomp-dev libx11-dev m4 make patch python2.7 sudo tzdata unzip
-RUN apt autoremove -y --purge && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+                    libomp-dev libx11-dev m4 make patch python2.7 sudo time tzdata unzip
+RUN apt autoremove -y --purge
 
 
 RUN adduser --disabled-password --home $HOME --shell /bin/bash --gecos '' opam && \
@@ -35,7 +33,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.7.2
+RUN opam install --yes alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.7.3
 RUN opam clean --yes
 
 
