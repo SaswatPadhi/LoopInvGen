@@ -14,12 +14,15 @@ dev-repo: "git+https://github.com:SaswatPadhi/LoopInvGen.git"
 
 build: [
   [ "dune" "build" "@NoLog" ]
-  [ "dune" "build" "-p" name "-j" jobs "--profile" "optimize" ]
-	[ "dune" "build" "test/Runner.exe" ]
+  [ "dune" "build" "-p" name
+                   "-j" jobs
+                   "--profile" "optimize" ]
+	[ "dune" "build" "test/Runner.exe"
+    {with-test} ]
 ]
 
 depends: [
-  "ocaml"         {>= "4.05.0"}
+  "ocaml"         {>= "4.05"}
   "dune"          {>= "1.6" & build}
   "alcotest"      {>= "0.7" & with-test}
   "core"          {>= "0.11"}

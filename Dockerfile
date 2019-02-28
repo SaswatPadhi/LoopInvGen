@@ -12,11 +12,19 @@ ENV Z3_VERSION    4.8.4
 ENV HOME /home/opam
 
 
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     apt upgrade -yq && \
-    apt install -yq aspcud binutils cmake curl g++ git libgmp-dev libgomp1 libomp5 \
-                    libomp-dev libx11-dev m4 make patch python2.7 sudo time tzdata unzip
+    apt install -yq aspcud \
+                    binutils \
+                    cmake curl \
+                    g++ git \
+                    libgmp-dev libgomp1 libomp5 libomp-dev libx11-dev \
+                    m4 make \
+                    patch python2.7 \
+                    sudo \
+                    time tzdata \
+                    unzip
 RUN apt autoremove -y --purge
 
 

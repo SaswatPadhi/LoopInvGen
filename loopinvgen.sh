@@ -1,6 +1,8 @@
 #!/bin/bash
 
-if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+set -Euo pipefail
+
+if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version >= 4.0 required!" ; exit -1 ; fi
 
 EXIT_CODE_BUILD_ERROR=-3
 EXIT_CODE_USAGE_ERROR=-2
@@ -42,18 +44,18 @@ MIN_RECORD_STATES_PER_FORK=63
 
 EXPRESSIVENESS_LEVEL=4
 
-PROCESS_LOG=""
-RECORD_LOG=""
-INFER_LOG=""
-VERIFY_LOG=""
-
 PROCESS_ARGS=""
 RECORD_ARGS=""
 INFER_ARGS=""
 VERIFY_ARGS=""
 
 declare -A DO_LOG
+DO_LOG[process]="no"
+DO_LOG[record]="no"
+DO_LOG[infer]="no"
+DO_LOG[verify]="no"
 
+STATS_ARG=""
 DO_CLEAN="no"
 DO_VERIFY="no"
 
@@ -88,68 +90,73 @@ Arguments to Internal Programs (@ `dirname $RECORD`):
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
-OPTS=`getopt -n 'parse-options' -o :P:R:I:V:cvl:L:p:s:S:t:z: --long Process-args:,Record-args:,Infer-args:,Verify-args:,clean-intermediates,verify,log:,expressiveness-level:,intermediates-dir:,states-to-record:,stats-path:,infer-timeout:,z3-path: -- "$@"`
-if [ $? != 0 ]; then usage ; fi
+for opt in "$@"; do
+  shift
+  case "$opt" in
+    "--Process-args")         set -- "$@" "-P" ;;
+    "--Record-args")          set -- "$@" "-R" ;;
+    "--Infer-args")           set -- "$@" "-I" ;;
+    "--Verify-args")          set -- "$@" "-V" ;;
 
-eval set -- "$OPTS"
+    "--clean-intermediates")  set -- "$@" "-c" ;;
+    "--verify")               set -- "$@" "-v" ;;
 
-while true ; do
-  case "$1" in
-    -P | --Process-args )
-         PROCESS_ARGS="$2"
-         shift ; shift ;;
-    -R | --Record-args )
-         RECORD_ARGS="$2"
-         shift ; shift ;;
-    -I | --Infer-args )
-         INFER_ARGS="$2"
-         shift ; shift ;;
-    -V | --Verify-args )
-         VERIFY_ARGS="$2"
-         shift ; shift ;;
+    "--log")                  set -- "$@" "-l" ;;
+    "--expressiveness-level") set -- "$@" "-L" ;;
+    "--intermediates-path")   set -- "$@" "-p" ;;
+    "--states-to-record")     set -- "$@" "-s" ;;
+    "--stats-path")           set -- "$@" "-S" ;;
+    "--infer-timeout")        set -- "$@" "-t" ;;
+    "--z3-path")              set -- "$@" "-z" ;;
 
-    -c | --clean-intermediates )
-         DO_CLEAN="yes" ; shift ;;
-    -v | --verify )
-         DO_VERIFY="yes" ; shift ;;
-
-    -l | --log )
-         for LOG_SRC in `echo "$2" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
-           case "$LOG_SRC" in
-             process | record | infer | verify ) DO_LOG[$LOG_SRC]="yes" ;;
-             * ) usage "Unknown source [$LOG_SRC] for logging."
-           esac
-         done
-         shift ; shift ;;
-    -L | --expressiveness-level )
-         [ "$2" -ge "1" ] && [ "$2" -le "6" ] \
-           || usage "The expressiveness level (= $2) must be between 1 and 6 (both inclusive)."
-         EXPRESSIVENESS_LEVEL="$2"
-         shift ; shift ;;
-    -p | --intermediates-dir )
-         INTERMEDIATES_DIR="$2"
-         shift ; shift ;;
-    -s | --states-to-record )
-         [ "$2" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
-           || usage "The number of states to record (= $2) must be > $MIN_RECORD_STATES_PER_FORK."
-         STATES="$2"
-         shift ; shift ;;
-    -S | --stats-path )
-         STATS_ARG="-t $2"
-         shift ; shift ;;
-    -t | --infer-timeout )
-         [ "$2" -gt "$MIN_INFER_TIMEOUT" ] \
-           || usage "The inference timeout (= $2) must be > $MIN_INFER_TIMEOUT."
-         INFER_TIMEOUT="$2"
-         shift ; shift ;;
-    -z | --z3-path )
-         [ -f "$2" ] || usage "Z3 [$2] not found."
-         Z3_PATH="$2"
-         shift ; shift ;;
-    -- ) shift; break ;;
-    * ) break ;;
+    "--")                     set -- "$@" "--" ;;
+    "--"*)                    usage "Unrecognized option: $opt." ;;
+    *)                        set -- "$@" "$opt"
   esac
 done
+
+OPTIND=1
+while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
+  case "$OPTION" in
+    "P" ) PROCESS_ARGS="$OPTARG" ;;
+    "R" ) RECORD_ARGS="$OPTARG" ;;
+    "I" ) INFER_ARGS="$OPTARG" ;;
+    "V" ) VERIFY_ARGS="$OPTARG" ;;
+
+    "c" ) DO_CLEAN="yes" ;;
+    "v" ) DO_VERIFY="yes" ;;
+
+    "l" ) for LOG_SRC in `echo "$OPTARG" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
+            case "$LOG_SRC" in
+              process | record | infer | verify ) DO_LOG[$LOG_SRC]="yes" ;;
+              * ) usage "Unknown source [$LOG_SRC] for logging."
+            esac
+          done
+          ;;
+    "L" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
+            || usage "The expressiveness level (= $OPTARG) must be between 1 and 6 (both inclusive)."
+          EXPRESSIVENESS_LEVEL="$OPTARG"
+          ;;
+    "p" ) INTERMEDIATES_DIR="$OPTARG"
+          ;;
+    "s" ) [ "$OPTARG" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
+            || usage "The number of states to record (= $OPTARG) must be > $MIN_RECORD_STATES_PER_FORK."
+          STATES="$OPTARG"
+          ;;
+    "S" ) rm -rf $OPTARG
+          STATS_ARG="-t $OPTARG"
+          ;;
+    "t" ) [ "$OPTARG" -gt "$MIN_INFER_TIMEOUT" ] \
+            || usage "The inference timeout (= $OPTARG) must be > $MIN_INFER_TIMEOUT."
+          INFER_TIMEOUT="$OPTARG"
+          ;;
+    "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
+          Z3_PATH="$OPTARG"
+          ;;
+      * ) usage "Unrecognized option: -$OPTARG." ;;
+  esac
+done
+shift $(($OPTIND -1))
 
 [ -d "$INTERMEDIATES_DIR" ] || mkdir -p "$INTERMEDIATES_DIR"
 [ -d "$INTERMEDIATES_DIR" ] \
@@ -181,7 +188,7 @@ INFER_TIMEOUT="${INFER_TIMEOUT}s"
 [ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_ALL_LOG"
 [ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_ALL_LOG"
 
-rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES $TESTCASE_STATISTICS &
+rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES &
 echo -en '' > "$TESTCASE_INVARIANT" &
 echo -en '' > "$TESTCASE_ALL_LOG"
 
@@ -205,7 +212,7 @@ wait
 
 grep -hv "^[[:space:]]*$" "$TESTCASE_REC_STATES"? | sort -u > "$TESTCASE_ALL_STATES"
 
-[ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"? >> "$TESTCASE_ALL_LOG"
+[ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"? >> "$TESTCASE_ALL_LOG" 2> /dev/null || true
 
 
 show_status "(inferring)"

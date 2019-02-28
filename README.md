@@ -1,6 +1,6 @@
 LoopInvGen
-  [![Build Status](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?label=Travis+Build)][travis]
-  [![Docker Build](https://img.shields.io/docker/build/padhi/loopinvgen.svg?label=Docker+Image)][docker-hub]
+[<img align='right' src='https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?logo=travis&style=popout&label=Travis+Build'></img>][travis]
+[<img align='right' src='https://img.shields.io/docker/build/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image'></img>][docker-hub]
 ==========
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
@@ -8,7 +8,8 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 <p align="center">
   <img src="docs/architecture.png" width="400"/>
   <br><br>
-  <small>[<code>LoopInvGen</code> is the successor of our old project, <a href="https://github.com/SaswatPadhi/PIE"><s>PIE</s></a> (now deactivated), on precondition inference.]</small>
+  <small>[<code>LoopInvGen</code> extends our old (now deactivated) project,
+  PIE -- the Precondition Inference Engine.]</small>
 </p>
 
 
@@ -47,22 +48,32 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 ### Using `docker` (recommended)
 
-_**Note:** The docker image consumes ~4GB of disk space._
+_**Note:** The docker image consumes ~&hairsp;4GB of disk space._
 
 We recommend running LoopInvGen within a docker container,
-as opposed to installing it within your host OS.
-Docker containers have negligible performance overhead.
+since they have negligible performance overhead.
 (See [this report](http://domino.research.ibm.com/library/cyberdig.nsf/papers/0929052195DD819C85257D2300681E7B/$File/rc25482.pdf))
 
 1. [Get `docker` for your OS](https://docs.docker.com/install).
 2. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
-3. Run a container over the image: `docker run -it padhi/loopinvgen`. This would give you a `bash` shell within LoopInvGen directory.
+3. Run a container over the image: `docker run -it padhi/loopinvgen`.<br>
+   This would give you a `bash` shell within LoopInvGen directory.
 
 <a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
 
 ```bash
 docker build -t padhi/loopinvgen github.com/SaswatPadhi/LoopInvGen
 ```
+
+Docker containers are isolated from the host system.
+Therefore, to run LoopInvGen on SyGuS files residing on the host system,
+you must first [bind mount] them while running the container:
+
+```bash
+docker run -v /host/dir:/home/opam/LoopInvGen/shared -it padhi/loopinvgen
+```
+
+The `/host/dir` on the host system would then be accessible within the container at `~/LoopInvGen/shared` (with read+write permissions).
 
 <details>
 
@@ -183,7 +194,7 @@ Try `./loopinvgen.sh -h` for other options that allow more control over the infe
 
 ## Batch Verification
 
-Execute `./scripts/test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].  
+Execute `./scripts/test_all.sh -b benchmarks/LIA` to run LoopInvGen on all benchmarks in [benchmarks/LIA].
 The `test_all.sh` script invokes LoopInvGen for invariant inference,
 and then verifies that the generated invariant is sufficient to prove correctness of the SyGuS benchmark.
 
@@ -243,12 +254,14 @@ Try `./scripts/test_all.sh -h` for more options.
 }
 ```
 
-[flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
-[z3]:             https://github.com/Z3Prover/z3
 [benchmarks/LIA]: benchmarks/LIA
+
+[flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
+[bind mount]:     https://docs.docker.com/storage/bind-mounts
 
 [SyGuSCOMP17]:    http://www.sygus.org/SyGuS-COMP2017.html
 [SyGuSCOMP18]:    http://www.sygus.org/SyGuS-COMP2018.html
 
-[travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
 [docker-hub]:     https://hub.docker.com/r/padhi/loopinvgen
+[travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
+[z3]:             https://github.com/Z3Prover/z3

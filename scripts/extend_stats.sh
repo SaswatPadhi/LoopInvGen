@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
 
 ROOT="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/.."
@@ -20,21 +22,25 @@ Configuration:
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b: --long benchmark: -- "$@"`
-if [ $? != 0 ]; then usage ; fi
+for opt in "$@"; do
+  shift
+  case "$opt" in
+    "--benchmark")    set -- "$@" "-b" ;;
 
-eval set -- "$OPTS"
-
-while true ; do
-  case "$1" in
-    -b | --benchmarks )
-         [ -d "$2" ] || usage "Target directory [$2] not found."
-         BENCHMARKS_DIR="`realpath "$2"`"
-         shift ; shift ;;
-    -- ) shift ; break ;;
-    * ) break ;;
+    "--")             set -- "$@" "--" ;;
+    "--"*)            usage "Unrecognized option: $opt." ;;
+    *)                set -- "$@" "$opt"
   esac
 done
+
+while getopts ':b:' OPTION ; do
+  case "$OPTION" in
+    "b" ) [ -d "$OPTARG" ] || usage "Target directory [$OPTARG] not found."
+          BENCHMARKS_DIR="`realpath "$OPTARG"`" ;;
+      * ) usage "Unrecognized option: -$OPTARG." ;;
+  esac
+done
+shift $(($OPTIND -1))
 
 [ -d "$BENCHMARKS_DIR" ] || usage "Benchmarks directory [$BENCHMARKS_DIR] not found."
 

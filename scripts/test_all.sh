@@ -1,6 +1,8 @@
 #!/bin/bash
 
-if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version 4.0+ required!" ; exit -1 ; fi
+set -Euo pipefail
+
+if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version >= 4.0 required!" ; exit -1 ; fi
 
 ROOT="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/.."
 
@@ -59,55 +61,60 @@ Substitutions supported within [tool specific options] and [--Verify-args]:
 " 1>&2 ; exit -1
 }
 
-OPTS=`getopt -n 'parse-options' -o :b:c:C:l:m:nt:T:V:z: --long benchmarks:,continue-from:,continue-till:,logs-dir:,mode:,no-skipped-mark,time-out:,tool:,Verify-args:,z3-path: -- "$@"`
-if [ $? != 0 ]; then usage ; fi
+for opt in "$@"; do
+  shift
+  case "$opt" in
+    "--benchmarks")       set -- "$@" "-b" ;;
+    "--continue-from")    set -- "$@" "-c" ;;
+    "--continue-till")    set -- "$@" "-C" ;;
+    "--logs-dir")         set -- "$@" "-l" ;;
+    "--mode")             set -- "$@" "-m" ;;
+    "--no-skipped-mark")  set -- "$@" "-n" ;;
+    "--time-out")         set -- "$@" "-t" ;;
+    "--tool")             set -- "$@" "-T" ;;
+    "--Verify-args")      set -- "$@" "-V" ;;
+    "--z3-path")          set -- "$@" "-z" ;;
 
-eval set -- "$OPTS"
-
-while true ; do
-  case "$1" in
-    -b | --benchmarks )
-         [ -d "$2" ] || usage "Benchmarks directory [$2] not found."
-         BENCHMARKS_DIR="`realpath "$2"`"
-         shift ; shift ;;
-    -c | --continue-from )
-         [ "$2" -gt "0" ] || usage "$2 is not a positive index."
-         CONTINUE_FROM="$2"
-         shift ; shift ;;
-    -C | --continue-till )
-         [ "$2" -gt "0" ] || usage "$2 is not a positive index."
-         CONTINUE_TILL="$2"
-         shift ; shift ;;
-    -l | --logs-dir )
-         LOGS_DIR="`realpath "$2"`"
-         shift ; shift ;;
-    -m | --mode )
-         case "$2" in
-           rerun-failed | rerun-all | reverify ) MODE="$2" ;;
-           * ) usage "Invalid mode [$2]."
-         esac
-         shift ; shift ;;
-    -n | --no-skipped-mark )
-         SKIP_MARK=""
-         shift ;;
-    -t | --time-out )
-         TIMEOUT="$2"
-         shift ; shift ;;
-    -T | --tool )
-         [ -f "$2" ] || usage "Tool [$2] not found."
-         TOOL="`realpath $2`"
-         shift ; shift ;;
-    -V | --Verify-args )
-         ORIGINAL_VERIFY_ARGS="$2"
-         shift ; shift ;;
-    -z | --z3-path )
-         [ -f "$2" ] || usage "Z3 [$2] not found."
-         Z3_PATH="`realpath $2`"
-         shift ; shift ;;
-    -- ) shift; break ;;
-    * ) break ;;
+    "--")             set -- "$@" "--" ;;
+    "--"*)            usage "Unrecognized option: $opt." ;;
+    *)                set -- "$@" "$opt"
   esac
 done
+
+while getopts ':b:c:C:l:m:nt:T:V:z:' OPTION ; do
+  case "$OPTION" in
+    "b" ) [ -d "$OPTARG" ] || usage "Benchmarks directory [$OPTARG] not found."
+          BENCHMARKS_DIR="`realpath "$OPTARG"`"
+          ;;
+    "c" ) [ "$OPTARG" -gt "0" ] || usage "$OPTARG is not a positive index."
+          CONTINUE_FROM="$OPTARG"
+          ;;
+    "C" ) [ "$OPTARG" -gt "0" ] || usage "$OPTARG is not a positive index."
+          CONTINUE_TILL="$OPTARG"
+          ;;
+    "l" ) LOGS_DIR="`realpath "$OPTARG"`"
+          ;;
+    "m" ) case "$OPTARG" in
+            "rerun-failed" | "rerun-all" | "reverify" ) MODE="$OPTARG" ;;
+            * ) usage "Invalid mode [$OPTARG]."
+          esac
+          ;;
+    "n" ) SKIP_MARK=""
+          ;;
+    "t" ) TIMEOUT="$OPTARG"
+          ;;
+    "T" ) [ -f "$OPTARG" ] || usage "Tool [$OPTARG] not found."
+          TOOL="`realpath "$OPTARG"`"
+          ;;
+    "V" ) ORIGINAL_VERIFY_ARGS="$OPTARG"
+          ;;
+    "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
+          Z3_PATH="`realpath "$OPTARG"`"
+          ;;
+      * ) usage "Unrecognized option: -$OPTARG." ;;
+  esac
+done
+shift $(($OPTIND -1))
 
 [ -d "$BENCHMARKS_DIR" ] || usage "Benchmarks directory [$BENCHMARKS_DIR] not found."
 if [ "$CONTINUE_TILL" -lt "$CONTINUE_FROM" ]; then
@@ -158,9 +165,10 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   VERIFY_ARGS="${ORIGINAL_VERIFY_ARGS//\#BENCHMARK_PATH/$TESTCASE}"
   VERIFY_ARGS="${ORIGINAL_VERIFY_ARGS//\#BENCHMARK_OUT_PREFIX/$TESTCASE_PREFIX}"
 
-  (( COUNTER++ ))
+  COUNTER=$(( COUNTER + 1 ))
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
 
+  OLD_VERDICT=""
   if [ -f "$TESTCASE_RES" ]; then
     OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
   fi
@@ -183,7 +191,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
     show_status "(inferring)"
     (\time --format "\nreal(s)\t%e\nuser(s)\t%U\n sys(s)\t%S\n   cpu%%\t%P\nrss(kb)\t%M\n" \
-          timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
+           timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
     INFER_PID=$!
     wait $INFER_PID
     INFER_RESULT_CODE=$?

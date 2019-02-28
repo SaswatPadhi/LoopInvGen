@@ -1,7 +1,3 @@
-config.h
-*.tgz
-starexec*
-
 # - - -
 # OCaml
 # - - -
@@ -17,9 +13,6 @@ starexec*
 *.cmxs
 *.cmxa
 
-# ocamlbuild working directory
-_build/
-
 # ocamlbuild targets
 *.byte
 *.native
@@ -29,16 +22,13 @@ _build/
 *.install
 
 # External
-_dep
-_log*
-_comp
+/_*
 
 # Temporaries
 ocamlprof.dump
 gmon.out
-_tags
-
-
+config.h
+/*.tgz
 
 # - - -
 # Editor/IDE
