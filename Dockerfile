@@ -53,7 +53,8 @@ RUN git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 WORKDIR $HOME/LoopInvGen
 
 
-RUN opam config exec -- ./scripts/build_all.sh --with-logging --build-z3 $HOME/z3-$Z3_VERSION
+RUN opam config exec -- ./scripts/build_all.sh --with-logging --build-z3 $HOME/z3-$Z3_VERSION && \
+    rm -rf ../z3*
 
 
 ENTRYPOINT [ "opam", "config", "exec", "--" ]

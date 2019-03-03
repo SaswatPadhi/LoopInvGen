@@ -1,15 +1,17 @@
 LoopInvGen
-[<img align='right' src='https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?logo=travis&style=popout&label=Travis+Build'></img>][travis]
-[<img align='right' src='https://img.shields.io/docker/build/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image'></img>][docker-hub]
 ==========
+
+[![](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?logo=travis&style=popout&label=Travis+Build)][travis]
+[![](https://img.shields.io/microbadger/image-size/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image)][docker-hub]
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
 
 <p align="center">
   <img src="docs/architecture.png" width="400"/>
-  <br><br>
-  <small>[<code>LoopInvGen</code> extends our old (now deactivated) project,
-  PIE -- the Precondition Inference Engine.]</small>
+  <br>
+  <sub>
+    [&thinsp;LoopInvGen extends our old (now deactivated) project, PIE -- the Precondition Inference Engine.&thinsp;]
+  </sub>
 </p>
 
 
@@ -23,7 +25,7 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 &nbsp; &nbsp; &vert; &nbsp; &nbsp;
 [_Use as a Library_](app/)
 &nbsp; &nbsp; &vert; &nbsp; &nbsp;
-[Citing `LoopInvGen`](#citing-loopinvgen)
+[Citing LoopInvGen](#citing-loopinvgen)
 &nbsp;&middot;&nbsp;
 [License (MIT)](LICENSE.md)
 
@@ -48,7 +50,7 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 ### Using `docker` (recommended)
 
-_**Note:** The docker image consumes ~&hairsp;4GB of disk space._
+_**Note:** The docker image may consume  ~&hairsp;4GB of disk space._
 
 We recommend running LoopInvGen within a docker container,
 since they have negligible performance overhead.
@@ -238,7 +240,7 @@ Try `./scripts/test_all.sh -h` for more options.
 
 </details>
 
-## Citing `LoopInvGen`
+## Citing LoopInvGen
 
 ```
 @inproceedings{pldi/2016/PadhiSM,
