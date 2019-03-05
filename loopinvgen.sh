@@ -50,10 +50,10 @@ INFER_ARGS=""
 VERIFY_ARGS=""
 
 declare -A DO_LOG
-DO_LOG[process]="no"
-DO_LOG[record]="no"
-DO_LOG[infer]="no"
-DO_LOG[verify]="no"
+DO_LOG[process]=""
+DO_LOG[record]=""
+DO_LOG[infer]=""
+DO_LOG[verify]=""
 
 STATS_ARG=""
 DO_CLEAN="no"
@@ -202,6 +202,7 @@ $PROCESS -o "$TESTCASE_PROCESSED" "$TESTCASE" ${DO_LOG[process]} $PROCESS_ARGS >
 wait
 show_status "(recording)"
 
+LOG_PARAM=""
 for i in `seq 1 $RECORD_FORKS` ; do
   [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
   (timeout $RECORD_TIMEOUT \

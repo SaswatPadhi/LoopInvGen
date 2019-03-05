@@ -1,2 +1,3 @@
-benchmarks/* linguist-vendored
-docs/* linguist-vendored
+benchmarks/*    linguist-vendored
+docs/*          linguist-vendored
+.travis.*       linguist-vendored

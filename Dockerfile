@@ -21,7 +21,7 @@ RUN apt update && \
                     g++ git \
                     libgmp-dev libgomp1 libomp5 libomp-dev libx11-dev \
                     m4 make \
-                    patch python2.7 \
+                    patch python3 \
                     sudo \
                     time tzdata \
                     unzip
