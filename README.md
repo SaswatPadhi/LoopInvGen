@@ -1,8 +1,9 @@
 LoopInvGen
+<img align="right" src="https://img.shields.io/microbadger/image-size/padhi/loopinvgen.svg?style=flat&label=docker"></img>
 ==========
 
 [![](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?logo=travis&style=popout&label=Travis+Build)][travis]
-[![](https://img.shields.io/microbadger/image-size/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image)][docker-hub]
+[![](https://img.shields.io/docker/cloud/build/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image)][docker-hub]
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
 
@@ -56,9 +57,9 @@ We recommend running LoopInvGen within a docker container,
 since they have negligible performance overhead.
 (See [this report](http://domino.research.ibm.com/library/cyberdig.nsf/papers/0929052195DD819C85257D2300681E7B/$File/rc25482.pdf))
 
-1. [Get `docker` for your OS](https://docs.docker.com/install).
-2. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
-3. Run a container over the image: `docker run -it padhi/loopinvgen`.<br>
+0. [Get `docker` for your OS](https://docs.docker.com/install).
+1. Pull our docker image<sup>[#](#note_1)</sup>: `docker pull padhi/loopinvgen`.
+2. Run a container over the image: `docker run -it padhi/loopinvgen`.<br>
    This would give you a `bash` shell within LoopInvGen directory.
 
 <a name="note_1"><sup>#</sup></a> Alternatively, you could also build the Docker image locally:
@@ -117,7 +118,7 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.7.3
+$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.8.0
 ```
 
 #### 4. Get the [Z3 project][z3].
@@ -126,7 +127,7 @@ You could either:
 - `git checkout https://github.com/Z3Prover/z3.git` for the bleeding edge version, or
 - `wget https://github.com/Z3Prover/z3/archive/z3-4.8.4.zip && unzip z3-4.8.4.zip` for the stable version
 
-#### 4. `git clone` this project, and build everything.
+#### 5. `git clone` this project, and build everything.
 ```bash
 $ ./scripts/build_all.sh -z /PATH/TO/z3_dir
 ```
