@@ -14,7 +14,7 @@
 - _Related Publication:_ Madhukar, Kumar, et al. "**Accelerating Invariant Generation.**" _Proceedings of the 15th Conference on Formal Methods in Computer-Aided Design._ FMCAD Inc, 2015.
 - _Original Benchmarks:_ <http://www.cmi.ac.in/~madhukar/fmcad15/benchmarks/>
 
-### (2016) PILAT &middot; &middot; &middot; TODO
+### (2016) PILAT &middot; &middot; &middot; [NIA](NIA/2016.ATVA_PILAT)
  - _Related Publication:_ de Oliveira, Steven, Saddek Bensalem, and Virgile Prevosto. "**Polynomial Invariants by Linear Algebra.**" _International Symposium on Automated Technology for Verification and Analysis._ Springer, Cham, 2016.
  - _Original Benchmarks:_ <http://www.cs.upc.edu/~erodri/webpage/polynomial_invariants/list.html>
 
@@ -26,7 +26,7 @@
 - _Related Publication:_ Lin, Shang-Wei, et al. "**FiB: Squeezing Loop Invariants by Interpolation between Forward/Backward Predicate Transformers.**" _Automated Software Engineering (ASE), 2017 32nd IEEE/ACM International Conference on_. IEEE, 2017.
 - _Original Benchmarks:_ <https://github.com/spencerxiao/ase2017-results-and-tools/tree/master/FiB_Tool/benchmarks>
 
-### (2018) InvGame &middot; &middot; &middot; [NIA](NIA/2018.InvGame)
+### (2018) InvGame &middot; &middot; &middot; [NIA](NIA/2018.CHI_InvGame)
 - _Related Publication:_ Bounov, Dimitar, et al. "**Inferring Loop Invariants through Gamification.**" _Proceedings of the 2018 CHI Conference on Human Factors in Computing Systems_. ACM, 2018.
 - _Original Benchmarks:_ n/a
 

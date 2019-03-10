@@ -1,4 +1,4 @@
-; Benchmark adapted from "sorin04.desugared.bpl"
+; Benchmark adapted from "sqrt-more-rows-swap-columns.bpl"
 
 (set-logic NIA)
 

@@ -3,6 +3,7 @@ LoopInvGen
 ==========
 
 [![](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?logo=travis&style=popout&label=Travis+Build)][travis]
+&nbsp;
 [![](https://img.shields.io/docker/cloud/build/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image)][docker-hub]
 
 A data-driven tool that generates provably-sufficient loop invariants for program verification.
@@ -51,7 +52,7 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 ### Using `docker` (recommended)
 
-_**Note:** The docker image may consume  ~&hairsp;4GB of disk space._
+_**Note:** The docker image may consume  ~&hairsp;3&hairsp;GB of disk space._
 
 We recommend running LoopInvGen within a docker container,
 since they have negligible performance overhead.
@@ -108,7 +109,7 @@ except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 
 #### 1. Install `opam` package manager for OCaml.
 
-See <https://opam.ocaml.org/doc/Install.html>.
+See <https://opam.ocaml.org/doc/Install.html> for detailed instructions.
 
 #### 2. Install `ocaml` >= 4.05.0.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enable
@@ -118,13 +119,13 @@ For example, with [`opam`](https://opam.ocaml.org/), you could:
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.8.0
+$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.8.2
 ```
 
 #### 4. Get the [Z3 project][z3].
 We have tested LoopInvGen with the latest stable version of Z3 (4.8.4).
 You could either:
-- `git checkout https://github.com/Z3Prover/z3.git` for the bleeding edge version, or
+- `git checkout https://github.com/Z3Prover/z3.git` for the bleeding-edge version, or
 - `wget https://github.com/Z3Prover/z3/archive/z3-4.8.4.zip && unzip z3-4.8.4.zip` for the stable version
 
 #### 5. `git clone` this project, and build everything.
@@ -227,7 +228,7 @@ This can be achieved by forcing `test_all.sh` to use a previous log directory, u
 `test_all.sh` is a generic benchmarking script that may run any invariant inference tool.
 which accepts the SyGuS format. This makes it easier for us to compare various tools easily.  
 To use an invariant inference tool other than LoopInvGen, invoke it as:
-`test_all.sh -b <path/to/benchmarks> -T <path/to/tool> [-- -tool -specific -options]`
+`test_all.sh -b <path/to/benchmarks> -T <path/to/tool> [-- [-tool] [-specific] [-options]]`
 
 #### Limiting Execution Time
 
