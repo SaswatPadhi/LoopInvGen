@@ -25,6 +25,6 @@ depends: [
   "ocaml"         {>= "4.05"}
   "dune"          {>= "1.6" & build}
   "alcotest"      {>= "0.7" & with-test}
-  "core"          {>= "0.11"}
-  "core_extended" {>= "0.11"}
+  "core"          {>= "0.11" & < "0.12"}
+  "core_extended" {>= "0.11" & < "0.12"}
 ]

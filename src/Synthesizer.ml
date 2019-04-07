@@ -198,7 +198,7 @@ let solve_impl config task stats=
       expr = Expr.Const value;
       outputs = Array.create ~len:(Array.length task.outputs) value;
     } in ignore (add_candidate (typed_candidates (Value.typeof value)) 0 1 candidate)
-  in List.iter constants ~f:add_constant_candidate
+  in List.(iter (rev constants) ~f:add_constant_candidate)
   ;
 
   List.iteri task.inputs ~f:(fun i input ->
