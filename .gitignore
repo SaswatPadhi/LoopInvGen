@@ -21,17 +21,23 @@
 .merlin
 *.install
 
-# External
-/_*
-
 # Temporaries
 ocamlprof.dump
 gmon.out
 config.h
-/*.tgz
+
+
 
 # - - -
 # Editor/IDE
 # - - -
 
 .vscode
+
+
+
+# - - -
+# External
+# - - -
+/_*
+/*.tgz
