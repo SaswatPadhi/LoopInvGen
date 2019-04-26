@@ -42,7 +42,7 @@ RECORD_FORKS=4
 RECORD_STATES_PER_FORK=256
 MIN_RECORD_STATES_PER_FORK=63
 
-EXPRESSIVENESS_LEVEL=4
+EXPRESSIVENESS_LEVEL=6
 
 PROCESS_ARGS=""
 RECORD_ARGS=""
@@ -74,7 +74,7 @@ Flags:
     [--verify, -v]
 
 Configuration:
-    [--expressiveness-level, -L <int>]  (4)\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--expressiveness-level, -L <int>]  (6)\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
     [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
     [--intermediates-dir, -p <path>]    (_log)
     [--log, -l <src_1>[,<src_2>...]]    ()\t    src <- {process|record|infer|verify}
