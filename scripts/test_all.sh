@@ -10,7 +10,6 @@ trap 'kill -TERM -$INFER_PID > /dev/null 2> /dev/null' INT
 trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
 
 SYGUS_EXT=".sl"
-RESULT_EXT=".res"
 MODE="rerun-failed"
 
 SKIP_MARK="[SKIPPED] "
@@ -141,8 +140,8 @@ echo -n "" > "$TXT_SUMMARY"
 echo "Benchmark,Verdict,Wall_Time(s),Time_Score,Size_score,Max_Memory(MB)" > "$CSV_RESULTS"
 
 function parse_stats() {
-  TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_RES | cut -f2`
-  TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_RES | cut -f2`
+  TESTCASE_REAL_TIME=`grep "real(s)" $TESTCASE_VERDICT_FILE | cut -f2`
+  TESTCASE_MAX_MEMORY=`grep "rss(kb)" $TESTCASE_VERDICT_FILE | cut -f2`
   TESTCASE_MAX_MEMORY=$(( TESTCASE_MAX_MEMORY / 1024 ))
   printf "%8.3fs [%5.0f MB]  @  $1$2" $TESTCASE_REAL_TIME $TESTCASE_MAX_MEMORY
 }
@@ -155,9 +154,10 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   mkdir -p "`dirname \"$TESTCASE_PREFIX\"`"
 
-  TESTCASE_RES="$TESTCASE_PREFIX$RESULT_EXT"
-  TESTCASE_INV="$TESTCASE_PREFIX.inv"
+  TESTCASE_RESULT_FILE="$TESTCASE_PREFIX.inv"
   TESTCASE_SCORES_FILE="$TESTCASE_PREFIX.scores"
+  TESTCASE_VERDICT_FILE="$TESTCASE_PREFIX.res"
+  TESTCASE_STDERR_FILE="$TESTCASE_PREFIX.err"
 
   TOOL_ARGS="${ORIGINAL_TOOL_ARGS//\#BENCHMARK_PATH/$TESTCASE}"
   TOOL_ARGS="${ORIGINAL_TOOL_ARGS//\#BENCHMARK_OUT_PREFIX/$TESTCASE_PREFIX}"
@@ -169,12 +169,12 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
   printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
 
   OLD_VERDICT=""
-  if [ -f "$TESTCASE_RES" ]; then
-    OLD_VERDICT=`tail -n 1 $TESTCASE_RES`
+  if [ -f "$TESTCASE_VERDICT_FILE" ]; then
+    OLD_VERDICT=`tail -n 1 $TESTCASE_VERDICT_FILE`
   fi
 
   if [ "$CONTINUE_FROM" -gt "$COUNTER" ] || [ "$COUNTER" -gt "$CONTINUE_TILL" ] || ( \
-       [ "$MODE" != "rerun-all" ] && [ -f "$TESTCASE_RES" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
+       [ "$MODE" != "rerun-all" ] && [ -f "$TESTCASE_VERDICT_FILE" ] && [[ "$OLD_VERDICT" =~ .*PASS.* ]] \
      ); then
     parse_stats "$SKIP_MARK" "$OLD_VERDICT\n"
     if [ -f "$TESTCASE_SCORES_FILE" ]; then
@@ -186,24 +186,25 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
     continue
   fi
 
-  if [ "$MODE" != "reverify" ] || [ ! -f "$TESTCASE_INV" ]; then
-    echo > $TESTCASE_INV ; echo > $TESTCASE_RES
+  if [ "$MODE" != "reverify" ] || [ ! -f "$TESTCASE_RESULT_FILE" ]; then
+    echo -n > "$TESTCASE_RESULT_FILE" ; echo -n > "$TESTCASE_VERDICT_FILE"
 
     show_status "(inferring)"
-    (\time --format "\nreal(s)\t%e\nuser(s)\t%U\n sys(s)\t%S\n   cpu%%\t%P\nrss(kb)\t%M\n" \
-           timeout $TIMEOUT $TOOL $TESTCASE $TOOL_ARGS) > $TESTCASE_INV 2> $TESTCASE_RES &
+    \time --format "\nreal(s)\t%e\nuser(s)\t%U\n sys(s)\t%S\n   cpu%%\t%P\nrss(kb)\t%M\n" \
+          bash -c "timeout $TIMEOUT \"$TOOL\" $TOOL_ARGS \"$TESTCASE\" 2> \"$TESTCASE_STDERR_FILE\"" \
+          > $TESTCASE_RESULT_FILE \
+          2> $TESTCASE_VERDICT_FILE &
     INFER_PID=$!
     wait $INFER_PID
     INFER_RESULT_CODE=$?
-    echo -e "\n----< END OF STDERR CAPTURE >----\n" >> $TESTCASE_RES
 
     if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
-      echo -n "[TIMEOUT] " >> $TESTCASE_RES
+      echo -n "[TIMEOUT] " >> $TESTCASE_VERDICT_FILE
     fi
   else
-    head -n -1 "$TESTCASE_RES" > /tmp/tmp ; mv /tmp/tmp "$TESTCASE_RES"
+    head -n -1 "$TESTCASE_VERDICT_FILE" > "$TESTCASE_PREFIX.tmp" ; mv "$TESTCASE_PREFIX.tmp" "$TESTCASE_VERDICT_FILE"
     if [[ "$OLD_VERDICT" =~ .*TIMEOUT.* ]]; then
-      echo -n "[TIMEOUT] " >> $TESTCASE_RES
+      echo -n "[TIMEOUT] " >> $TESTCASE_VERDICT_FILE
     fi
   fi
 
@@ -211,16 +212,16 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT` ; do
 
   show_status "(verifying)"
   RESULT_CODE=0
-  timeout 300 $VERIFY -s $TESTCASE $VERIFY_ARGS $TESTCASE_INV >> $TESTCASE_RES
+  timeout 300s $VERIFY -s "$TESTCASE" $VERIFY_ARGS "$TESTCASE_RESULT_FILE" >> "$TESTCASE_VERDICT_FILE"
   RESULT_CODE=$?
   if [ $RESULT_CODE == 124 ] || [ $RESULT_CODE == 137 ]; then
-    echo "UNKNOWN" >> $TESTCASE_RES
+    echo "UNKNOWN" >> $TESTCASE_VERDICT_FILE
   fi
-  VERDICT=`tail -n 1 $TESTCASE_RES`
+  VERDICT=`tail -n 1 $TESTCASE_VERDICT_FILE`
   show_status "" ; echo "$VERDICT"
 
   if [ "$VERDICT" = "PASS" ]; then
-    TESTCASE_SCORES=`$SCORE -t "$TESTCASE_REAL_TIME" "$TESTCASE_INV" | tee "$TESTCASE_SCORES_FILE"`
+    TESTCASE_SCORES=`$SCORE -t "$TESTCASE_REAL_TIME" "$TESTCASE_RESULT_FILE" | tee "$TESTCASE_SCORES_FILE"`
   else
     TESTCASE_SCORES=`echo -n "0,0" | tee "$TESTCASE_SCORES_FILE"`
   fi

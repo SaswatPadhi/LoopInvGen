@@ -225,10 +225,12 @@ This can be achieved by forcing `test_all.sh` to use a previous log directory, u
 
 #### Benchmarking with Other Inference Tools
 
-`test_all.sh` is a generic benchmarking script that may run any invariant inference tool.
+`test_all.sh` is a generic benchmarking script that may run any invariant inference tool
 which accepts the SyGuS format. This makes it easier for us to compare various tools easily.  
 To use an invariant inference tool other than LoopInvGen, invoke it as:
-`test_all.sh -b <path/to/benchmarks> -T <path/to/tool> [-- [-tool] [-specific] [-options]]`
+```bash
+$ ./scripts/test_all.sh -b <path/to/benchmarks> -T <path/to/tool> [-- [-tool] [-specific] [-options]]
+```
 
 #### Limiting Execution Time
 

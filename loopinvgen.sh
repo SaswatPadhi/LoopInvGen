@@ -74,7 +74,7 @@ Flags:
     [--verify, -v]
 
 Configuration:
-    [--expressiveness-level, -L <int>]  (6)\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--expressiveness-level, -L <int>]  ($EXPRESSIVENESS_LEVEL)\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
     [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
     [--intermediates-dir, -p <path>]    (_log)
     [--log, -l <src_1>[,<src_2>...]]    ()\t    src <- {process|record|infer|verify}
