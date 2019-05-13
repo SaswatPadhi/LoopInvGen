@@ -16,8 +16,8 @@ build: [
   [ "dune" "build" "@NoLog" ]
   [ "dune" "build" "-p" name
                    "-j" jobs
-                   "--profile" "optimize" ]
-	[ "dune" "build" "test/Runner.exe"
+                   "--profile" "release" ]
+  [ "dune" "build" "test/Runner.exe"
     {with-test} ]
 ]
 
