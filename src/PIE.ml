@@ -70,7 +70,6 @@ let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
                      (conflict_group' : Value.t list conflict) stats
                      : Value.t list Job.feature Job.with_desc =
   let group_size = List.((length conflict_group'.pos) + (length conflict_group'.neg))
-  in let group_size = group_size * (conf._Synthesizer.logic.conflict_group_size_multiplier)
   in let conflict_group = if group_size < conf.max_conflict_group_size then conflict_group'
                    else { conflict_group' with
                           pos = List.take conflict_group'.pos (conf.max_conflict_group_size / 2);
