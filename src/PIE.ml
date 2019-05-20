@@ -23,7 +23,7 @@ type stats = {
   mutable _Synthesizer : Synthesizer.stats list ;
 } [@@deriving sexp]
 
-let base_max_conflict_group_size = 32
+let base_max_conflict_group_size = 50
 
 let default_config : config = {
   _BFL = BFL.default_config ;

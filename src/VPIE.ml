@@ -18,7 +18,7 @@ type stats = {
   mutable _PIE : PIE.stats list ;
 } [@@deriving sexp]
 
-let base_additional_counterexamples = 63
+let base_additional_counterexamples = 100
 
 let default_config = {
   _PIE = PIE.default_config ;

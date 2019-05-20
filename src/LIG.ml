@@ -91,12 +91,7 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
         ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (
           states @ (random_value ~size:conf.max_steps_on_restart ~seed:(`Deterministic seed_string)
                                  (simulate_from sygus z3 head))))
-        ~conf:{ conf with
-                _VPIE = { conf._VPIE with
-                          _PIE = { conf._VPIE._PIE with
-                                   max_conflict_group_size = conf._VPIE._PIE.max_conflict_group_size + 4
-              } } }
-        (restarts_left - 1) sygus (seed_string ^ "#") z3 stats
+        ~conf (restarts_left - 1) sygus (seed_string ^ "#") z3 stats
     end
   in match (
     if sygus.post_func.expressible
