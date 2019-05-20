@@ -27,10 +27,7 @@
 (define-fun post_fun ((c Int) (x Int) (y Int) (z Int) (x0 Int) (y0 Int) (z0 Int)) Bool
   (=> (and (>= x y) (>= z 0))
       (=> (and (>= z0 0) (>= x0 y0))
-           (<= (* 2 c) (+ z0 (* 2 (- x0 y0))
-                             (* 2 z0)
-                             (* z0 z0)))
-           )))
+          (<= c (+ z0 (- x0 y0) (* z0 z0))))))
 
 (inv-constraint inv_fun pre_fun trans_fun post_fun)
 

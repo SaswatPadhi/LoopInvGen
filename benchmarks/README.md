@@ -26,6 +26,10 @@
 - _Related Publication:_ Lin, Shang-Wei, et al. "**FiB: Squeezing Loop Invariants by Interpolation between Forward/Backward Predicate Transformers.**" _Automated Software Engineering (ASE), 2017 32nd IEEE/ACM International Conference on_. IEEE, 2017.
 - _Original Benchmarks:_ <https://github.com/spencerxiao/ase2017-results-and-tools/tree/master/FiB_Tool/benchmarks>
 
+### (2018) Code2Inv &middot; &middot; &middot; [LIA](LIA/2018.NeurIPS_Code2Inv)
+- _Related Publication:_ Si, Xujie, et al. "**Learning Loop Invariants for Program Verification.**" _Advances in Neural Information Processing Systems_. NeurIPS, 2018.
+- _Original Benchmarks:_ https://github.com/PL-ML/code2inv
+
 ### (2018) InvGame &middot; &middot; &middot; [NIA](NIA/2018.CHI_InvGame)
 - _Related Publication:_ Bounov, Dimitar, et al. "**Inferring Loop Invariants through Gamification.**" _Proceedings of the 2018 CHI Conference on Human Factors in Computing Systems_. ACM, 2018.
 - _Original Benchmarks:_ n/a
