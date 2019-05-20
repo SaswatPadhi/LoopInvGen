@@ -55,8 +55,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
            (Job.create_positive states
               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
-              ~args: sygus.synth_variables
-              ~post: (fun _ res -> res = Ok (Value.Bool false)))
+              ~args:sygus.synth_variables
+              ~post:(fun _ res -> res = Ok (Value.Bool false)))
         in ZProc.close_scope z3
          ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
          ; if String.equal pre_inv "true"
@@ -91,7 +91,12 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
         ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (
           states @ (random_value ~size:conf.max_steps_on_restart ~seed:(`Deterministic seed_string)
                                  (simulate_from sygus z3 head))))
-        ~conf (restarts_left - 1) sygus (seed_string ^ "#") z3 stats
+        ~conf:{ conf with
+                _VPIE = { conf._VPIE with
+                          _PIE = { conf._VPIE._PIE with
+                                   max_conflict_group_size = conf._VPIE._PIE.max_conflict_group_size + 4
+              } } }
+        (restarts_left - 1) sygus (seed_string ^ "#") z3 stats
     end
   in match (
     if sygus.post_func.expressible

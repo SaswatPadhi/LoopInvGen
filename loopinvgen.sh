@@ -162,6 +162,7 @@ shift $(($OPTIND -1))
 [ -d "$INTERMEDIATES_DIR" ] \
   || usage "Intermediates directory [$INTERMEDIATES_DIR] not found."
 
+[ "$#" -gt "0" ] || usage "No input file specified."
 TESTCASE="$1"
 [ -f "$TESTCASE" ] || usage "Input file [$TESTCASE] not found."
 

@@ -74,25 +74,29 @@ let close_scope (z3 : t) : unit =
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
-  (if scoped then create_scope z3 else ()) ;
-  Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
-                                 ~sep:(Log.indented_sep 4))) ;
   if queries = []
   then begin
-    if scoped then () else
-      Out_channel.output_lines z3.stdin db ;
-      Out_channel.flush z3.stdin ; []
+    if not scoped && db <> [] then
+      begin
+        Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
+      ; Out_channel.output_lines z3.stdin db
+      ; Out_channel.flush z3.stdin
+      end ; []
     end
-  else let results = ref []
-       in Out_channel.output_lines z3.stdin db
-        ; Log.debug (lazy "Results:")
-        ; List.iter queries ~f:(fun q ->
-            Out_channel.output_string z3.stdin q ;
-            Out_channel.newline z3.stdin ;
-            results := (flush_and_collect z3) :: (!results)
-          )
-        ; (if scoped then close_scope z3 else ())
-        ; Out_channel.flush z3.stdin ; List.rev (!results)
+  else begin
+    let results = ref []
+     in (if scoped then create_scope z3 else ())
+      ; Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
+                           ~sep:(Log.indented_sep 4)))
+      ; Out_channel.output_lines z3.stdin db
+      ; Log.debug (lazy "Results:")
+      ; List.iter queries ~f:(fun q ->
+          Out_channel.output_string z3.stdin q ;
+          Out_channel.newline z3.stdin ;
+          results := (flush_and_collect z3) :: (!results))
+      ; (if scoped then close_scope z3 else ())
+      ; Out_channel.flush z3.stdin ; List.rev (!results)
+  end
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
@@ -141,7 +145,7 @@ let simplify (z3 : t) (q : string) : string =
   let goal =
     match
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
-                  ["(apply (then simplify ctx-simplify ctx-solver-simplify))"]
+                  ["(apply (repeat (then purify-arith simplify ctx-simplify ctx-solver-simplify)))"]
     with [ goal ] -> goal
        | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n"
                                       ^ (String.concat ~sep:"\n" goals)))
@@ -169,3 +173,30 @@ let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
     with [ "sat" ]   -> Value.Bool true
        | [ "unsat" ] -> Value.Bool false
        | _ -> raise (Internal_Exn "z3 could not verify the query.")
+
+let model_to_constraint ?(negate=false) ?(ignore_primed=false) (model : model) : string =
+   (if negate then "(not (and " else "(and ")
+ ^ (List.filter_map model ~f:(fun (n, v) -> if ignore_primed && String.is_suffix n ~suffix:"!"
+                                            then None
+                                            else Some ("(= " ^ n ^ " " ^ (Value.to_string v) ^ ")"))
+      |> String.concat ~sep:" ")
+ ^ (if negate then "))" else ")")
+
+let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) (z3 : t)
+                   : model list =
+  let query = query_for_model ~eval_term ()
+   in create_scope z3
+    ; ignore (run_queries ~scoped:false z3 ~db [])
+    ; let rec helper accum = function
+        | 0 -> accum
+        | r -> match
+                 match accum with
+                   | [] -> z3_result_to_model (run_queries z3 query ~scoped:false)
+                   | h :: _ -> z3_result_to_model (run_queries ~scoped:false z3 query
+                                 ~db:[ "(assert " ^ (model_to_constraint ~negate:true ~ignore_primed:true h) ^ ")" ])
+               with
+               | None -> accum
+               | Some model -> helper (model :: accum) (r - 1)
+       in let result = helper (match init with None -> [] | Some m -> [m]) n
+           in close_scope z3
+            ; result

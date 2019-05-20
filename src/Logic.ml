@@ -3,7 +3,7 @@ open Core_kernel
 type t = {
   name : string ;
   components_per_level : Expr.component list array ;
-  conflict_group_size_multiplier : int
+  dataset_size_multiplier : int
 }
 
 let all_supported =
@@ -17,7 +17,7 @@ let all_supported =
              (BooleanComponents.all @ IntegerComponents.octagons) ;
              (BooleanComponents.all @ IntegerComponents.polyhedra) ;
            |] ;
-           conflict_group_size_multiplier = 1
+           dataset_size_multiplier = 1
          } ; {
            name = "NIA" ;
            components_per_level = [|
@@ -28,7 +28,7 @@ let all_supported =
              (BooleanComponents.all @ IntegerComponents.polynomials) ;
              (BooleanComponents.all @ IntegerComponents.peano) ;
            |] ;
-           conflict_group_size_multiplier = 2
+           dataset_size_multiplier = 8
          }]
     ; table
 
