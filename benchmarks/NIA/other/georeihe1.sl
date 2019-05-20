@@ -10,7 +10,7 @@
 (declare-primed-var y Int)
 
 (define-fun pre-f ((z Int) (k Int) (x Int) (y Int)) Bool
-  (and (>= z 1) (= k 0) (= x 1) (= y z)))
+  (and (>= z 1) (= k 0) (= x 1) (= y 1)))
 
 (define-fun trans-f ((z Int) (k Int) (x Int) (y Int)
                      (z! Int) (k! Int) (x! Int) (y! Int)) Bool

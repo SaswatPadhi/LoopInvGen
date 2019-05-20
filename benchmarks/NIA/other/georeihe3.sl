@@ -11,7 +11,7 @@
 (declare-primed-var y Int)
 
 (define-fun pre-f ((a Int) (z Int) (k Int) (x Int) (y Int)) Bool
-  (and (>= z 1) (= k 0) (= x a) (= y 1)))
+  (and (> z 1) (= k 1) (= x a) (= y 1)))
 
 (define-fun trans-f ((a Int) (z Int) (k Int) (x Int) (y Int)
                      (a! Int) (z! Int) (k! Int) (x! Int) (y! Int)) Bool
@@ -21,7 +21,7 @@
  
 (define-fun post-f ((a Int) (z Int) (k Int) (x Int) (y Int)) Bool
   (and (= y (pow z (- k 1)))
-       (= x (* a (div (- (pow z (+ k 1)) 1) (- z 1))))))
+       (= x (* a (div (- (pow z k) 1) (- z 1))))))
 
 (inv-constraint inv-f pre-f trans-f post-f)
 

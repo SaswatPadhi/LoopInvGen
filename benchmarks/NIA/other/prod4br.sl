@@ -16,7 +16,7 @@
 
 (define-fun trans-f ((x Int) (y Int) (a Int) (b Int) (p Int) (q Int)
                      (x! Int) (y! Int) (a! Int) (b! Int) (p! Int) (q! Int)) Bool
-  (and (not (= a 0)) (not (= b 0))
+  (and (not (= a 0)) (not (= b 0)) (= x! x) (= y! y)
        (or (and (= (mod a 2) 0) (= (mod b 2) 0)
                 (= q! q)
                 (= a! (div a 2)) (= b! (div b 2)) (= p! (* 4 p)))
@@ -27,9 +27,9 @@
                 (= p! p) (= a! a)
                 (= b! (- b 1)) (= q! (+ q (* a p))))
            (and (= (mod a 2) 1) (= (mod b 2) 1)
-                (= b! (- b 1)) (= a! (- a 1))
                 (= p! p)
-                (= q! (+ q (* p (+ (+ a b) (- 0 1))))))
+                (= b! (- b 1)) (= a! (- a 1))
+                (= q! (+ q (* p (+ (+ a! b!) (- 0 1))))))
        )))
 
 (define-fun post-f ((x Int) (y Int) (a Int) (b Int) (p Int) (q Int)) Bool
