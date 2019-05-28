@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -Eeuo pipefail
 
@@ -22,7 +22,7 @@ Configuration:
 " 1>&2 ; exit 1
 }
 
-JOBS="`cat /proc/cpuinfo | grep processor | wc -l`"
+JOBS="`getconf _NPROCESSORS_ONLN`"
 
 WITH_LOGGING=""
 MAKE_Z3_AT=""
