@@ -11,24 +11,24 @@
   \node [designed_comp, below=1.5em of program] (process) {\Process} ;
   \node [designed_comp, below=1.5em of process] (record) {\Record} ;
   
-  \node [designed_comp, text width=12em, label={[blue!40!black, shift={(1,-1.125)}]\Infer}, minimum height=8.25em, above right=-2.3em and 2.55em of record] (infer) {} ;
-  \node [label={[yellow!30!black, shift={(1.4,-0.58)}]\PIE~\cite{Padhi2016DatadrivenPI}}, draw, yellow!30!black, fill=yellow!6, rectangle, rounded corners, text width=11.125em, minimum height=3em, above right=-1.95em and 3em of record] (pie) {} ;
+  \node [designed_comp, text width=12em, label={[blue!40!black, shift={(1,-1.125)}]\Infer}, minimum height=8.75em, above right=-2.625em and 2.55em of record] (infer) {} ;
+  \node [label={[yellow!30!black, shift={(1.4,-0.625)}]\PIE~\citep{Padhi2016DatadrivenPI}}, draw, yellow!30!black, fill=yellow!6, rectangle, rounded corners, text width=11.125em, minimum height=3.5em, above right=-2.25em and 3em of record] (pie) {} ;
 
-  \node [existing_comp, text width=3.25em, above right=0em and 3.625em of process] (prove) {\Checker} ;
-  \node [designed_comp, magenta!30!black, fill=magenta!6, text width=2.75em, below=3.625em of prove, minimum height=1em] (bfl) {\small \BFL} ;
-  \node [existing_comp, text width=3.25em, right=2.9em of bfl, minimum height=1em] (synth) {\small \Synth} ;
+  \node [existing_comp, text width=3.25em, above right=0em and 4.5em of process] (prove) {\Checker} ;
+  \node [designed_comp, magenta!30!black, fill=magenta!6, text width=2em, below left=3.75em and -1.725em of prove, minimum height=1em] (bfl) {\small \BFL} ;
+  \node [existing_comp, text width=4.5em, right=2.9em of bfl, minimum height=1em] (synth) {\small \HEnum~\citep{Padhi2019OverfittingSTP}} ;
   \node [right=0.5em of infer] (inv) {Sufficient\\Invariant} ;
   
 
   \path [oarrow] (program) -- (process);
   \path [arrow] (process) -- node[right=0em] {\scriptsize Simplified $\mathcal{P}$} (record);
-  \path [arrow] (process) to[bend left=10] node[above left=-0.4em and -1.25em, rotate=10] {\scriptsize Simplified $\mathcal{P}$} (prove);
+  \path [arrow] (process) to[bend left=15] node[above left=-0.125em and -1.25em, rotate=17.5] {\scriptsize Simplified $\mathcal{P}$} (prove);
   \path [arrow] (record) to[bend left=-2] node[below left=-0.4em and -2.25em] {\scriptsize States} (pie);
   \path [oarrow, success] (prove) to[bend left=30] (inv);
   
-  \path [arrow, failure] (prove) to[bend left=20] node[text width = 5em, above right=-1.5em and -0.1em] {\scriptsize Counterexample} (pie);
-  \path [arrow, success] (bfl) to[bend right=12] node[below left=-1.5em and -0.64em] {\scriptsize Candidate\\[-0.64em]Invariant} (prove);
+  \path [arrow, failure] (prove) to[bend left=20] node[text width = 5em, above right=-1.5em and 0.125em] {\scriptsize Counterexample} (pie);
+  \path [arrow, success] (bfl) to[bend right=12] node[below left=-1.75em and -0.64em] {\scriptsize Candidate\\[-0.6em]Invariant} (prove);
   
-  \path [arrow, failure] (bfl) to[bend left=10] node[above=-0.55em] {\scriptsize Conflicts} (synth);
-  \path [arrow] (synth) to[bend left=6] node[below=-0.55em] {\scriptsize Features} (bfl);
+  \path [arrow, failure] (bfl) to[bend left=10] node[above=-0.35em] {\scriptsize Conflicts} (synth);
+  \path [arrow] (synth) to[bend left=6] node[below=-0.5em] {\scriptsize Features} (bfl);
 \end{tikzpicture}

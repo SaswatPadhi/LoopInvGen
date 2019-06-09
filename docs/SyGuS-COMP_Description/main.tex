@@ -30,14 +30,14 @@ Email: \mailtourl{todd@cs.ucla.edu}}}
 We describe the \LoopInvGen tool for generating loop invariants that can
 provably guarantee correctness of a program with respect to a given specification.
 \LoopInvGen is an efficient implementation of the inference technique
-originally proposed in our earlier work on \PIE~\cite{Padhi2016DatadrivenPI}.
+proposed in our earlier work on the precondition inference engine (\PIE).
 
 In contrast to existing techniques, \LoopInvGen is not restricted to a fixed set of \emph{features} --
 atomic predicates that are composed together to build complex loop invariants.
 Instead, we start with no initial features, and use program synthesis techniques to grow the set on demand.
 This not only enables a less onerous and more expressive approach,
 but also appears to be significantly faster than the existing tools over
-the SyGuS-COMP 2017 benchmarks from the INV track.
+the SyGuS-Comp 2018 benchmarks from the \INV track.
 \end{abstract}
 
 
@@ -62,16 +62,16 @@ Given some sets of ``good'' and ``bad'' program states,
 data-driven approaches learn a candidate invariant as a boolean combination of atomic predicates (called \emph{features})
 defined on states, such that it is satisfied by the good states and falsified by the bad ones.
 Prior techniques are restricted to using a fixed set, or a fixed template for features.
-For instance, a state-of-the-art technique, \ICEDT~\cite{Garg2016LearningIU}
+For instance, a state-of-the-art technique, \ICEDT~\citep{Garg2016LearningIU}
 requires the shape of constraints (such as octagonal) to be fixed apriori\footnoteNum{
     \ICEDT also requires specialized learners for boolean formulas, which can utilize the \emph{implication counterexamples}.}.
 A fixed set of features not only limits the expressiveness, but predicting such a set,
-which would be adequate for learning a sufficiently strong invariant is also quite challenging~\cite{Padhi2016DatadrivenPI}.
+which would be adequate for learning a sufficiently strong invariant is also quite challenging~\citep{Padhi2016DatadrivenPI}.
 
 We present \LoopInvGen, a data-driven tool for inferring sufficient loop invariants,
 which starts with no initial features, and automatically learns features as necessary using \emph{program synthesis} techniques.
-\LoopInvGen is an optimized implementation of the general inference technique proposed in our recent work
-on data-driven precondition inference~\cite{Padhi2016DatadrivenPI}.
+\LoopInvGen is an optimized implementation of the general inference technique proposed in our prior work
+on data-driven precondition inference~\citep{Padhi2016DatadrivenPI}.
 It reduces the problem of loop invariant inference to a series of precondition inference problems,
 and alternates between two phases to converge to a sufficient invariant:
 \begin{andlist}
@@ -87,7 +87,7 @@ and is used to guide the learning phase towards the desired invariants.
 Our technique is modular, and makes no assumptions on the specific program synthesizer used for feature synthesis,
 except that the language of the synthesizer must be compatible with the theorem prover employed for checking.
 The synthesizer utilized by \LoopInvGen is currently restricted to expressions over the theory of
-\emph{linear integer arithmetic} (LIA), which is the sole focus of the INV track of SyGuS-COMP 2018.
+\emph{linear integer arithmetic} (LIA), which is the sole focus of the \INV track of SyGuS-Comp 2019.
 
 
 
@@ -95,7 +95,7 @@ The synthesizer utilized by \LoopInvGen is currently restricted to expressions o
 
 \begin{figure}[!t]
 \centering\input{arch.tex}
-\caption{The key components in \LoopInvGen, and their interdependence.}
+\caption{The key components in \LoopInvGen and their interdependence.}
 \label{fig:overview}
 \end{figure}
 
@@ -109,11 +109,15 @@ The synthesizer utilized by \LoopInvGen is currently restricted to expressions o
 \Cref{fig:overview} shows a high-level schematic of \LoopInvGen.
 It consists of three major components:
 \begin{andlist}
-    \item \Process\ -- performs some simplifications using static analysis
+    \item \Process\ -- performs simplifications using static analysis
     \item \Record\ -- collects the data required to drive the inference
     \item \Infer\ -- uses the \PIE and \Checker subcomponents to learn candidate invariants,
           and verify that they satisfy the desired properties.
 \end{andlist}
+The \PIE subcomponent further depends on a boolean-function learner \BFL and a feature synthesizer \Synth,
+as detailed in a prior work~\citep{Padhi2016DatadrivenPI}.
+We use a standard PAC learning algorithm for \BFL and
+the hybrid enumeration algorithm (\HEnum)~\citep{Padhi2019OverfittingSTP} for \Synth.
 
 In the following subsections, we briefly describe each of these subcomponents,
 and illustrate them with the help of a running example.
@@ -121,9 +125,9 @@ We consider a program, listed in \cref{code:sygus},
 in which $x$ is iteratively doubled starting from $1$ till $(x \geqslant y)$,
 and $y$ may be arbitrarily updated at each iteration.
 The goal is to verify that $(x \geqslant 1)$ always holds after the loop.
-The SyGuS-INV format~\cite{Alur2016SyGuSComp2R} used in \cref{code:sygus},
+The SyGuS-\INV format~\citep{Alur2016SyGuSComp2R} used in \cref{code:sygus},
 allows encoding the semantics of the program along with a desired functional specification.
-For the rest of the paper, we use the quadruplet \SyGuSINVQuadruplet\ to denote an arbitrary SyGuS-INV problem ---
+For the rest of the paper, we use the quadruplet \SyGuSINVQuadruplet\ to denote an arbitrary SyGuS-\INV problem ---
 $P$ being the precondition, $Q$ the postcondition, $T$ the state transition relation, and $\Delta$ the remaining relations, if any.
 
 \begin{figure}[!t]
@@ -133,7 +137,7 @@ $P$ being the precondition, $Q$ the postcondition, $T$ the state transition rela
            colback=white,colframe=darkbordercolor]
         \lstinputlisting[language=SyGuS]{trex1_vars.sl}
     \end{tcolorbox}
-    \caption{The \texttt{trex1\_vars} benchmark from SyGuS-COMP 2016 (INV track).}
+    \caption{The \texttt{trex1\_vars} benchmark from SyGuS-Comp 2016 (\INV track).}
     \label{code:sygus}
 \end{figure}
 
@@ -143,14 +147,14 @@ $P$ being the precondition, $Q$ the postcondition, $T$ the state transition rela
 \subsection{\Process: Simplification using Static Analysis} \label{subsec:Process}
 
 \noindent
-This first component statically analyzes a given SyGuS-INV problem,
+This first component statically analyzes a given SyGuS-\INV problem,
 and generates a simplified problem which is propagated to the subsequent components.
 Moreover, it also performs basic syntactic and semantic checks to ensure validity of the problem,
 and serializes it to a binary format that can be directly deserialized,
 eliminating the need to re-parse the specification within the subsequent components.
 
 Currently, the \Process component only performs an
-\emph{unused variable elimination} over a given SyGuS-INV problem \SyGuSINVQuadruplet.
+\emph{unused variable elimination} over a given SyGuS-\INV problem \SyGuSINVQuadruplet.
 For this analysis, we define ``use'' of a variable $v$ as its presence within either the specification ($P$ or $Q$),
 or the state transition relation ($v$ or $v'$ in $T$), upon inlining all other relations from $\Delta$.
 This analysis reduces the variables that we consider during invariant synthesis later --
@@ -170,7 +174,7 @@ $$
     V_P = \{ x \} \enskip;\enskip V_T = \{ x, y, x' \} \enskip;\enskip V_Q = \{ x, y \} \qquad V = \{ x, y \}
 $$
 
-\subsection{\Record: Collecting Reachable Program States} \label{subsec:Record}
+\subsection{\Record: Sampling Reachable Program States} \label{subsec:Record}
 
 \noindent
 This component collects a sample of the program states reachable at the two locations where a loop invariant must hold --
@@ -178,13 +182,13 @@ This component collects a sample of the program states reachable at the two loca
     \item the beginning of each loop iteration
     \item just after exiting the loop.
 \end{andlist}
-To collect these states for programs encoded in the SyGuS-INV format~\cite{Alur2016SyGuSComp2R},
+To collect these states for programs encoded in the SyGuS-\INV format~\citep{Alur2016SyGuSComp2R},
 we use a constraint solver as an execution engine\footnoteNum{
-    Our original technique~\cite{Padhi2016DatadrivenPI} instrumented C/C++ programs,
+    Our original technique~\citep{Padhi2016DatadrivenPI} instrumented C/C++ programs,
     and collected program states during execution of the program.}.
 We present an outline of the \Record algorithm in \cref{algo:record},
 which invokes a constraint solver within the \GetModel procedure.
-The algorithm accepts a SyGuS-INV problem \SyGuSINVQuadruplet,
+The algorithm accepts a SyGuS-\INV problem \SyGuSINVQuadruplet,
 the set $V$ of variables to track, the desired number $n$ of program states,
 and returns the set \States of the states of the variables in $V$.
 
@@ -239,7 +243,7 @@ For our running example, such program states could, for instance,
 be $(x \mapsto 1 \wedge y \mapsto -3)$, or $(x = 1 \wedge y = 7)$ etc.
 
 In lines 5\,--\,8, we execute several iterations of the loop body, and collect the program states at the loop head each time.
-In the SyGuS-INV encoding, executing a single iteration of the loop is equivalent to making a transition from the current state.
+In the SyGuS-\INV encoding, executing a single iteration of the loop is equivalent to making a transition from the current state.
 In line 6, we solve for the next program state resulting from such a transition, and save it to \States in line 7.
 For our running example, the state $(x \mapsto 1 \wedge y \mapsto 7)$ will transition to $(x \mapsto 2)$,
 that could be extended to $(x \mapsto 2 \wedge y \mapsto -2)$, for example.
@@ -253,12 +257,12 @@ we start with an \emph{unseen} state (which is not already in the set \States).
 
 
 
-\subsection{\Infer: Inference of Sufficiently Strong Loop Invariants} \label{subsec:Infer}
+\subsection{\Infer: Generating Sufficiently Strong Loop Invariants} \label{subsec:Infer}
 
 \noindent
 This component uses the program states collected by \Record to infer a loop invariant that is sufficient
-for proving correctness of a given SyGuS-INV problem \SyGuSINVQuadruplet.
-We outline our \Infer algorithm in \cref{algo:infer}, which given a SyGuS-INV problem \SyGuSINVQuadruplet,
+for proving correctness of a given SyGuS-\INV problem \SyGuSINVQuadruplet.
+We outline our \Infer algorithm in \cref{algo:infer}, which given a SyGuS-\INV problem \SyGuSINVQuadruplet,
 a set \States of reachable states, and a set $\Theta$ of configuration parameters,
 returns an invariant \Inv.
 
@@ -296,14 +300,14 @@ returns an invariant \Inv.
 
 A \emph{sufficient} loop invariant \Inv must satisfy three conditions:
 \begin{itemize}[leftmargin=1.25em]
-    \item Weaker than precondition: \hspace*{4.5pt} $\forall s\colon P(s) \Rightarrow \Inv(s)$
-    \item Inductive over loop body: \hspace*{7.75pt} $\forall s,t\colon \Inv(s) \wedge T(s,t) \Rightarrow \Inv(t)$
+    \item Weaker than precondition: \hspace*{4.75pt} $\forall s\colon P(s) \Rightarrow \Inv(s)$
+    \item Inductive over loop body: \hspace*{6.5pt} $\forall s,t\colon \Inv(s) \wedge T(s,t) \Rightarrow \Inv(t)$
     \item Stronger than postcondition: $\forall s\colon \Inv(s) \Rightarrow Q(s)$
 \end{itemize}
 As shown in \cref{fig:overview}, \Infer relies on an off-the-shelf theorem prover \Checker for verifying these conditions,
-and employs \PIE~\cite{Padhi2016DatadrivenPI} to refine candidate invariants.
+and employs \PIE~\citep{Padhi2016DatadrivenPI} to refine candidate invariants.
 In line 1, it starts with the weakest possible candidate\footnoteNum{
-    Our original technique~\cite{Padhi2016DatadrivenPI} used PIE to learn the initial candidate invariant \Inv as
+    Our original technique~\citep{Padhi2016DatadrivenPI} used PIE to learn the initial candidate invariant \Inv as
     one that satisfies $\{\Inv\}\;\textbf{skip}\;\{Q\}$.
     We found this initial candidate to be too strong sometimes, requiring additional counterexamples to weaken it.},
 $\Inv = Q$, and iteratively refines \Inv till all of the above properties are satisfied.
@@ -313,7 +317,7 @@ For instance, on our running example from \cref{code:sygus},
 However, this candidate invariant is not inductive.
 The state $(x \mapsto 0 \wedge y \mapsto 1)$ satisfies \Inv,
 but it may transition to state $(x \mapsto 0 \wedge y \mapsto 0)$, which violates \Inv.
-In lines 2\,--\,13, \Infer employs a \emph{strengthening} loop (inspired by \tool{HOLA}~\cite{Dillig2013InductiveIG}),
+In lines 2\,--\,13, \Infer employs a \emph{strengthening} loop (inspired by \tool{HOLA}~\citep{Dillig2013InductiveIG}),
 to ensure inductiveness of the candidate.
 At the $i^\text{th}$ iteration, it learns a precondition $\rho_i$
 under which the candidate invariant is preserved after a single transition.
@@ -329,10 +333,10 @@ on learning preconditions with automatic synthesis of appropriate features\footn
         \item a program synthesizer \Synth to generate new features
         \item a boolean function learner \BFL to learn a composition of these features.
     \end{andlist}
-    The details are presented in our full paper~\cite{Padhi2016DatadrivenPI}.}.
+    The details are presented in our full paper~\citep{Padhi2016DatadrivenPI}.}.
 In line 5, \PIE accepts a set \States of states which lead to satisfaction of a desired property,
 a set $B$ of states which do not, the set $\Theta$ of configuration parameters
-(such as \emph{conflict group size}~\cite{Padhi2016DatadrivenPI}),
+(such as \emph{conflict group size}~\citep{Padhi2016DatadrivenPI}),
 and learns a \emph{likely} precondition $\rho$ for the desired property.
 Since the precondition is only a likely one, in line 6, \Infer checks the likely precondition using \Checker for sufficiency,
 and provides counterexamples to \PIE iteratively, in lines 4\,--\,7, till a provably sufficient precondition is learned.
@@ -360,26 +364,45 @@ our current candidate invariant is provably sufficient for guaranteeing correctn
 \section{Implementation} \label{subsec:Implementation}
 
 \noindent
-Our implementation of \LoopInvGen is open source, and is available at \tturl{https://github.com/SaswatPadhi/LoopInvGen}.
+Our implementation of \LoopInvGen is open source, and is available at {\small \tturl{https://github.com/SaswatPadhi/LoopInvGen}}.
 For its various components, \LoopInvGen internally uses the following off-the-shelf algorithms or implementations:
 \begin{itemize}
-    \item Both \GetModel and \Checker are implemented using the \tool{Z3}~\cite{Moura2008Z3AE} theorem prover.
-          Our prior work used \tool{CVC4}~\cite{Barrett2011CVC4} for reasoning over the theory of strings,
-          which is beyond the scope of INV track of SyGuS-COMP 2018.
+    \item Both \GetModel and \Checker are implemented using the \tool{Z3}~\citep{Moura2008Z3AE} theorem prover.
+          Our prior work used \tool{CVC4}~\citep{Barrett2011CVC4} for reasoning over the theory of strings,
+          which is beyond the scope of \INV track of SyGuS-Comp 2018.
+          However, constraint solving with both \tool{Z3} and \tool{CVC4} in parallel is still in progress.
     
-    \item \PIE uses the \tool{Escher}~\cite{Albarghouthi2013RecursivePS} program synthesizer as its \Synth component.
+    \item \PIE uses the \HEnum~\citep{Padhi2019OverfittingSTP} algorithm for grammar-based expression synthesis.
           The language for synthesis has been shrunk to only allow expressions over LIA theory.
     
     \item The \BFL component in \PIE uses a standard \emph{probably approximately correct} (PAC) algorithm
           that can learn arbitrary \emph{conjunctive normal form} (CNF) formula,
-          and is biased towards small formulas~\cite{Kearns1994AnIT}.
+          and is biased towards small formulas~\citep{Kearns1994AnIT}.
 \end{itemize}
 
 \subsection*{\textsc{Major Implementation Changes}}
 
-\subsubsection*{Since SyGuS-COMP 2017}
+\subsubsection*{Since SyGuS-Comp 2018}
 \begin{itemize}
-    \item \Process --
+    \item Hybrid Enumeration~\citep{Padhi2019OverfittingSTP} --
+          We now have a static analysis pass before the \Record and \Infer components (see \cref{subsec:Process}).
+
+    \item Early Postcondition Check --
+          The \Process{} component now checks if the postcondition itself is a sufficient loop invariant,
+          even before sampling any program states (\Record) and invoking inference (\Infer).
+
+    \item Multiple Counterexamples --
+          We observed that adding multiple counterexamples (32) instead of just one (see line 6 of \cref{algo:infer})
+          significantly reduces the number of CEGIS rounds and results in faster convergence.
+
+    \item Sampling Bad States --
+          The \Record{} component now also allows recording bad states (that violate the postcondition),
+          which are used during precondition inference to generate stronger features.
+\end{itemize}
+
+\subsubsection*{Since SyGuS-Comp 2017}
+\begin{itemize}
+    \item \Process{} --
           We now have a static analysis pass before the \Record and \Infer components (see \cref{subsec:Process}).
 
     \item Early Precondition Check --
@@ -390,8 +413,8 @@ For its various components, \LoopInvGen internally uses the following off-the-sh
           We have implemented a syntactic checking phase before \tool{Escher}'s semantic checks,
           that prunes redundant ASTs such as (\texttt{\_ + x - x}) or (\texttt{1 * \_}) etc.
 
-    \item Better SyGuS-INV Support --
-          We have added support for defining and invoking relations with arbitrary sorts,
+    \item Better SyGuS-IF~\citep{Alur2016SyGuSComp2R} Support --
+          We have added support for defining and invoking arbitrary auxiliary relations,
           other than precondition, postcondition and transition relations.
 
     \item Beyond LIA Theory --
@@ -399,7 +422,7 @@ For its various components, \LoopInvGen internally uses the following off-the-sh
           which may be activated using the command: \texttt{(set-logic NLIA)}.
 \end{itemize}
 
-\subsubsection*{Since First Publication~\cite{Padhi2016DatadrivenPI}}
+\subsubsection*{Since First Publication~\citep{Padhi2016DatadrivenPI}}
 \begin{itemize}
     \item \Record Coverage --
           The \Record component has been significantly improved to better explore program states for non-deterministic programs.
@@ -420,7 +443,7 @@ For its various components, \LoopInvGen internally uses the following off-the-sh
           It also keeps track of known program states, and terminates as soon as a state appears to be a negative example
           (w.r.t. the given specification).
 
-    \item \emph{Conflict Group Size}~\cite{Padhi2016DatadrivenPI} --
+    \item \emph{Conflict Group Size}~\citep{Padhi2016DatadrivenPI} --
           Overriding \PIE's default size of $16$, \LoopInvGen uses $64$.
 \end{itemize}
 
@@ -447,13 +470,17 @@ and solves them using \PIE, which uses a form of program synthesis to learn feat
 \section*{Acknowledgment}
 
 \noindent
-Thanks to Sumit Gulwani and Zachary Kincaid for access to the \tool{Escher} program synthesis tool;
-and the organizers of SyGuS-COMP for making all the artifacts publicly available.
+We thank the organizers of SyGuS-Comp for making all the solvers and benchmarks publicly available.
 
 
 
 
-\bibliographystyle{IEEEtran}
-\bibliography{IEEEabrv,refs}
+\bibliographystyle{plainnat}
+\begingroup
+  \small
+  \bibliography{refs}
+\endgroup
+
+
 
 \end{document}

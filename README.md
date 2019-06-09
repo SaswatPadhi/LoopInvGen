@@ -6,7 +6,7 @@ LoopInvGen
 &nbsp;
 [![](https://img.shields.io/docker/cloud/build/padhi/loopinvgen.svg?logo=docker&style=popout&label=Docker+Image)][docker-hub]
 
-A data-driven tool that generates provably-sufficient loop invariants for program verification.
+A data-driven tool that generates provably sufficient loop invariants for program verification.
 
 <p align="center">
   <img src="docs/architecture.png" width="400"/>
@@ -35,18 +35,22 @@ A data-driven tool that generates provably-sufficient loop invariants for progra
 
 #### :page_with_curl: Papers and Presentations
 
-- [PLDI 2016](http://conf.researchr.org/home/pldi-2016) -
-  Original [paper on PIE](http://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf) (Precondition Inference Engine), the backbone of LoopInvGen
+- [CAV 2019](http://i-cav.org/2019) --
+  Paper on the [_Hybrid Enumeration_](https://saswatpadhi.github.io/assets/pdf/cav2019_overfitting.pdf) technique used for "feature" synthesis within LoopInvGen
+- [PLDI 2016](http://conf.researchr.org/home/pldi-2016) --
+  Original paper on the [_Precondition Inference Engine_ (PIE)](https://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf), the backbone of LoopInvGen
   <br><br>
-- [SyGuS-COMP 2018][SyGuSCOMP18] (a satellite event of CAV and SYNT at FLoC 2018) -
-  Solver [Presentation](docs/2018_SyGuS-COMP-Presentation.pdf) and [Description](docs/2018_SyGuS-COMP-Description.pdf)
-- [SyGuS-COMP 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) -
-  Solver [Presentation](docs/2017_SyGuS-COMP-Presentation.pdf) and [Description](docs/2017_SyGuS-COMP-Description.pdf)
+- [SyGuS-Comp 2018][SyGuSCOMP18] (in conjunction with CAV and SYNT 2019) --
+  Solver [Presentation](docs/2019_SyGuS-Comp-Presentation.pdf) and [Description](docs/2019_SyGuS-Comp-Description.pdf)
+- [SyGuS-Comp 2018][SyGuSCOMP18] (a satellite event of CAV and SYNT at FLoC 2018) --
+  Solver [Presentation](docs/2018_SyGuS-Comp-Presentation.pdf) and [Description](docs/2018_SyGuS-Comp-Description.pdf)
+- [SyGuS-Comp 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) --
+  Solver [Presentation](docs/2017_SyGuS-Comp-Presentation.pdf) and [Description](docs/2017_SyGuS-Comp-Description.pdf)
 
 #### :trophy: Awards and Honors
 
-- [SyGuS-COMP 2018][SyGuSCOMP18] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp18.pdf))
-- [SyGuS-COMP 2017][SyGuSCOMP17] - INV Track **Winner** ([Presentation](http://sygus.seas.upenn.edu/files/sygus-comp17_results.pdf) and [Report](http://sygus.seas.upenn.edu/files/SyGuSComp2017.pdf))
+- [SyGuS-Comp 2018][SyGuSCOMP18] -- Inv Track **Winner** ([Results](https://sygus.org/comp/2018/results-slides.pdf) and [Report](https://sygus.org/comp/2018/report.pdf))
+- [SyGuS-Comp 2017][SyGuSCOMP17] -- Inv Track **Winner** ([Results](https://sygus.org/comp/2017/results-slides.pdf) and [Report](https://sygus.org/comp/2017/report.pdf))
 
 ## Installation
 
@@ -113,20 +117,18 @@ See <https://opam.ocaml.org/doc/Install.html> for detailed instructions.
 
 #### 2. Install `ocaml` >= 4.05.0.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enable
-For example, with [`opam`](https://opam.ocaml.org/), you could:
-- run `opam switch 4.07.1+flambda` for opam 1.x
-- run `opam switch create 4.07.1+flambda` for opam 2.x
+For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.07.1+flambda`.
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.9.1
+$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.10.0
 ```
 
 #### 4. Get the [Z3 project][z3].
-We have tested LoopInvGen with the latest stable version of Z3 (4.8.4).
+We have tested LoopInvGen with the latest stable version of Z3 (4.8.5).
 You could either:
 - `git checkout https://github.com/Z3Prover/z3.git` for the bleeding-edge version, or
-- `wget https://github.com/Z3Prover/z3/archive/z3-4.8.4.zip && unzip z3-4.8.4.zip` for the stable version
+- `wget https://github.com/Z3Prover/z3/archive/z3-4.8.5.zip && unzip z3-4.8.5.zip` for the stable version
 
 #### 5. `git clone` this project, and build everything.
 ```bash
@@ -148,7 +150,7 @@ using: `dune build --profile <profile>`.
 
 Infer invariants for SyGuS-INV benchmarks by invoking LoopInvGen as:
 ```bash
-$ ./loopinvgen.sh benchmarks/LIA/2016.SyGuS-COMP/array.sl
+$ ./loopinvgen.sh benchmarks/LIA/2016.SyGuS-Comp/array.sl
 (define-fun inv-f ((x Int) (y Int) (z Int)) Bool (not (and (>= x 5) (not (<= y z)))))
 ```
 
@@ -161,7 +163,7 @@ and <kbd>CTRL</kbd>+<kbd>\\</kbd> (`SIGQUIT` signal) to kill LoopInvGen and with
 You may use the `-t` flag to run LoopInvGen with a maximum limit
 on the number of _seconds_ (wall-clock time) for which the inference algorithm may run.
 ```bash
-$ ./loopinvgen.sh -t 8 benchmarks/LIA/2016.SyGuS-COMP/array.sl
+$ ./loopinvgen.sh -t 8 benchmarks/LIA/2016.SyGuS-Comp/array.sl
 ```
 
 For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulimit.html).
@@ -174,7 +176,7 @@ For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulim
 
 The `-v` switch makes LoopInvGen verify the benchmark with the generated invariant:
 ```bash
-$ ./loopinvgen.sh -v benchmarks/LIA/2016.SyGuS-COMP/array.sl
+$ ./loopinvgen.sh -v benchmarks/LIA/2016.SyGuS-Comp/array.sl
 PASS
 ```
 
@@ -265,8 +267,8 @@ Try `./scripts/test_all.sh -h` for more options.
 [flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
 [bind mount]:     https://docs.docker.com/storage/bind-mounts
 
-[SyGuSCOMP17]:    http://www.sygus.org/SyGuS-COMP2017.html
-[SyGuSCOMP18]:    http://www.sygus.org/SyGuS-COMP2018.html
+[SyGuSCOMP17]:    https://sygus.org/comp/2017
+[SyGuSCOMP18]:    https://sygus.org/comp/2018
 
 [docker-hub]:     https://hub.docker.com/r/padhi/loopinvgen
 [travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen

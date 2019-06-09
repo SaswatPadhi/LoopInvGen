@@ -5,9 +5,9 @@ FROM ubuntu:18.04
 LABEL maintainer="padhi@cs.ucla.edu"
 
 
-ENV OPAM_VERSION  2.0.3
+ENV OPAM_VERSION  2.0.4
 ENV OCAML_VERSION 4.07.1+flambda
-ENV Z3_VERSION    4.8.4
+ENV Z3_VERSION    4.8.5
 
 ENV HOME /home/opam
 
@@ -39,7 +39,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.9.1 && \
+RUN opam install --yes alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.10.0 && \
     opam clean --yes && \
     git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 
