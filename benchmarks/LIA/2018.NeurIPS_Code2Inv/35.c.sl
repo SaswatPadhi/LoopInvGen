@@ -10,7 +10,7 @@
 (declare-primed-var c_4 Int)
 (declare-primed-var c_5 Int)
 
-(synth-inv inv-f((c Int) (tmp Int) (c_0 Int) (c_1 Int) (c_2 Int) (c_3 Int) (c_4 Int) (c_5 Int)))
+(synth-inv inv-f ((c Int) (tmp Int) (c_0 Int) (c_1 Int) (c_2 Int) (c_3 Int) (c_4 Int) (c_5 Int)))
 
 (define-fun pre-f ((c Int) (tmp Int) (c_0 Int) (c_1 Int) (c_2 Int) (c_3 Int) (c_4 Int) (c_5 Int)) Bool
   (and

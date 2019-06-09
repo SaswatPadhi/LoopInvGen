@@ -17,7 +17,7 @@
 (declare-primed-var m_2 Int)
 (declare-primed-var m_3 Int)
 
-(synth-inv inv-f((a Int) (j Int) (k Int) (m Int) (a_0 Int) (j_0 Int) (j_1 Int) (k_0 Int) (k_1 Int) (k_2 Int) (k_3 Int) (m_0 Int) (m_1 Int) (m_2 Int) (m_3 Int)))
+(synth-inv inv-f ((a Int) (j Int) (k Int) (m Int) (a_0 Int) (j_0 Int) (j_1 Int) (k_0 Int) (k_1 Int) (k_2 Int) (k_3 Int) (m_0 Int) (m_1 Int) (m_2 Int) (m_3 Int)))
 
 (define-fun pre-f ((a Int) (j Int) (k Int) (m Int) (a_0 Int) (j_0 Int) (j_1 Int) (k_0 Int) (k_1 Int) (k_2 Int) (k_3 Int) (m_0 Int) (m_1 Int) (m_2 Int) (m_3 Int)) Bool
   (and

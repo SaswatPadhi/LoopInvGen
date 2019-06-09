@@ -9,7 +9,7 @@
 (declare-primed-var x_2 Int)
 (declare-primed-var x_3 Int)
 
-(synth-inv inv-f((n Int) (x Int) (n_0 Int) (x_0 Int) (x_1 Int) (x_2 Int) (x_3 Int)))
+(synth-inv inv-f ((n Int) (x Int) (n_0 Int) (x_0 Int) (x_1 Int) (x_2 Int) (x_3 Int)))
 
 (define-fun pre-f ((n Int) (x Int) (n_0 Int) (x_0 Int) (x_1 Int) (x_2 Int) (x_3 Int)) Bool
   (and

@@ -11,7 +11,7 @@
 (declare-primed-var c_4 Int)
 (declare-primed-var n_0 Int)
 
-(synth-inv inv-f((c Int) (n Int) (tmp Int) (c_0 Int) (c_1 Int) (c_2 Int) (c_3 Int) (c_4 Int) (n_0 Int)))
+(synth-inv inv-f ((c Int) (n Int) (tmp Int) (c_0 Int) (c_1 Int) (c_2 Int) (c_3 Int) (c_4 Int) (n_0 Int)))
 
 (define-fun pre-f ((c Int) (n Int) (tmp Int) (c_0 Int) (c_1 Int) (c_2 Int) (c_3 Int) (c_4 Int) (n_0 Int)) Bool
   (and

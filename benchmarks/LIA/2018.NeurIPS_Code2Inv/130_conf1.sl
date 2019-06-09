@@ -34,7 +34,7 @@
 (declare-primed-var x3_2 Int)
 (declare-primed-var x3_3 Int)
 
-(synth-inv inv-f((d1 Int) (d2 Int) (d3 Int) (conf_0 Int) (x1 Int) (x2 Int) (x3 Int) (d1_0 Int) (d1_1 Int) (d2_0 Int) (d2_1 Int) (d3_0 Int) (d3_1 Int) (conf_0_0 Int) (conf_0_1 Int) (conf_0_2 Int) (conf_0_3 Int) (conf_0_4 Int) (conf_0_5 Int) (x1_0 Int) (x1_1 Int) (x1_2 Int) (x1_3 Int) (x1_4 Int) (x2_0 Int) (x2_1 Int) (x2_2 Int) (x2_3 Int) (x3_0 Int) (x3_1 Int) (x3_2 Int) (x3_3 Int)))
+(synth-inv inv-f ((d1 Int) (d2 Int) (d3 Int) (conf_0 Int) (x1 Int) (x2 Int) (x3 Int) (d1_0 Int) (d1_1 Int) (d2_0 Int) (d2_1 Int) (d3_0 Int) (d3_1 Int) (conf_0_0 Int) (conf_0_1 Int) (conf_0_2 Int) (conf_0_3 Int) (conf_0_4 Int) (conf_0_5 Int) (x1_0 Int) (x1_1 Int) (x1_2 Int) (x1_3 Int) (x1_4 Int) (x2_0 Int) (x2_1 Int) (x2_2 Int) (x2_3 Int) (x3_0 Int) (x3_1 Int) (x3_2 Int) (x3_3 Int)))
 
 (define-fun pre-f ((d1 Int) (d2 Int) (d3 Int) (conf_0 Int) (x1 Int) (x2 Int) (x3 Int) (d1_0 Int) (d1_1 Int) (d2_0 Int) (d2_1 Int) (d3_0 Int) (d3_1 Int) (conf_0_0 Int) (conf_0_1 Int) (conf_0_2 Int) (conf_0_3 Int) (conf_0_4 Int) (conf_0_5 Int) (x1_0 Int) (x1_1 Int) (x1_2 Int) (x1_3 Int) (x1_4 Int) (x2_0 Int) (x2_1 Int) (x2_2 Int) (x2_3 Int) (x3_0 Int) (x3_1 Int) (x3_2 Int) (x3_3 Int)) Bool
   (and

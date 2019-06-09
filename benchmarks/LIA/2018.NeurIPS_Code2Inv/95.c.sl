@@ -17,7 +17,7 @@
 (declare-primed-var y_0 Int)
 (declare-primed-var y_1 Int)
 
-(synth-inv inv-f((i Int) (j Int) (x Int) (y Int) (i_0 Int) (i_1 Int) (i_2 Int) (i_3 Int) (j_0 Int) (j_1 Int) (j_2 Int) (j_3 Int) (x_0 Int) (y_0 Int) (y_1 Int)))
+(synth-inv inv-f ((i Int) (j Int) (x Int) (y Int) (i_0 Int) (i_1 Int) (i_2 Int) (i_3 Int) (j_0 Int) (j_1 Int) (j_2 Int) (j_3 Int) (x_0 Int) (y_0 Int) (y_1 Int)))
 
 (define-fun pre-f ((i Int) (j Int) (x Int) (y Int) (i_0 Int) (i_1 Int) (i_2 Int) (i_3 Int) (j_0 Int) (j_1 Int) (j_2 Int) (j_3 Int) (x_0 Int) (y_0 Int) (y_1 Int)) Bool
   (and
