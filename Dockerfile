@@ -7,7 +7,7 @@ LABEL maintainer="padhi@cs.ucla.edu"
 
 ENV OPAM_VERSION  2.0.4
 ENV OCAML_VERSION 4.07.1+flambda
-ENV Z3_VERSION    4.8.5
+ENV Z3_VERSION    Z3-4.8.5
 
 ENV HOME /home/opam
 
@@ -48,9 +48,9 @@ WORKDIR $HOME/LoopInvGen
 
 
 ENV LC_CTYPE=C.UTF-8
-RUN curl -LO https://github.com/Z3Prover/z3/archive/z3-$Z3_VERSION.zip && \
-    unzip z3-$Z3_VERSION.zip && \
-    opam config exec -- ./scripts/build_all.sh --with-logging --build-z3 z3-z3-$Z3_VERSION && \
+RUN curl -LO https://github.com/Z3Prover/z3/archive/$Z3_VERSION.zip && \
+    unzip $Z3_VERSION.zip && \
+    opam config exec -- ./scripts/build_all.sh --with-logging --build-z3 z3-$Z3_VERSION && \
     rm -rf z3*
 
 

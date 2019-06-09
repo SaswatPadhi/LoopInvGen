@@ -384,8 +384,16 @@ For its various components, \LoopInvGen internally uses the following off-the-sh
 
 \subsubsection*{Since SyGuS-Comp 2018}
 \begin{itemize}
+    \item \tool{PLearn}~\citep{Padhi2019OverfittingSTP} --
+          We now run several parallel instances of \Infer each with a different subgrammar of the LIA/NIA grammar.
+          This significantly reduces chances of overfitting and hence improves inference time,
+          as described in our recent work~\cite{Padhi2019OverfittingSTP}.
+
     \item Hybrid Enumeration~\citep{Padhi2019OverfittingSTP} --
-          We now have a static analysis pass before the \Record and \Infer components (see \cref{subsec:Process}).
+          Within \PIE, we now use the hybrid enumeration technique for feature synthesis.
+          As detailed in our recent work~\cite{Padhi2019OverfittingSTP},
+          this technique interleaves exploration of subgrammars of varying expressiveness,
+          and typically results in significantly faster convergence.
 
     \item Early Postcondition Check --
           The \Process{} component now checks if the postcondition itself is a sufficient loop invariant,

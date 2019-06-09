@@ -36,7 +36,7 @@ A data-driven tool that generates provably sufficient loop invariants for progra
 #### :page_with_curl: Papers and Presentations
 
 - [CAV 2019](http://i-cav.org/2019) --
-  Paper on the [_Hybrid Enumeration_](https://saswatpadhi.github.io/assets/pdf/cav2019_overfitting.pdf) technique used for "feature" synthesis within LoopInvGen
+  Paper on the [_Hybrid Enumeration_ (HEnum)](https://saswatpadhi.github.io/assets/pdf/cav2019_overfitting.pdf) technique used for "feature" synthesis within LoopInvGen
 - [PLDI 2016](http://conf.researchr.org/home/pldi-2016) --
   Original paper on the [_Precondition Inference Engine_ (PIE)](https://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf), the backbone of LoopInvGen
   <br><br>
