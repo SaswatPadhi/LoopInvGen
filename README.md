@@ -1,5 +1,5 @@
 LoopInvGen
-<img align="right" src="https://img.shields.io/microbadger/image-size/padhi/loopinvgen.svg?style=flat&label=docker"></img>
+<a href="https://microbadger.com/images/padhi/loopinvgen"><img align="right" src="https://img.shields.io/microbadger/image-size/padhi/loopinvgen.svg?style=flat&label=docker"></img></a>
 ==========
 
 [![](https://img.shields.io/travis/SaswatPadhi/LoopInvGen/master.svg?logo=travis&style=popout&label=Travis+Build)][travis]
@@ -40,17 +40,17 @@ A data-driven tool that generates provably sufficient loop invariants for progra
 - [PLDI 2016](http://conf.researchr.org/home/pldi-2016) --
   Original paper on the [_Precondition Inference Engine_ (PIE)](https://saswatpadhi.github.io/assets/pdf/pldi2016_pie.pdf), the backbone of LoopInvGen
   <br><br>
-- [SyGuS-Comp 2018][SyGuSCOMP18] (in conjunction with CAV and SYNT 2019) --
+- [SyGuS-Comp 2019] (in conjunction with CAV and SYNT 2019) --
   Solver [Presentation](docs/2019_SyGuS-Comp-Presentation.pdf) and [Description](docs/2019_SyGuS-Comp-Description.pdf)
-- [SyGuS-Comp 2018][SyGuSCOMP18] (a satellite event of CAV and SYNT at FLoC 2018) --
+- [SyGuS-Comp 2018] (a satellite event of CAV and SYNT at FLoC 2018) --
   Solver [Presentation](docs/2018_SyGuS-Comp-Presentation.pdf) and [Description](docs/2018_SyGuS-Comp-Description.pdf)
-- [SyGuS-Comp 2017][SyGuSCOMP17] (in conjunction with CAV and SYNT 2017) --
+- [SyGuS-Comp 2017] (in conjunction with CAV and SYNT 2017) --
   Solver [Presentation](docs/2017_SyGuS-Comp-Presentation.pdf) and [Description](docs/2017_SyGuS-Comp-Description.pdf)
 
 #### :trophy: Awards and Honors
 
-- [SyGuS-Comp 2018][SyGuSCOMP18] -- Inv Track **Winner** ([Results](https://sygus.org/comp/2018/results-slides.pdf) and [Report](https://sygus.org/comp/2018/report.pdf))
-- [SyGuS-Comp 2017][SyGuSCOMP17] -- Inv Track **Winner** ([Results](https://sygus.org/comp/2017/results-slides.pdf) and [Report](https://sygus.org/comp/2017/report.pdf))
+- [SyGuS-Comp 2018] -- Inv Track **Winner** ([Results](https://sygus.org/comp/2018/results-slides.pdf) and [Report](https://sygus.org/comp/2018/report.pdf))
+- [SyGuS-Comp 2017] -- Inv Track **Winner** ([Results](https://sygus.org/comp/2017/results-slides.pdf) and [Report](https://sygus.org/comp/2017/report.pdf))
 
 ## Installation
 
@@ -267,8 +267,9 @@ Try `./scripts/test_all.sh -h` for more options.
 [flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
 [bind mount]:     https://docs.docker.com/storage/bind-mounts
 
-[SyGuSCOMP17]:    https://sygus.org/comp/2017
-[SyGuSCOMP18]:    https://sygus.org/comp/2018
+[SyGuS-Comp 2017]:    https://sygus.org/comp/2017
+[SyGuS-Comp 2018]:    https://sygus.org/comp/2018
+[SyGuS-Comp 2019]:    https://sygus.org/comp/2019
 
 [docker-hub]:     https://hub.docker.com/r/padhi/loopinvgen
 [travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen

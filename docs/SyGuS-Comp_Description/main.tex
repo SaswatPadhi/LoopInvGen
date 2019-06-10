@@ -402,10 +402,6 @@ For its various components, \LoopInvGen internally uses the following off-the-sh
     \item Multiple Counterexamples --
           We observed that adding multiple counterexamples (32) instead of just one (see line 6 of \cref{algo:infer})
           significantly reduces the number of CEGIS rounds and results in faster convergence.
-
-    \item Sampling Bad States --
-          The \Record{} component now also allows recording bad states (that violate the postcondition),
-          which are used during precondition inference to generate stronger features.
 \end{itemize}
 
 \subsubsection*{Since SyGuS-Comp 2017}

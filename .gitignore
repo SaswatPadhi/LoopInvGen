@@ -39,5 +39,5 @@ config.h
 # - - -
 # External
 # - - -
-/_*
-/*.tgz
+_*
+*.tgz
