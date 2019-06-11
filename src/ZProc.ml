@@ -47,6 +47,7 @@ let process ?(init_options = []) ?(random_seed = None)
             ~(zpath : string) (f : t -> 'a) : 'a =
   let z3 = create ~init_options ~random_seed zpath in
   let result = (f z3) in (close z3) ; result
+[@@inline always]
 
 let flush_and_collect (z3 : t) : string =
   let last_line = "THIS.LINE>WILL.BE#PRINTED=AFTER+THE-RESULT."
@@ -64,13 +65,11 @@ let flush_and_collect (z3 : t) : string =
 let create_scope ?(db = []) (z3 : t) : unit =
   Log.debug (lazy (String.concat ("Created z3 scope." :: db)
                                  ~sep:(Log.indented_sep 4))) ;
-  Out_channel.output_lines z3.stdin ("(push)" :: db) ;
-  Out_channel.flush z3.stdin
+  Out_channel.output_lines z3.stdin ("(push)" :: db)
 
 let close_scope (z3 : t) : unit =
   Log.debug (lazy ("Closed z3 scope.")) ;
-  Out_channel.output_string z3.stdin "(pop)\n" ;
-  Out_channel.flush z3.stdin
+  Out_channel.output_string z3.stdin "(pop)\n"
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
@@ -80,7 +79,6 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
       begin
         Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
       ; Out_channel.output_lines z3.stdin db
-      ; Out_channel.flush z3.stdin
       end ; []
     end
   else begin
@@ -95,7 +93,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
           Out_channel.newline z3.stdin ;
           results := (flush_and_collect z3) :: (!results))
       ; (if scoped then close_scope z3 else ())
-      ; Out_channel.flush z3.stdin ; List.rev (!results)
+      ; List.rev (!results)
   end
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
@@ -147,18 +145,16 @@ let simplify (z3 : t) (q : string) : string =
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
                   ["(apply (repeat (then purify-arith simplify ctx-simplify ctx-solver-simplify)))"]
     with [ goal ] -> goal
-       | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n"
-                                      ^ (String.concat ~sep:"\n" goals)))
+       | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n" ^ (String.concat ~sep:"\n" goals)))
   in match Sexp.parse goal with
-     | Done (List([(Atom "goals") ; (List((Atom "goal") :: goalexpr))]), _)
-       -> let goals = List.filter_map goalexpr
-                        ~f:(function Atom("true") -> Some "true"
-                                   | Atom("false") -> Some "false"
-                                   | Atom(_) -> None
-                                   | l -> Some (to_string_hum l))
-          in if List.length goals = 0 then "true"
-             else (let goalstr = String.concat ~sep:" " goals
-                   in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
+     | Done (List [ (Atom "goals") ; (List ((Atom "goal") :: goalexpr)) ], _)
+       -> let goals = List.(filter_map (drop (rev goalexpr) 4)
+                                       ~f:(function Atom "true" -> None
+                                                  | Atom atom -> Some atom
+                                                  | l -> Some (to_string_hum l)))
+           in if List.length goals = 0 then "true"
+              else (let goalstr = String.concat ~sep:" " goals
+                     in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
      | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
 
 let constraint_sat_function (expr : string) ~(z3 : t) ~(arg_names : string list)
@@ -182,7 +178,7 @@ let model_to_constraint ?(negate=false) ?(ignore_primed=false) (model : model) :
       |> String.concat ~sep:" ")
  ^ (if negate then "))" else ")")
 
-let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) (z3 : t)
+let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) ?(run = fun _ -> ()) (z3 : t)
                    : model list =
   let query = query_for_model ~eval_term ()
    in create_scope z3
@@ -196,7 +192,8 @@ let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) (z3 
                                  ~db:[ "(assert " ^ (model_to_constraint ~negate:true ~ignore_primed:true h) ^ ")" ])
                with
                | None -> accum
-               | Some model -> helper (model :: accum) (r - 1)
+               | Some model -> run model
+                             ; helper (model :: accum) (r - 1)
        in let result = helper (match init with None -> [] | Some m -> [m]) n
            in close_scope z3
             ; result

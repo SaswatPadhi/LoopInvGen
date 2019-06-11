@@ -103,14 +103,27 @@ STAREXEC_DEFAULT_CONFIG_FILE="_starexec/bin/starexec_run_default"
 STAREXEC_DEBUG_CONFIG_FILE="_starexec/bin/starexec_run_IGNORE-debug"
 
 cat > "$STAREXEC_DEFAULT_CONFIG_FILE" << "EOF"
-#!/bin/bash
+#!/usr/bin/env bash
 
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 
 RECORD_FORKS=4
-RECORD_TIMEOUT=0.33s
-RECORD_STATES_PER_FORK=256
+RECORD_TIMEOUT=0.35s
+RECORD_STATES_PER_FORK=320
+
+set -o monitor
+output() {
+  trap - SIGCHLD
+  kill $(jobs -p) & 2> /dev/null
+
+  if [ -s "$TESTCASE_NAME.inv_a" ]; then
+    cat "$TESTCASE_NAME.inv_a" ; exit 0
+  fi
+  if [ -s "$TESTCASE_NAME.inv_b" ]; then
+    cat "$TESTCASE_NAME.inv_b" ; exit 0
+  fi
+}
 
 _bin/lig-process -o $TESTCASE_NAME.pro $TESTCASE >&2 || exit 1
 
@@ -123,7 +136,18 @@ wait
 
 grep -hv "^[[:space:]]*$" $TESTCASE_NAME.r* | sort -u > $TESTCASE_NAME.states
 
-_bin/lig-infer -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro
+_bin/lig-infer -base-max-conflict-group-size 32                              \
+               -base-additional-counterexamples 31                           \
+               -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro        \
+               > $TESTCASE_NAME.inv_a &
+_bin/lig-infer -base-max-conflict-group-size 128                             \
+               -base-additional-counterexamples 31                           \
+               -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro        \
+               > $TESTCASE_NAME.inv_b &
+
+trap output SIGCHLD 2> /dev/null
+
+wait 2> /dev/null
 EOF
 chmod +x "$STAREXEC_DEFAULT_CONFIG_FILE"
 
@@ -142,7 +166,7 @@ EOF
 chmod +x "$STAREXEC_ZERO_CONFIG_FILE"
 
 cat > "$STAREXEC_DEBUG_CONFIG_FILE" << "EOF"
-#!/bin/bash
+#!/usr/bin/env bash
 
 pwd
 ls -lah

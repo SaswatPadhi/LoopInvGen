@@ -1,6 +1,6 @@
 (* TODO: Refactor in to ocaml-sygus package. *)
 
-open Base
+open Core
 
 open Exceptions
 open Sexplib.Type
@@ -30,48 +30,51 @@ type t = {
   synth_variables : var list ;
 }
 
-let rec extract_consts (exp : Sexp.t) : (Value.t list) =
-  match exp with
-  | List([]) -> []
-  | (Atom a) | List([Atom a]) -> (try [ Value.of_string a ] with _ -> [])
-  (* FIXME: Handling let expressins needs  more work:
-     let in SyGuS format looks like (let ((<symb> <sort> <term>)+) <term>),
-     but in Z3 the syntax is (let ((<symb> <term>)+) <term>).
+let replace bindings expr =
+  if bindings = [] then expr else
+  let table = ref (String.Map.empty)
+   in List.iter bindings
+                ~f:(function [@warning "-8"]
+                    | List [ (Atom key) ; data ]      (* SMTLIB *)
+                    | List [ (Atom key) ; _ ; data ]  (* SyGuS *)
+                    -> table := String.Map.add_exn !table ~key ~data)
+    ; let rec helper = function
+        | List l -> List (List.map l ~f:helper)
+        | Atom atom -> match String.Map.find !table atom with
+                       | None      -> Atom atom
+                       | Some data -> data
+       in helper expr
 
-  | List [(Atom "let") ; (List let_bindings) ; let_expr]
-    -> let (bind_vars, args_in_bind , consts_in_bind) =
-         List.fold let_bindings ~init:([],[],[])
-                   ~f:(fun[@warning "-8"] (symbs, args, consts) (List [(Atom l_symb) ; (Atom l_typ) ; l_term]) ->
-                         let (a, c) = extract_used_args_and_consts vars l_term
-                         in (((l_symb, (to_typ l_typ)) :: symbs), (a @ args), (c @ consts)))
-       in let (args , consts) = extract_used_args_and_consts (bind_vars @ vars) let_expr
-       in let args = List.(filter args ~f:(fun a -> not (mem ~equal:Poly.equal bind_vars a)))
-       in List.((dedup_and_sort ~compare:Poly.compare (args @ args_in_bind)),
-                (dedup_and_sort ~compare:Poly.compare (consts @ consts_in_bind))) *)
-  | List ((Atom "let") :: _)
-    -> raise (Parse_Exn ("`let` constructs are currently not supported: " ^ (Sexp.to_string_hum exp)))
+let rec remove_lets : Sexp.t -> Sexp.t = function
+  | Atom _ as atom -> atom
+  | List [ (Atom "let") ; List bindings ; body ]
+    -> replace bindings (remove_lets body)
+  | List l -> List (List.map l ~f:remove_lets)
+
+let rec extract_consts : Sexp.t -> Value.t list = function
+  | List [] -> []
+  | (Atom a) | List([Atom a]) -> (try [ Value.of_string a ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
 
-let parse_variable_declaration (sexp : Sexp.t) : var =
-  match sexp with
+let parse_variable_declaration : Sexp.t -> var = function
   | List([Atom(v) ; Atom(t)]) -> (v, (Type.of_string t))
-  | _ -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
+  | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
-let parse_define_fun (sexp_list : Sexp.t list) : func * Value.t list =
-  match sexp_list with
+let parse_define_fun : Sexp.t list -> func * Value.t list = function
   | [Atom(name) ; List(args) ; Atom(r_typ) ; expr]
     -> let args = List.map ~f:parse_variable_declaration args in
+       let expr = remove_lets expr in
        let consts = extract_consts expr
-       in ({ name = name
-           ; body = (Sexp.to_string_hum expr)
-           ; args = args
-           ; return = (Type.of_string r_typ)
-           ; expressible = true (* TODO: Check! *)
-           }, consts)
-  | _ -> raise (Parse_Exn ("Invalid function definition: "
-                          ^ (Sexp.to_string_hum (List(Atom("define-fun") :: sexp_list)))))
+        in ({ name = name
+            ; body = (Sexp.to_string_hum expr)
+            ; args = args
+            ; return = (Type.of_string r_typ)
+            ; expressible = true (* TODO: Check if function is expressible in the provided grammar, when we sypport it. *)
+            }, consts)
+  | sexp_list -> raise (Parse_Exn ("Invalid function definition: "
+                                  ^ (Sexp.to_string_hum (List(Atom("define-fun") :: sexp_list)))))
 
 let func_definition (f : func) : string =
   "(define-fun " ^ f.name ^ " ("
@@ -94,37 +97,43 @@ let parse_sexps (sexps : Sexp.t list) : t =
   let invf_vars : var list ref = ref []
    in List.iter sexps
         ~f:(function
-              | List([Atom("check-synth")]) -> ()
-              | List([Atom("set-logic"); Atom(_logic)])
+              | List [ (Atom "check-synth") ] -> ()
+              | List [ (Atom "set-logic"); (Atom _logic) ]
                 -> if String.equal !logic "" then logic := _logic
                    else raise (Parse_Exn ("Logic already set to: " ^ !logic))
-              | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars)])
+              | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ]
                 -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
-              | List([Atom("synth-inv") ; Atom(_invf_name) ; List(_invf_vars) ; _])
-                -> (* FIXME *) Log.warn (lazy ("LoopInvGen currently does not allow custom grammars. The provided grammar will be ignored, and the entire background theory will be used instead."))
+              | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ; _ ]
+                -> (* FIXME: Custom grammar *) Log.warn (lazy ("LoopInvGen currently does not allow custom grammars."))
                  ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
-              | List(Atom("declare-var") :: sexps)
+              | List ( (Atom "declare-var") :: sexps )
                 -> let new_var = parse_variable_declaration (List sexps)
                     in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
                        then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
                        else variables := new_var :: !variables
-              | List(Atom("declare-primed-var") :: sexps)
+              | List [ (Atom "declare-fun") ; name ; args ; rtype ]
+                -> if args <> List [] then raise (Parse_Exn "Only nullary function (i.e. variable) declarations supported.") else
+                   let new_var = parse_variable_declaration (List [name ; rtype])
+                    in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
+                       then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
+                       else variables := new_var :: !variables
+              | List ( (Atom "declare-primed-var") :: sexps )
                 -> let _var, _type = parse_variable_declaration (List sexps)
                     in if List.mem !variables (_var, _type) ~equal:(fun x y -> String.equal (fst x) (fst y))
                        then raise (Parse_Exn ("Multiple declarations of variable " ^ _var))
                        else variables := (_var, _type) :: (_var ^ "!", _type) :: !variables
-              | List(Atom("define-fun") :: func_sexps)
+              | List ( (Atom "define-fun") :: func_sexps )
                 -> let (func, fconsts) = parse_define_fun func_sexps
                     in if List.mem !funcs func ~equal:(fun x y -> String.equal x.name y.name)
                        (* FIXME: SyGuS format allows overloaded functions with different signatures *)
                        then raise (Parse_Exn ("Multiple definitions of function " ^ func.name))
                        else funcs := func :: !funcs ; consts := fconsts @ !consts
-              | List([Atom("inv-constraint") ; Atom(_invf_name) ; Atom(_pref_name)
-                                             ; Atom(_transf_name) ; Atom(_postf_name) ])
+              | List [ (Atom "inv-constraint") ; (Atom _invf_name) ; (Atom _pref_name)
+                                               ; (Atom _transf_name) ; (Atom _postf_name) ]
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
                  ; if not (String.equal !invf_name _invf_name)
                    then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared"))
-              | _ as sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
+              | sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
     ; if String.equal !logic ""
@@ -163,21 +172,15 @@ let read_from (filename : string) : t =
 let translate_smtlib_expr (expr : string) : string =
   if (String.equal expr "true") || (String.equal expr "false") then expr else
   let open Sexp in
-  let rec replace name expr body =
-    match body with
-    | Atom a when String.equal a name -> expr
-    | List(l) -> List(List.map l ~f:(replace name expr))
-    | _ -> body
-  in let rec helper sexp =
-    match sexp with
-    | List([Atom("-") ; Atom(num)]) when (String.for_all num ~f:Char.is_digit)
+  let rec helper = function
+    | List [ (Atom "-") ; (Atom num) ] when (String.for_all num ~f:Char.is_digit)
       -> Atom("-" ^ num)
-    | List([Atom("-") ; name])
+    | List [ (Atom "-") ; name ]
       -> List([Atom("-") ; Atom("0") ; name])
-    | List([Atom("let") ; List([List([Atom(name) ; expr])]) ; body])
-      -> helper (replace name expr body)
-    | List(l) -> List(List.map l ~f:helper)
-    | _ -> sexp
+    | List [ (Atom "let") ; List bindings ; body]
+      -> replace bindings (helper body)
+    | List l -> List (List.map l ~f:helper)
+    | sexp -> sexp
   in match Sexplib.Sexp.parse expr with
      | Done (sexp, _) -> Sexp.to_string_hum (helper (sexp))
-     | _ -> raise (Internal_Exn "Incomplete sexp encountered!")
+     | _ -> expr (* TODO: parse does not work on single atoms *)
