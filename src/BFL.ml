@@ -6,7 +6,7 @@ open Utils
 
 type conjunct = int list
 
-type truthAssignment = (int, bool) Hashtbl.t
+type truth_assignment = (int, bool) Hashtbl.t
 
 type config = {
   auto_incr_k : bool ;
@@ -20,14 +20,14 @@ let default_config = {
   strengthen = false ;
 }
 
-let truthAssignment_to_string (ta : truthAssignment) : string =
+let truthAssignment_to_string (ta : truth_assignment) : string =
   "[" ^ (Hashtbl.fold ta ~init:""
                       ~f:(fun ~key ~data s -> s ^ "(" ^ (Int.to_string key) ^ ","
                                             ^ (Bool.to_string data) ^ ") ; "))
  ^ "]"
 
 (* remove literals from conj that are inconsistent with the given example *)
-let pruneWithAPositiveExample (conj : conjunct) (example : truthAssignment)
+let pruneWithAPositiveExample (conj : conjunct) (example : truth_assignment)
                               : conjunct =
   List.filter conj ~f:(fun v -> Hashtbl.find_default example v ~default:true)
 
@@ -36,7 +36,7 @@ let pruneWithAPositiveExample (conj : conjunct) (example : truthAssignment)
    (i.e., that conjunction of literals suffices to falsify all
    of the provided negative examples). *)
 let pruneWithNegativeExamples (conj : conjunct)
-                              (example : truthAssignment list) : conjunct =
+                              (example : truth_assignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remaining accum =
     if List.equal ~equal:Poly.equal remaining [] then accum
@@ -77,8 +77,8 @@ let pruneWithNegativeExamples (conj : conjunct)
 
 (* learn a simple conjunction that falsifies all negative examples
    but may not satisfy all positive examples *)
-let learnStrongConjunction (conj : conjunct) (pos : truthAssignment list)
-                           (neg : truthAssignment list) : conjunct =
+let learnStrongConjunction (conj : conjunct) (pos : truth_assignment list)
+                           (neg : truth_assignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remainingNeg accum =
     if List.equal ~equal:Poly.equal remainingNeg [] then accum
@@ -142,7 +142,7 @@ let learnStrongConjunction (conj : conjunct) (pos : truthAssignment list)
    costs is a map from variables to an integer cost, which is used as
    part of the greedy heuristic for learning from negative examples. *)
 let learnConjunction ?(strengthen = false) (vars : conjunct)
-                     (pos : truthAssignment list) (neg : truthAssignment list)
+                     (pos : truth_assignment list) (neg : truth_assignment list)
                      : conjunct =
   (* the initial conjunction is the AND of all variables *)
   let conj = vars in

@@ -1,4 +1,17 @@
 (executables
-    (names Process Record Infer Verify Score)
-    (public_names lig-process lig-record lig-infer lig-verify lig-score)
-    (libraries LoopInvGen core))
+    (names          Process
+                    Record
+                    Infer
+                    Verify
+                    Score
+    )
+    (public_names   lig-process
+                    lig-record
+                    lig-infer
+                    lig-verify
+                    lig-score
+    )
+    (libraries      LoopInvGen
+                    core
+    )
+)

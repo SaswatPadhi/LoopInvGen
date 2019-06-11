@@ -39,7 +39,7 @@ MIN_INFER_TIMEOUT=5
 
 RECORD_TIMEOUT=0.5s
 RECORD_FORKS=4
-RECORD_STATES_PER_FORK=256
+RECORD_STATES_PER_FORK=512
 MIN_RECORD_STATES_PER_FORK=63
 
 EXPRESSIVENESS_LEVEL=6
@@ -73,41 +73,44 @@ Flags:
     [--clean-intermediates, -c]
     [--verify, -v]
 
+Parameters:
+    [--expressiveness-level, -L <int>]              ($EXPRESSIVENESS_LEVEL)\t\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--max-states-per-fork,  -s <count>]            ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
+    [--infer-timeout,        -t <seconds>]          ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
+
 Configuration:
-    [--expressiveness-level, -L <int>]  ($EXPRESSIVENESS_LEVEL)\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
-    [--infer-timeout, -t <seconds>]     ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
-    [--intermediates-dir, -p <path>]    (_log)
-    [--log, -l <src_1>[,<src_2>...]]    ()\t    src <- {process|record|infer|verify}
-    [--states-to-record, -s <count>]    ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
-    [--stats-path, -S <path>]           ()
-    [--z3-path, -z <path>]              (_dep/z3)
+    [--intermediates-dir,    -i <path>]             (_log)
+    [--log,                  -l <src>[,<src>...]]   ()\t\t    src <- {process|record|infer|verify}
+    [--stats-file,           -S <path>]             ()
+    [--z3-exe-path,          -z <path>]             (_dep/z3)
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
-    [--Process-args, -P \"<args>\"]   see \``basename "$PROCESS"` -h\` for details
-    [--Record-args, -R \"<args>\"]    see \``basename "$RECORD"` -h\` for details
-    [--Infer-args, -I \"<args>\"]     see \``basename "$INFER"` -h\` for details
-    [--Verify-args, -V \"<args>\"]    see \``basename "$VERIFY"` -h\` for details
+    [--Process-args,         -P \"<args>\"]           see \``basename "$PROCESS"` -h\` for details
+    [--Record-args,          -R \"<args>\"]           see \``basename "$RECORD"` -h\` for details
+    [--Infer-args,           -I \"<args>\"]           see \``basename "$INFER"` -h\` for details
+    [--Verify-args,          -V \"<args>\"]           see \``basename "$VERIFY"` -h\` for details
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
 for opt in "$@"; do
   shift
   case "$opt" in
+    "--clean-intermediates")  set -- "$@" "-c" ;;
+    "--verify")               set -- "$@" "-v" ;;
+
+    "--expressiveness-level") set -- "$@" "-L" ;;
+    "--max-states-per-fork")  set -- "$@" "-s" ;;
+    "--infer-timeout")        set -- "$@" "-t" ;;
+
+    "--intermediates-path")   set -- "$@" "-i" ;;
+    "--log")                  set -- "$@" "-l" ;;
+    "--stats-file")           set -- "$@" "-S" ;;
+    "--z3-exe-path")          set -- "$@" "-z" ;;
+
     "--Process-args")         set -- "$@" "-P" ;;
     "--Record-args")          set -- "$@" "-R" ;;
     "--Infer-args")           set -- "$@" "-I" ;;
     "--Verify-args")          set -- "$@" "-V" ;;
-
-    "--clean-intermediates")  set -- "$@" "-c" ;;
-    "--verify")               set -- "$@" "-v" ;;
-
-    "--log")                  set -- "$@" "-l" ;;
-    "--expressiveness-level") set -- "$@" "-L" ;;
-    "--intermediates-path")   set -- "$@" "-p" ;;
-    "--states-to-record")     set -- "$@" "-s" ;;
-    "--stats-path")           set -- "$@" "-S" ;;
-    "--infer-timeout")        set -- "$@" "-t" ;;
-    "--z3-path")              set -- "$@" "-z" ;;
 
     "--")                     set -- "$@" "--" ;;
     "--"*)                    usage "Unrecognized option: $opt." ;;
@@ -118,14 +121,24 @@ done
 OPTIND=1
 while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
   case "$OPTION" in
-    "P" ) PROCESS_ARGS="$OPTARG" ;;
-    "R" ) RECORD_ARGS="$OPTARG" ;;
-    "I" ) INFER_ARGS="$OPTARG" ;;
-    "V" ) VERIFY_ARGS="$OPTARG" ;;
-
     "c" ) DO_CLEAN="yes" ;;
     "v" ) DO_VERIFY="yes" ;;
 
+    "L" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
+            || usage "The expressiveness level (= $OPTARG) must be between 1 and 6 (both inclusive)."
+          EXPRESSIVENESS_LEVEL="$OPTARG"
+          ;;
+    "s" ) [ "$OPTARG" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
+            || usage "The number of states to record (= $OPTARG) must be > $MIN_RECORD_STATES_PER_FORK."
+          RECORD_STATES_PER_FORK="$OPTARG"
+          ;;
+    "t" ) [ "$OPTARG" -gt "$MIN_INFER_TIMEOUT" ] \
+            || usage "The inference timeout (= $OPTARG) must be > $MIN_INFER_TIMEOUT."
+          INFER_TIMEOUT="$OPTARG"
+          ;;
+
+    "i" ) INTERMEDIATES_DIR="$OPTARG"
+          ;;
     "l" ) for LOG_SRC in `echo "$OPTARG" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
             case "$LOG_SRC" in
               process | record | infer | verify ) DO_LOG[$LOG_SRC]="yes" ;;
@@ -133,26 +146,19 @@ while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
             esac
           done
           ;;
-    "L" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
-            || usage "The expressiveness level (= $OPTARG) must be between 1 and 6 (both inclusive)."
-          EXPRESSIVENESS_LEVEL="$OPTARG"
-          ;;
-    "p" ) INTERMEDIATES_DIR="$OPTARG"
-          ;;
-    "s" ) [ "$OPTARG" -gt "$MIN_RECORD_STATES_PER_FORK" ] \
-            || usage "The number of states to record (= $OPTARG) must be > $MIN_RECORD_STATES_PER_FORK."
-          STATES="$OPTARG"
-          ;;
-    "S" ) rm -rf $OPTARG
+    "S" ) [ -d "$OPT_ARG" ] && usage "Stats file [$OPT_ARG] is a directory!"
+          [ -f "$OPT_ARG" ] && rm -rf $OPTARG
           STATS_ARG="-t $OPTARG"
-          ;;
-    "t" ) [ "$OPTARG" -gt "$MIN_INFER_TIMEOUT" ] \
-            || usage "The inference timeout (= $OPTARG) must be > $MIN_INFER_TIMEOUT."
-          INFER_TIMEOUT="$OPTARG"
           ;;
     "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
           Z3_PATH="$OPTARG"
           ;;
+
+    "P" ) PROCESS_ARGS="$OPTARG" ;;
+    "R" ) RECORD_ARGS="$OPTARG" ;;
+    "I" ) INFER_ARGS="$OPTARG" ;;
+    "V" ) VERIFY_ARGS="$OPTARG" ;;
+
       * ) usage "Unrecognized option: -$OPTARG." ;;
   esac
 done
@@ -169,7 +175,7 @@ TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
 
-TESTCASE_PROCESSED="$TESTCASE_PREFIX.pro"
+TESTCASE_PROCESSED="$TESTCASE_PREFIX.bin"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
 TESTCASE_ALL_LOG="$TESTCASE_PREFIX.log"
@@ -189,7 +195,7 @@ INFER_TIMEOUT="${INFER_TIMEOUT}s"
 [ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_ALL_LOG"
 [ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_ALL_LOG"
 
-rm -rf "$TESTCASE_REC_STATES"? $TESTCASE_ALL_STATES &
+rm -rf "$TESTCASE_REC_STATES"* $TESTCASE_ALL_STATES &
 echo -en '' > "$TESTCASE_INVARIANT" &
 echo -en '' > "$TESTCASE_ALL_LOG"
 
@@ -212,9 +218,9 @@ for i in `seq 1 $RECORD_FORKS` ; do
 done
 wait
 
-grep -hv "^[[:space:]]*$" "$TESTCASE_REC_STATES"? | sort -u > "$TESTCASE_ALL_STATES"
+grep -hsv "^[[:space:]]*$" "$TESTCASE_REC_STATES"* | sort -u > "$TESTCASE_ALL_STATES"
 
-[ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"? >> "$TESTCASE_ALL_LOG" 2> /dev/null || true
+[ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"* >> "$TESTCASE_ALL_LOG" 2> /dev/null || true
 
 
 show_status "(inferring)"
@@ -251,7 +257,7 @@ fi
 
 
 if [ "$DO_CLEAN" == "yes" ]; then
-  rm -rf "$TESTCASE_REC_STATES"? "$TESTCASE_REC_LOG"?
+  rm -rf "$TESTCASE_REC_STATES"* "$TESTCASE_REC_LOG"*
   if [ $RESULT_CODE == 0 ] || [ $RESULT_CODE == 2 ]; then
     rm -rf "$TESTCASE_PROCESSED" "$TESTCASE_ALL_STATES"
   fi

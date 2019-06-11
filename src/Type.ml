@@ -7,21 +7,17 @@ type t = INT
        | LIST
        [@@deriving sexp]
 
-let of_string (s : string) : t =
-  match s with
+let of_string : string -> t = function
   | "Int"    -> INT
   | "Bool"   -> BOOL
   | "Char"   -> CHAR
   | "String" -> STRING
   | "List"   -> LIST
-  | _ -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
-[@@inline always]
+  | s -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
 
-let to_string (t : t) : string =
-  match t with
+let to_string : t -> string = function
   | INT    -> "Int"
   | BOOL   -> "Bool"
   | CHAR   -> "Char"
   | STRING -> "String"
   | LIST   -> "List"
-[@@inline always]

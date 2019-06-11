@@ -1,4 +1,4 @@
-open Base
+open Core
 
 module Hashtbl = struct
   include Hashtbl

@@ -35,16 +35,16 @@ let main expressiveness logfile statefile statsfile zpath
               logic = logic
             ; max_level = expressiveness
             }
-          ; max_conflict_group_size = (
+          ; max_conflict_group_size = logic.sample_set_size_multiplier * (
               if conflict_group_size > 0
               then conflict_group_size
-              else (logic.dataset_size_multiplier * PIE.base_max_conflict_group_size)
+              else PIE.base_max_conflict_group_size
             )
           }
-        ; additional_counterexamples = (
+        ; additional_counterexamples = logic.sample_set_size_multiplier * (
             if additional_counterexamples > 0
             then additional_counterexamples
-            else (logic.dataset_size_multiplier * VPIE.base_additional_counterexamples)
+            else VPIE.base_additional_counterexamples
           )
         ; max_tries = max_strengthening_attempts
         }
@@ -70,9 +70,9 @@ let spec =
       +> flag "-z" (required string)
          ~doc:"FILENAME path to the z3 executable"
 
-      +> flag "-conflict-group-size" (optional_with_default 0 int)
+      +> flag "-base-max-conflict-group-size" (optional_with_default 0 int)
          ~doc:"INTEGER max size of the conflict group (POS+NEG). 0 = auto"
-      +> flag "-additional-counterexamples" (optional_with_default 0 int)
+      +> flag "-base-additional-counterexamples" (optional_with_default 0 int)
          ~doc:"INTEGER the number of additional counterexamples to generate. 0 = auto"
       +> flag "-max-strengthening" (optional_with_default (LIG.default_config._VPIE.max_tries) int)
          ~doc:"INTEGER max candidates to consider, per strengthening. 0 = unlimited"

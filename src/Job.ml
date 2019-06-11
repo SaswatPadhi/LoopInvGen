@@ -27,14 +27,14 @@ let compute_feature_value (test : 'a) (feature : 'a feature with_desc) : bool =
 let compute_feature_vector (test : 'a) (features : 'a feature with_desc list)
                            : bool list =
   List.map ~f:(compute_feature_value test) features
-  [@@inline always]
+[@@inline always]
 
-let create_positive ~f ~args ~post ?(features = []) pos_tests : t =
+let create ~f ~args ~post ?(features = []) ?(pos_tests = []) ?(neg_tests = []) () : t =
   { f ; post ; features
   ; farg_names = List.map args ~f:fst
   ; farg_types = List.map args ~f:snd
   ; pos_tests = List.map pos_tests ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
-  ; neg_tests = []
+  ; neg_tests = List.map neg_tests ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
   }
 
 let split_tests ~f ~post tests =
@@ -44,12 +44,10 @@ let split_tests ~f ~post tests =
                          with IgnoreTest -> (l1, l2)
                             | _ -> (l1, t :: l2))
 
-let create ~f ~args ~post ?(features = []) tests : t =
-  let (pos, neg) = split_tests (List.dedup_and_sort ~compare:(List.compare Value.compare) tests)
-                               ~f ~post
-  in { (create_positive ~f ~args ~post ~features pos) with
-       neg_tests = List.map neg ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
-     }
+let create_unlabeled ~f ~args ~post ?(features = []) tests : t =
+  let tests = List.dedup_and_sort ~compare:(List.compare Value.compare) tests in
+  let (pos_tests, neg_tests) = split_tests tests ~f ~post
+   in create ~f ~args ~post ~features ~pos_tests ~neg_tests ()
 
 let add_pos_test ~(job : t) (test : Value.t list) : t =
   if List.exists job.pos_tests ~f:(fun (pt, _) -> pt = test)
@@ -87,11 +85,11 @@ let add_neg_test ~(job : t) (test : Value.t list) : t =
             -> raise (Ambiguous_Test ("New NEG test (" ^ (String.concat ~sep:"," job.farg_names)
                                      ^ ") = (" ^ (List.to_string_map ~sep:"," ~f:Value.to_string test)
                                      ^ ") does not belong in NEG set!"))
-          | Caml.Exit -> {
-              job with
-              neg_tests = (test, lazy (compute_feature_vector test job.features))
-                      :: job.neg_tests
-          }
+          | Caml.Exit
+            -> { job with
+                 neg_tests = (test, lazy (compute_feature_vector test job.features))
+                          :: job.neg_tests
+               }
 
 let add_feature ~(job : t) (feature : 'a feature with_desc) : t =
   let add_to_fv (t, old_fv) =

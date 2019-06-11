@@ -52,7 +52,8 @@ let satisfyTrans ?(conf = default_config) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
      ; let pre_inv, vpie_stats =
          VPIE.learnVPreCond ~z3 ~eval_term
            ~conf:conf._VPIE ~consts:sygus.constants ~post_desc:invf'_call
-           (Job.create_positive states
+           (Job.create ()
+              ~pos_tests:states
               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
               ~args:sygus.synth_variables
@@ -87,10 +88,12 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
       Log.warn (lazy ("Restarting inference engine. Attempt "
                      ^ (string_of_int (1 + conf.max_restarts - restarts_left))
                      ^ "/" ^ (string_of_int conf.max_restarts) ^".")) ;
-      learnInvariant_internal
-        ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (
-          states @ (random_value ~size:conf.max_steps_on_restart ~seed:(`Deterministic seed_string)
-                                 (simulate_from sygus z3 head))))
+      let new_states = random_value ~size:conf.max_steps_on_restart
+                                    ~seed:(`Deterministic seed_string)
+                                    (simulate_from sygus z3 head)
+       in learnInvariant_internal
+            ~states:List.(dedup_and_sort ~compare:(compare Value.compare)
+                                         (states @ new_states))
         ~conf:{ conf with
                 _VPIE = { conf._VPIE with
                           _PIE = { conf._VPIE._PIE with
@@ -100,17 +103,21 @@ let rec learnInvariant_internal ?(conf = default_config) (restarts_left : int)
     end
   in match (
     if sygus.post_func.expressible
-    then (Log.info (lazy "Starting with initial invariant = postcondition.")
-         ; (None, sygus.post_func.body))
-    else begin ZProc.create_scope z3
-      ; Log.warn (lazy "Postcondition is not expressive within the provided grammar!")
-      ; let inv, vpie_stats =
+    then begin
+      Log.info (lazy "Starting with initial invariant = postcondition.") ;
+      (None, sygus.post_func.body)
+    end
+    else begin
+      ZProc.create_scope z3 ;
+      Log.warn (lazy "Postcondition is not expressive within the provided grammar!") ;
+      let inv, vpie_stats =
           VPIE.learnVPreCond
             ~z3 ~conf:conf._VPIE ~consts:sygus.constants
             ~post_desc:sygus.post_func.body
             ~eval_term:(if not (conf.model_completion_mode = `UsingZ3)
                         then "true" else sygus.post_func.body)
-            (Job.create_positive states
+          (Job.create ()
+              ~pos_tests:states
                ~f:(ZProc.constraint_sat_function
                      (if String.is_prefix sygus.post_func.body ~prefix:"("
                       then ("(not " ^ sygus.post_func.body ^ ")")
@@ -148,7 +155,7 @@ let learnInvariant ?(conf = default_config) ~(states : Value.t list list)
        ~random_seed:(Some (Int.to_string (Quickcheck.(random_value ~seed:(`Deterministic conf.base_random_seed)
                                                                    (Generator.small_non_negative_int)))))
        (fun z3 -> Simulator.setup sygus z3
-                ; if not ((implication_counter_example z3 sygus.pre_func.body sygus.post_func.body) = None)
+                ; if (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body) <> None
                   then ("false", stats)
                   else learnInvariant_internal ~conf ~states conf.max_restarts
                                                sygus conf.base_random_seed z3 stats)

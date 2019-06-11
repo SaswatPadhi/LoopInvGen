@@ -14,23 +14,19 @@ end
 include T
 include Comparable.Make (T)
 
-let typeof (v : t) : Type.t =
-  match v with
+let typeof : t -> Type.t = function
   | Int _    -> Type.INT
   | Bool _   -> Type.BOOL
   | Char _   -> Type.CHAR
   | String _ -> Type.STRING
   | List _   -> Type.LIST
-[@@inline always]
 
-let to_string (v : t) : string =
-  match v with
+let to_string : t -> string = function
   | Int i    -> Int.to_string i
   | Bool b   -> Bool.to_string b
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
-[@@inline always]
 
 let of_string (s : string) : t =
   try
@@ -44,4 +40,3 @@ let of_string (s : string) : t =
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
-[@@inline always]

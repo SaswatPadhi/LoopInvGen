@@ -166,7 +166,7 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT | sort` ; do
   VERIFY_ARGS="${ORIGINAL_VERIFY_ARGS//\#BENCHMARK_OUT_PREFIX/$TESTCASE_PREFIX}"
 
   COUNTER=$(( COUNTER + 1 ))
-  printf "[%4d] %72s => " $COUNTER $TESTCASE_NAME
+  printf "%4d) %72s => " $COUNTER $TESTCASE_NAME
 
   OLD_VERDICT=""
   if [ -f "$TESTCASE_VERDICT_FILE" ]; then
