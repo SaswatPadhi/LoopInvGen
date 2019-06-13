@@ -4,7 +4,7 @@ open LoopInvGen.Utils
 
 open PIE
 
-let abs_job = Job.create
+let abs_job = Job.create_unlabeled
   ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
   ~args:([ "x", Type.INT ])
   ~post:(fun inp res ->
@@ -59,7 +59,7 @@ let abs_precond_auto_1 () =
                              (cnf_opt_to_desc res)
 
 let abs_zero_initial_features () =
-  let (res, _) = learnPreCond (Job.create
+  let (res, _) = learnPreCond (Job.create_unlabeled
     ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
     ~args:([ "x", Type.INT ])
     ~post:(fun inp res ->

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -Euo pipefail
+set -Eumo pipefail
 
 if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version >= 4.0 required!" ; exit -1 ; fi
 
@@ -27,8 +27,8 @@ One or more dependencies not found. Building OCaml modules ...
 " >&2 ; dune build || exit $EXIT_CODE_BUILD_ERROR
 fi
 
-trap 'jobs -p | xargs kill -TERM > /dev/null 2> /dev/null' INT
-trap "kill -KILL -`ps -o ppid= $$` > /dev/null 2> /dev/null" QUIT TERM
+trap 'jobs -p | xargs kill -TERM &> /dev/null' INT
+trap "kill -KILL -`ps -o ppid= $$` &> /dev/null" QUIT TERM
 
 INTERMEDIATES_DIR="$SELF_DIR/_log"
 SYGUS_EXT=".sl"
@@ -184,52 +184,54 @@ TESTCASE_REC_LOG="$TESTCASE_PREFIX.rlog"
 TESTCASE_REC_STATES="$TESTCASE_PREFIX.rstates"
 TESTCASE_ALL_STATES="$TESTCASE_PREFIX.states"
 
+PROCESS="$PROCESS -z $Z3_PATH"
 RECORD="$RECORD -z $Z3_PATH"
 INFER="$INFER -z $Z3_PATH"
 VERIFY="$VERIFY -z $Z3_PATH"
 
 INFER_TIMEOUT="${INFER_TIMEOUT}s"
 
+rm -rf "$TESTCASE_REC_STATES"* "$TESTCASE_ALL_STATES" "$TESTCASE_INVARIANT" "$TESTCASE_ALL_LOG" &
+
 [ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l $TESTCASE_ALL_LOG"
 [ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l $TESTCASE_REC_LOG"
 [ -z "${DO_LOG[infer]}" ] || DO_LOG[infer]="-l $TESTCASE_ALL_LOG"
 [ -z "${DO_LOG[verify]}" ] || DO_LOG[verify]="-l $TESTCASE_ALL_LOG"
 
-rm -rf "$TESTCASE_REC_STATES"* $TESTCASE_ALL_STATES &
-echo -en '' > "$TESTCASE_INVARIANT" &
-echo -en '' > "$TESTCASE_ALL_LOG"
-
+#
+# LoopInvGen Stages
+#
 
 show_status "(processsing)"
 
-$PROCESS -o "$TESTCASE_PROCESSED" "$TESTCASE" ${DO_LOG[process]} $PROCESS_ARGS >&2
+$PROCESS -o "$TESTCASE_PROCESSED" ${DO_LOG[process]} $PROCESS_ARGS "$TESTCASE" \
+         > "$TESTCASE_INVARIANT"
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
 
+if [ -s "$TESTCASE_INVARIANT" ]; then
+  INFER_RESULT_CODE=0
+else
+  show_status "(recording)"
 
-wait
-show_status "(recording)"
+  LOG_PARAM=""
+  for i in `seq 1 $RECORD_FORKS` ; do
+    [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
+    (timeout $RECORD_TIMEOUT \
+             $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i" $LOG_PARAM $RECORD_ARGS \
+                     "$TESTCASE_PROCESSED") > "$TESTCASE_REC_STATES$i" &
+  done
+  wait
 
-LOG_PARAM=""
-for i in `seq 1 $RECORD_FORKS` ; do
-  [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
-  (timeout $RECORD_TIMEOUT \
-           $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i" $LOG_PARAM $RECORD_ARGS \
-                   "$TESTCASE_PROCESSED") > "$TESTCASE_REC_STATES$i" &
-done
-wait
+  grep -hsv "^[[:space:]]*$" "$TESTCASE_REC_STATES"* | sort -u > "$TESTCASE_ALL_STATES"
+  [ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"* >> "$TESTCASE_ALL_LOG" 2> /dev/null || true
 
-grep -hsv "^[[:space:]]*$" "$TESTCASE_REC_STATES"* | sort -u > "$TESTCASE_ALL_STATES"
+  show_status "(inferring)"
 
-[ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"* >> "$TESTCASE_ALL_LOG" 2> /dev/null || true
-
-
-show_status "(inferring)"
-
-timeout --foreground $INFER_TIMEOUT \
-        $INFER -s "$TESTCASE_ALL_STATES" -e "$EXPRESSIVENESS_LEVEL" $INFER_ARGS \
-               ${DO_LOG[infer]} ${STATS_ARG} "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
-INFER_RESULT_CODE=$?
-
+  timeout --foreground $INFER_TIMEOUT \
+          $INFER -s "$TESTCASE_ALL_STATES" -e "$EXPRESSIVENESS_LEVEL" $STATS_ARG \
+                 ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+  INFER_RESULT_CODE=$?
+fi
 
 if [ "$DO_VERIFY" = "yes" ]; then
   if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then

@@ -1,7 +1,7 @@
 open Base
 open LoopInvGen
 
-let abs_job = Job.create
+let abs_job = Job.create_unlabeled
   ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
   ~args:([ "x", Type.INT ])
   ~post:(fun inp res ->

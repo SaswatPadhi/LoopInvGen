@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-set -Euo pipefail
+set -Eumo pipefail
 
 if (( ${BASH_VERSION%%.*} < 4 )); then echo "ERROR: [bash] version >= 4.0 required!" ; exit -1 ; fi
 
 ROOT="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/.."
 
-trap 'kill -TERM -$INFER_PID > /dev/null 2> /dev/null' INT
-trap "kill -KILL -`ps -o pgid= $$` > /dev/null 2> /dev/null" QUIT TERM
+trap 'kill -TERM -$INFER_PID &> /dev/null' INT
+trap "kill -KILL -`ps -o pgid= $$` &> /dev/null" QUIT TERM
 
 SYGUS_EXT=".sl"
 MODE="rerun-failed"
@@ -195,8 +195,10 @@ for TESTCASE in `find "$BENCHMARKS_DIR" -name *$SYGUS_EXT | sort` ; do
           > $TESTCASE_RESULT_FILE \
           2> $TESTCASE_VERDICT_FILE &
     INFER_PID=$!
+    INFER_PGID=`ps -o pgid= $INFER_PID`
     wait $INFER_PID
     INFER_RESULT_CODE=$?
+    kill -9 -$INFER_PGID 2> /dev/null
 
     if [ $INFER_RESULT_CODE == 124 ] || [ $INFER_RESULT_CODE == 137 ]; then
       echo -n "[TIMEOUT] " >> $TESTCASE_VERDICT_FILE

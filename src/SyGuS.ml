@@ -98,7 +98,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
    in List.iter sexps
         ~f:(function
               | List [ (Atom "check-synth") ] -> ()
-              | List [ (Atom "set-logic"); (Atom _logic) ]
+              | List [ (Atom "set-logic") ; (Atom _logic) ]
                 -> if String.equal !logic "" then logic := _logic
                    else raise (Parse_Exn ("Logic already set to: " ^ !logic))
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ]
@@ -174,11 +174,15 @@ let translate_smtlib_expr (expr : string) : string =
   let open Sexp in
   let rec helper = function
     | List [ (Atom "-") ; (Atom num) ] when (String.for_all num ~f:Char.is_digit)
-      -> Atom("-" ^ num)
+      -> Atom ("-" ^ num)
     | List [ (Atom "-") ; name ]
-      -> List([Atom("-") ; Atom("0") ; name])
-    | List [ (Atom "let") ; List bindings ; body]
-      -> replace bindings (helper body)
+      -> List [ (Atom "-") ; (Atom "0") ; name ]
+    | List [ (Atom "let") ; List bindings ; body ]
+      -> replace (List.map bindings
+                           ~f:(function [@warning "-8"]
+                               | List [ key ; data ]
+                                 -> List [ key ; (helper data) ]))
+                 (helper body)
     | List l -> List (List.map l ~f:helper)
     | sexp -> sexp
   in match Sexplib.Sexp.parse expr with

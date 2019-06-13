@@ -112,40 +112,51 @@ RECORD_FORKS=4
 RECORD_TIMEOUT=0.35s
 RECORD_STATES_PER_FORK=320
 
-set -o monitor
+set -m
 output() {
-  trap - SIGCHLD
-  kill $(jobs -p) & 2> /dev/null
+  trap '' SIGCHLD
 
   if [ -s "$TESTCASE_NAME.inv_a" ]; then
     cat "$TESTCASE_NAME.inv_a" ; exit 0
+    kill -KILL -$PID_2 2> /dev/null
   fi
   if [ -s "$TESTCASE_NAME.inv_b" ]; then
-    cat "$TESTCASE_NAME.inv_b" ; exit 0
+    cat "$TESTCASE_NAME.inv_b"
+    kill -KILL -$PID_1 2> /dev/null
   fi
 }
 
-_bin/lig-process -o $TESTCASE_NAME.pro $TESTCASE >&2 || exit 1
+_bin/lig-process -z _dep/z3 -o "$TESTCASE_NAME.pro" "$TESTCASE"              \
+                 > "$TESTCASE_NAME.inv"
+[ $? == 0 ]                 || exit 1
+
+if [ -s "$TESTCASE_NAME.inv" ]; then
+  cat "$TESTCASE_NAME.inv"
+  exit 0
+fi
 
 for i in `seq 1 $RECORD_FORKS` ; do
   (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                      \
            _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i" \
-                           $TESTCASE_NAME.pro) > $TESTCASE_NAME.r$i &
+                           "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r$i" &
 done
 wait
 
-grep -hv "^[[:space:]]*$" $TESTCASE_NAME.r* | sort -u > $TESTCASE_NAME.states
+grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
 
 _bin/lig-infer -base-max-conflict-group-size 32                              \
                -base-additional-counterexamples 31                           \
-               -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro        \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"    \
                > $TESTCASE_NAME.inv_a &
+PID_1=$!
 _bin/lig-infer -base-max-conflict-group-size 128                             \
                -base-additional-counterexamples 31                           \
-               -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro        \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"    \
                > $TESTCASE_NAME.inv_b &
+PID_2=$!
 
 trap output SIGCHLD 2> /dev/null
+trap 'kill -KILL $PID_1 &> /dev/null ; kill -KILL $PID_2 &> /dev/null' QUIT TERM
 
 wait 2> /dev/null
 EOF
