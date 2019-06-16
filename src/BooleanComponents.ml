@@ -21,7 +21,7 @@ let all = [
     codomain = Type.BOOL;
     domain = [Type.BOOL;Type.BOOL];
     is_argument_valid = (function
-                         | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
+                         | [x ; y] -> (x =/= y) && (not (is_constant x || is_constant y))
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Bool x ; Value.Bool y] -> Value.Bool (x && y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(and " ^ a ^ " " ^ b ^ ")");
@@ -32,7 +32,7 @@ let all = [
     codomain = Type.BOOL;
     domain = [Type.BOOL;Type.BOOL];
     is_argument_valid = (function
-                         | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
+                         | [x ; y] -> (x =/= y) && (not (is_constant x || is_constant y))
                          | _ -> false);
     evaluate = (function [@warning "-8"] [Value.Bool x ; Value.Bool y] -> Value.Bool (x || y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(or " ^ a ^ " " ^ b ^ ")");

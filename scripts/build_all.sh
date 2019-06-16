@@ -98,99 +98,167 @@ cp -rL _dep _starexec/bin
 cp -L _build/install/default/bin/* _starexec/bin/_bin
 rm -rf _starexec/bin/_bin/lig-verify _starexec/bin/_bin/lig-score
 
-STAREXEC_ZERO_CONFIG_FILE="_starexec/bin/starexec_run_zero"
+STAREXEC_GPLEARN_CONFIG_FILE="_starexec/bin/starexec_run_gplearn"
 STAREXEC_DEFAULT_CONFIG_FILE="_starexec/bin/starexec_run_default"
-STAREXEC_DEBUG_CONFIG_FILE="_starexec/bin/starexec_run_IGNORE-debug"
 
 cat > "$STAREXEC_DEFAULT_CONFIG_FILE" << "EOF"
 #!/usr/bin/env bash
 
+set -m
+
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 
-RECORD_FORKS=4
 RECORD_TIMEOUT=0.35s
-RECORD_STATES_PER_FORK=320
+RECORD_STATES_PER_FORK=256
 
-set -m
-output() {
-  trap '' SIGCHLD
-
-  if [ -s "$TESTCASE_NAME.inv_a" ]; then
-    cat "$TESTCASE_NAME.inv_a" ; exit 0
-    kill -KILL -$PID_2 2> /dev/null
-  fi
-  if [ -s "$TESTCASE_NAME.inv_b" ]; then
-    cat "$TESTCASE_NAME.inv_b"
-    kill -KILL -$PID_1 2> /dev/null
-  fi
-}
-
-_bin/lig-process -z _dep/z3 -o "$TESTCASE_NAME.pro" "$TESTCASE"              \
-                 > "$TESTCASE_NAME.inv"
-[ $? == 0 ]                 || exit 1
+_bin/lig-process -z _dep/z3 -o "$TESTCASE_NAME.pro" "$TESTCASE" > "$TESTCASE_NAME.inv"
+[ $? == 0 ] || exit 1
 
 if [ -s "$TESTCASE_NAME.inv" ]; then
-  cat "$TESTCASE_NAME.inv"
-  exit 0
+  cat "$TESTCASE_NAME.inv" ; exit 0
 fi
 
-for i in `seq 1 $RECORD_FORKS` ; do
-  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                      \
-           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i" \
+trigger() {
+  if [ -s "$TESTCASE_NAME.inv_a" ] || [ -s "$TESTCASE_NAME.inv_b" ] || [ -s "$TESTCASE_NAME.inv_c" ]; then
+    trap - SIGCHLD
+    trap '' SIGCHLD
+  else
+    return
+  fi
+
+  if [ -s "$TESTCASE_NAME.inv_a" ]; then
+    cat "$TESTCASE_NAME.inv_a"
+  elif [ -s "$TESTCASE_NAME.inv_b" ]; then
+    cat "$TESTCASE_NAME.inv_b"
+  elif [ -s "$TESTCASE_NAME.inv_c" ]; then
+    cat "$TESTCASE_NAME.inv_c"
+  fi
+
+  kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null
+  exit 0
+}
+
+for i in `seq 1 3` ; do
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                  \
+           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i"             \
                            "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r$i" &
 done
+
+timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                     \
+        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed4"                 \
+                          "$TESTCASE_NAME.pro" > "$TESTCASE_NAME.r4"
 wait
 
 grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
 
-_bin/lig-infer -base-max-conflict-group-size 32                              \
-               -base-additional-counterexamples 31                           \
-               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"    \
+trap trigger SIGCHLD 2> /dev/null
+
+_bin/lig-infer -base-max-conflict-group-size 32 -base-additional-counterexamples 31      \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"                \
                > $TESTCASE_NAME.inv_a &
 PID_1=$!
-_bin/lig-infer -base-max-conflict-group-size 128                             \
-               -base-additional-counterexamples 31                           \
-               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"    \
+
+_bin/lig-infer -base-max-conflict-group-size 128 -base-additional-counterexamples 31     \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"                \
                > $TESTCASE_NAME.inv_b &
 PID_2=$!
 
-trap output SIGCHLD 2> /dev/null
-trap 'kill -KILL $PID_1 &> /dev/null ; kill -KILL $PID_2 &> /dev/null' QUIT TERM
+(timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                    \
+         _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed5"                \
+                         "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r5" &
+PID_REC=$!
+timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                     \
+        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed6"                 \
+                        "$TESTCASE_NAME.pro" > "$TESTCASE_NAME.r6"
+wait $PID_REC
 
-wait 2> /dev/null
+grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
+
+_bin/lig-infer -base-max-conflict-group-size 64 -base-additional-counterexamples 31      \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"                \
+               > $TESTCASE_NAME.inv_c &
+PID_3=$!
+
+trap 'kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null' QUIT TERM
+
+wait 2> /dev/null ; trigger
 EOF
 chmod +x "$STAREXEC_DEFAULT_CONFIG_FILE"
 
-cat > "$STAREXEC_ZERO_CONFIG_FILE" << "EOF"
-#!/bin/bash
+cat > "$STAREXEC_GPLEARN_CONFIG_FILE" << "EOF"
+#!/usr/bin/env bash
+
+set -m
 
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 
-_bin/lig-process -o $TESTCASE_NAME.pro $TESTCASE >&2 || exit 1
+RECORD_TIMEOUT=0.5s
+RECORD_STATES_PER_FORK=512
 
-echo -n '' > $TESTCASE_NAME.states
+_bin/lig-process -z _dep/z3 -o "$TESTCASE_NAME.pro" "$TESTCASE" > "$TESTCASE_NAME.inv"
+[ $? == 0 ] || exit 1
 
-_bin/lig-infer -z _dep/z3 -s $TESTCASE_NAME.states $TESTCASE_NAME.pro
+if [ -s "$TESTCASE_NAME.inv" ]; then
+  cat "$TESTCASE_NAME.inv" ; exit 0
+fi
+
+trigger() {
+  if [ -s "$TESTCASE_NAME.inv_a" ] || [ -s "$TESTCASE_NAME.inv_b" ] || [ -s "$TESTCASE_NAME.inv_c" ]; then
+    trap - SIGCHLD
+    trap '' SIGCHLD
+  else
+    return
+  fi
+
+  if [ -s "$TESTCASE_NAME.inv_a" ]; then
+    cat "$TESTCASE_NAME.inv_a"
+  elif [ -s "$TESTCASE_NAME.inv_b" ]; then
+    cat "$TESTCASE_NAME.inv_b"
+  elif [ -s "$TESTCASE_NAME.inv_c" ]; then
+    cat "$TESTCASE_NAME.inv_c"
+  fi
+
+  kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null
+  exit 0
+}
+
+for i in `seq 1 3` ; do
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                  \
+           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i"             \
+                           "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r$i" &
+done
+
+timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                     \
+        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed4"                 \
+                          "$TESTCASE_NAME.pro" > "$TESTCASE_NAME.r4"
+wait
+
+grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
+
+trap trigger SIGCHLD 2> /dev/null
+
+_bin/lig-infer -base-max-conflict-group-size 32 -base-additional-counterexamples 31      \
+               -e 2 -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"           \
+               > $TESTCASE_NAME.inv_a &
+PID_1=$!
+
+_bin/lig-infer -base-max-conflict-group-size 128 -base-additional-counterexamples 31     \
+               -e 3 -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"           \
+               > $TESTCASE_NAME.inv_b &
+PID_2=$!
+
+_bin/lig-infer -base-max-conflict-group-size 64 -base-additional-counterexamples 31      \
+               -e 4 -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"           \
+               > $TESTCASE_NAME.inv_c &
+PID_3=$!
+
+trap 'kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null' QUIT TERM
+
+wait 2> /dev/null ; trigger
 EOF
-chmod +x "$STAREXEC_ZERO_CONFIG_FILE"
-
-cat > "$STAREXEC_DEBUG_CONFIG_FILE" << "EOF"
-#!/usr/bin/env bash
-
-pwd
-ls -lah
-
-file _dep/z3 _bin/lig-process _bin/lig-record _bin/lig-infer
-ldd _dep/z3 _bin/lig-process _bin/lig-record _bin/lig-infer
-
-_dep/z3
-_bin/lig-process -h
-_bin/lig-record -h
-_bin/lig-infer -h
-EOF
-chmod +x "$STAREXEC_DEBUG_CONFIG_FILE"
+chmod +x "$STAREXEC_GPLEARN_CONFIG_FILE"
 
 cat <<EOF > _starexec/starexec_description.txt
 A loop invariant inference tool built using PIE: precondition inference engine.
