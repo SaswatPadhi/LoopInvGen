@@ -105,6 +105,7 @@ cat > "$STAREXEC_DEFAULT_CONFIG_FILE" << "EOF"
 #!/usr/bin/env bash
 
 set -m
+trap 'kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null' QUIT TERM
 
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
@@ -121,8 +122,7 @@ fi
 
 trigger() {
   if [ -s "$TESTCASE_NAME.inv_a" ] || [ -s "$TESTCASE_NAME.inv_b" ] || [ -s "$TESTCASE_NAME.inv_c" ]; then
-    trap - SIGCHLD
-    trap '' SIGCHLD
+    trap - SIGCHLD ; trap '' SIGCHLD
   else
     return
   fi
@@ -140,47 +140,42 @@ trigger() {
 }
 
 for i in `seq 1 3` ; do
-  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                  \
-           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i"             \
-                           "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r$i" &
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                            \
+           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -r "seed$i" "$TESTCASE_NAME.pro") \
+           > "$TESTCASE_NAME.r$i" &
 done
 
-timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                     \
-        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed4"                 \
-                          "$TESTCASE_NAME.pro" > "$TESTCASE_NAME.r4"
+timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                               \
+        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -r "seed4" "$TESTCASE_NAME.pro"      \
+        > "$TESTCASE_NAME.r4"
 wait
 
 grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
 
 trap trigger SIGCHLD 2> /dev/null
 
-_bin/lig-infer -base-max-conflict-group-size 32 -base-additional-counterexamples 31      \
-               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"                \
-               > $TESTCASE_NAME.inv_a &
+_bin/lig-infer -max-conflict-group-size 32 -num-counterexamples 32 -z _dep/z3                      \
+               -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro" > $TESTCASE_NAME.inv_a &
 PID_1=$!
 
-_bin/lig-infer -base-max-conflict-group-size 128 -base-additional-counterexamples 31     \
-               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"                \
-               > $TESTCASE_NAME.inv_b &
+_bin/lig-infer -max-conflict-group-size 128 -num-counterexamples 32 -z _dep/z3                     \
+               -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro" > $TESTCASE_NAME.inv_a &
 PID_2=$!
 
-(timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                    \
-         _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed5"                \
-                         "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r5" &
+(timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                              \
+         _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -r "seed5" "$TESTCASE_NAME.pro")    \
+         > "$TESTCASE_NAME.r5" &
 PID_REC=$!
-timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                     \
-        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed6"                 \
-                        "$TESTCASE_NAME.pro" > "$TESTCASE_NAME.r6"
+timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                               \
+        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -r "seed6" "$TESTCASE_NAME.pro"      \
+        > "$TESTCASE_NAME.r6"
 wait $PID_REC
 
 grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
 
-_bin/lig-infer -base-max-conflict-group-size 64 -base-additional-counterexamples 31      \
-               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"                \
-               > $TESTCASE_NAME.inv_c &
+_bin/lig-infer -max-conflict-group-size 64 -num-counterexamples 32 -z _dep/z3                      \
+               -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro" > $TESTCASE_NAME.inv_c &
 PID_3=$!
-
-trap 'kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null' QUIT TERM
 
 wait 2> /dev/null ; trigger
 EOF
@@ -190,6 +185,7 @@ cat > "$STAREXEC_GPLEARN_CONFIG_FILE" << "EOF"
 #!/usr/bin/env bash
 
 set -m
+trap 'kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null' QUIT TERM
 
 TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
@@ -206,8 +202,7 @@ fi
 
 trigger() {
   if [ -s "$TESTCASE_NAME.inv_a" ] || [ -s "$TESTCASE_NAME.inv_b" ] || [ -s "$TESTCASE_NAME.inv_c" ]; then
-    trap - SIGCHLD
-    trap '' SIGCHLD
+    trap - SIGCHLD ; trap '' SIGCHLD
   else
     return
   fi
@@ -225,36 +220,31 @@ trigger() {
 }
 
 for i in `seq 1 3` ; do
-  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                  \
-           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed$i"             \
-                           "$TESTCASE_NAME.pro") > "$TESTCASE_NAME.r$i" &
+  (timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                            \
+           _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -r "seed$i" "$TESTCASE_NAME.pro") \
+           > "$TESTCASE_NAME.r$i" &
 done
 
-timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                     \
-        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -e "seed4"                 \
-                          "$TESTCASE_NAME.pro" > "$TESTCASE_NAME.r4"
+timeout --kill-after=$RECORD_TIMEOUT $RECORD_TIMEOUT                                               \
+        _bin/lig-record -z _dep/z3 -s $RECORD_STATES_PER_FORK -r "seed4" "$TESTCASE_NAME.pro"      \
+        > "$TESTCASE_NAME.r4"
 wait
 
 grep -hv "^[[:space:]]*$" "$TESTCASE_NAME.r"* | sort -u > "$TESTCASE_NAME.states"
 
 trap trigger SIGCHLD 2> /dev/null
 
-_bin/lig-infer -base-max-conflict-group-size 32 -base-additional-counterexamples 31      \
-               -e 2 -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"           \
-               > $TESTCASE_NAME.inv_a &
+_bin/lig-infer -max-conflict-group-size 32 -num-counterexamples 32 -max-expressiveness-level 2     \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro" > $TESTCASE_NAME.inv_a &
 PID_1=$!
 
-_bin/lig-infer -base-max-conflict-group-size 128 -base-additional-counterexamples 31     \
-               -e 3 -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"           \
-               > $TESTCASE_NAME.inv_b &
+_bin/lig-infer -max-conflict-group-size 128 -num-counterexamples 32 -max-expressiveness-level 3    \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro" > $TESTCASE_NAME.inv_b &
 PID_2=$!
 
-_bin/lig-infer -base-max-conflict-group-size 64 -base-additional-counterexamples 31      \
-               -e 4 -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro"           \
-               > $TESTCASE_NAME.inv_c &
+_bin/lig-infer -max-conflict-group-size 64 -num-counterexamples 32 -max-expressiveness-level 4     \
+               -z _dep/z3 -s "$TESTCASE_NAME.states" "$TESTCASE_NAME.pro" > $TESTCASE_NAME.inv_c &
 PID_3=$!
-
-trap 'kill -KILL -$PID_1 -$PID_2 -$PID_3 &> /dev/null' QUIT TERM
 
 wait 2> /dev/null ; trigger
 EOF

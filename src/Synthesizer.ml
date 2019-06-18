@@ -3,23 +3,25 @@ open Core_kernel
 open Exceptions
 open Utils
 
-type cost_attr = Height | Size
+module Config = struct
+  type cost_attr = Height | Size
 
-type config = {
-  cost_limit : int ;
-  cost_attribute : cost_attr ;
-  cost_function : int -> int -> float ;
-  logic : Logic.t ;
-  max_level : int ;
-}
+  type t = {
+    cost_limit : int ;
+    cost_attribute : cost_attr ;
+    cost_function : int -> int -> float ;
+    logic : Logic.t ;
+    max_expressiveness_level : int ;
+  }
 
-let default_config : config = {
-  cost_limit = 25 ;
-  cost_attribute = Size ;
-  cost_function = (fun g_cost e_cost -> (Int.to_float e_cost) *. (Float.log (Int.to_float g_cost))) ;
-  logic = Logic.of_string "LIA" ;
-  max_level = 4 ;
-}
+  let default : t = {
+    cost_limit = 25 ;
+    cost_attribute = Size ;
+    cost_function = (fun g_cost e_cost -> (Int.to_float e_cost) *. (Float.log (Int.to_float g_cost))) ;
+    logic = Logic.of_string "LIA" ;
+    max_expressiveness_level = 4 ;
+  }
+end
 
 type task = {
   arg_names : string list ;
@@ -145,10 +147,10 @@ let subtract ~(from : Expr.component list) (comps : Expr.component list) =
   List.filter from ~f:(fun c -> not (List.mem comps c
                                        ~equal:(fun c1 c2 -> String.equal c1.name c2.name)))
 
-let solve_impl config task stats=
+let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let typed_components t_type = Array.append
     (Array.create ~len:1 [])
-    (Array.mapi (Array.init (Int.min config.max_level (Array.length config.logic.components_per_level))
+    (Array.mapi (Array.init (Int.min config.max_expressiveness_level (Array.length config.logic.components_per_level))
                             ~f:(fun i -> config.logic.components_per_level.(i)))
                 ~f:(fun level comps
                     -> List.filter ~f:(fun c -> Poly.equal c.codomain t_type)
@@ -212,7 +214,7 @@ let solve_impl config task stats=
   let check (candidate : Expr.synthesized) =
     (* Log.debug (lazy ("  > Now checking (@ cost " ^ (Int.to_string (f_cost candidate.expr)) ^ "): "
                        ^ (Expr.to_string (Array.of_list task.arg_names) candidate.expr))) ; *)
-    if Array.equal ~equal:Value.equal task.outputs candidate.outputs
+    if Array.equal Value.equal task.outputs candidate.outputs
     then raise (Success candidate.expr)
   in
 
@@ -248,7 +250,7 @@ let solve_impl config task stats=
     in List.sort ~compare:(fun (level1,cost1) (level2,cost2)
                            -> Float.compare (config.cost_function (grammar_cost level1) cost1)
                                             (config.cost_function (grammar_cost level2) cost2))
-                 (List.cartesian_product (List.range 1 ~stop:`inclusive (Int.min config.max_level (Array.length config.logic.components_per_level)))
+                 (List.cartesian_product (List.range 1 ~stop:`inclusive (Int.min config.max_expressiveness_level (Array.length config.logic.components_per_level)))
                                          (List.range 2 config.cost_limit))
   in
   Log.debug (lazy ( "  $ Exploration order (G,k):" ^ (Log.indented_sep 3)
@@ -275,7 +277,7 @@ let solve_impl config task stats=
                             ~f:(fun cands comps
                                 -> List.iter comps ~f:(expand_component l level cost cands))))
 
-let solve ?(config = default_config) (task : task) : result =
+let solve ?(config = Config.default) (task : task) : result =
   Log.debug (lazy ("Running enumerative synthesis:"));
   let start_time = Time.now () in
   let stats = { enumerated = 0 ; pruned = 0 ; synth_time_ms = 0.0 } in

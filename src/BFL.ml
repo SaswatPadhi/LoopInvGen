@@ -4,21 +4,23 @@ open CNF
 open Exceptions
 open Utils
 
-type conjunct = int list
-
-type truth_assignment = (int, bool) Hashtbl.t
-
-type config = {
-  auto_incr_k : bool ;
-  k : int ;
+module Config = struct
+  type t = {
+    auto_increment_clauses : bool ;
+    min_clauses : int ;
   strengthen : bool ;
 }
 
-let default_config = {
-  auto_incr_k = true ;
-  k = 1 ;
+  let default : t = {
+    auto_increment_clauses = true ;
+    min_clauses = 1 ;
   strengthen = false ;
 }
+end
+
+type conjunct = int list
+
+type truth_assignment = (int, bool) Hashtbl.t
 
 let truthAssignment_to_string (ta : truth_assignment) : string =
   "[" ^ (Hashtbl.fold ta ~init:""
@@ -39,8 +41,8 @@ let pruneWithNegativeExamples (conj : conjunct)
                               (example : truth_assignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remaining accum =
-    if List.equal ~equal:Poly.equal remaining [] then accum
-    else if List.equal ~equal:Int.equal conj [] then raise NoSuchFunction
+    if List.equal Poly.equal remaining [] then accum
+    else if List.equal Int.equal conj [] then raise NoSuchFunction
     else begin
       (* for each variable in conj, count the negative examples it covers
         (i.e, on how many of the examples it has the truth value false) *)
@@ -81,8 +83,8 @@ let learnStrongConjunction (conj : conjunct) (pos : truth_assignment list)
                            (neg : truth_assignment list) : conjunct =
   let find_or_true = Hashtbl.find_default ~default:true in
   let rec helper conj remainingNeg accum =
-    if List.equal ~equal:Poly.equal remainingNeg [] then accum
-    else if List.equal ~equal:Int.equal conj [] then raise NoSuchFunction
+    if List.equal Poly.equal remainingNeg [] then accum
+    else if List.equal Int.equal conj [] then raise NoSuchFunction
     else begin
       (* for each variable in conj, count the negative examples it covers
          (i.e, on how many of the examples it has the truth value false) *)
@@ -144,10 +146,9 @@ let learnStrongConjunction (conj : conjunct) (pos : truth_assignment list)
 let learnConjunction ?(strengthen = false) (vars : conjunct)
                      (pos : truth_assignment list) (neg : truth_assignment list)
                      : conjunct =
-  (* the initial conjunction is the AND of all variables *)
-  let conj = vars in
-  if strengthen then learnStrongConjunction conj pos neg
-  else let conj = List.fold pos ~init:conj ~f:pruneWithAPositiveExample
+  if strengthen
+  then learnStrongConjunction vars pos neg
+  else let conj = List.fold pos ~init:vars ~f:pruneWithAPositiveExample
        in pruneWithNegativeExamples conj neg
 
 (* produce all k-tuples (considered as sets) of numbers from 1 to n *)
@@ -157,10 +158,8 @@ let allKTuples (k : int) (n : int) : conjunct list =
     begin match k with
      | 1 -> rest @ l
      | _ -> let next = List.(
-              concat_map l ~f:(fun l ->
-                                 match l with
-                                 | [] -> []
-                                 | x :: _
+              concat_map l ~f:(function [] -> []
+                                      | (x :: _) as l
                                    -> map (srange (x+1) n) ~f:(fun v -> v::l))
               ) in aux (k - 1) next (rest @ l)
     end in
@@ -170,8 +169,8 @@ let allKTuples (k : int) (n : int) : conjunct list =
                      ~f:(fun t -> fold t ~init:[[]]
                                        ~f:(fun c x ->
                                              let x' = x + n
-                                             in (map c ~f:(fun l -> x::l))
-                                              @ (map c ~f:(fun l -> x'::l)))))
+                                             in (map c ~f:(cons x))
+                                              @ (map c ~f:(cons x')))))
 
 (* Given n variables over a k-CNF formula to learn, we create one variable
    per possible k-clause to use in the reduction to conjunction learning *)
@@ -195,13 +194,13 @@ let cnfVarsToClauseVars k n : (int * conjunct) list =
    all negative examples and satisfies at least one positive example but might
    falsify others.  this is useful if we are trying to find a simple
    strengthening of the "true" precondition. *)
-let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
+let learnCNF ?(config = Config.default) ~(n : int) (pos : bool list list)
              (neg : bool list list) : int CNF.t =
   let rec helper k =
   begin
     Log.debug (lazy ("  > max literals per clause = " ^ (Int.to_string k))) ;
     (* create one variable per possible k-clause over the given variables *)
-    let varEncoding = cnfVarsToClauseVars k n in
+    let var_encoding = cnfVarsToClauseVars k n in
     let augmentExamples =
           List.(map ~f:(foldi ~init:[]
                               ~f:(fun i curr b -> (i+1, b) :: (i + n + 1, not b)
@@ -209,17 +208,17 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
     (* translate an example on the original variables
       to one on the new variables *)
     in let encodeExamples ex =
-         let ex = Hashtbl.Poly.of_alist_exn ex in Hashtbl.Poly.of_alist_exn (
-                    List.map varEncoding
-                             ~f:(fun (i, c) ->
-                                   (i, List.exists c ~f:(Hashtbl.find_exn ex))))
+         let ex = Hashtbl.Poly.of_alist_exn ex
+          in Hashtbl.Poly.of_alist_exn (
+               List.map var_encoding
+                        ~f:(fun (i, c) -> (i, List.exists c ~f:(Hashtbl.find_exn ex))))
     in let pos = List.map ~f:encodeExamples (augmentExamples pos)
     in let neg = List.map ~f:encodeExamples (augmentExamples neg)
     (* learn a conjunction on the new variables *)
-    in let vars = List.map ~f:fst varEncoding
+    in let vars = List.map ~f:fst var_encoding
     in try
          let learnedConjunct = learnConjunction vars pos neg
-                                                ~strengthen:conf.strengthen
+                                                ~strengthen:config.strengthen
          in let decodeClause i =
               let rec aux n = match (i lsr n) land 0x3ff with
                               | 0 -> []
@@ -230,7 +229,8 @@ let learnCNF ?(conf = default_config) ~(n : int) (pos : bool list list)
          let indexToLit i = if i <= n then Pos i else Neg (i - n)
          in List.map ~f:(List.map ~f:indexToLit) learnedkCNF
        with NoSuchFunction
-            -> if not conf.auto_incr_k then raise NoSuchFunction
+            -> if not config.auto_increment_clauses
+               then raise NoSuchFunction
                                        else helper (k + 1)
   end in Log.debug (lazy ("Attempting BFL with " ^ (Int.to_string n) ^ " features"))
-       ; helper conf.k
+       ; helper config.min_clauses

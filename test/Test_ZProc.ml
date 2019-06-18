@@ -31,7 +31,7 @@ let simplification ~(zpath : string) () =
   process ~zpath (fun z3 ->
     ignore (run_queries ~scoped:false z3 ~db:[ "(declare-var x Int)" ] []);
     let res = simplify z3 "(and (or (>= x 1) (> x 5)) (<= x 9))"
-    in Alcotest.(check string) "same" res "(and (>= x 1) (<= x 9))")
+    in Alcotest.(check string) "same" res "(and (<= x 9) (>= x 1))")
 
 let all ~(zpath :string) = [
   "Implication_true",     `Quick, (implication_true ~zpath) ;

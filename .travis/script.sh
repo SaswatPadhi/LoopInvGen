@@ -8,7 +8,6 @@ if [ "$CHANGED" -eq "0" ]; then
 else
     docker exec -t \
                 -e OCAML_VERSION="$OCAML_VERSION" \
-                -e PROFILE="$PROFILE" \
                 -e MIN_REQS_ONLY="$MIN_REQS_ONLY" \
                 ocaml bash -c "cd /LoopInvGen && bash -ex .travis/run.sh"
 fi

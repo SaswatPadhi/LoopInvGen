@@ -35,29 +35,28 @@ let exit_code_of_result = function
   | NO_SOLUTION_PASS -> 0
   | NO_SOLUTION_FAIL -> 11
 
-let main zpath filename logfile invfile () =
-  Log.enable ~msg:"VERIFY" logfile ;
-  let sygus = SyGuS.parse (get_in_channel filename) in
-  let inv = read_inv_from_chan (get_in_channel invfile) ~sygus in
-  let res =
-    try is_sufficient_invariant ~zpath ~sygus (Sexplib.Sexp.to_string_hum inv)
-    with _ -> FAIL [ "<parse>" ]
-   in Out_channel.output_string Stdio.stdout (string_of_result res)
-    ; Caml.exit (exit_code_of_result res)
-
-let spec =
-  let open Command.Spec in (
-    empty
-    +> flag "-z" (required string)
-       ~doc:"FILENAME path to the z3 executable"
-    +> flag "-s" (required string)
-       ~doc:"FILENAME input file containing the SyGuS-INV problem"
-    +> flag "-l" (optional string)
-       ~doc:"FILENAME output file for logs, defaults to null"
-    +> anon (maybe_with_default "-" ("filename" %: file))
-  )
+let command =
+  let open Command.Let_syntax in
+  Command.basic
+    ~summary: "Check sufficiency of a generated invariant for proving correctness."
+    [%map_open
+      let z3_path     = flag "z3-path" (required string)
+                             ~doc:"FILENAME path to the z3 executable"
+      and sygus_path  = flag "sygus-path" (required string)
+                             ~doc:"FILENAME input file containing the SyGuS-INV problem"
+      and log_path    = flag "log-path" (optional string)
+                             ~doc:"FILENAME enable logging and output to the specified path"
+      and inv_path    = anon (maybe_with_default "-" ("filename" %: string))
+      in fun () ->
+        Log.enable ~msg:"VERIFY" log_path ;
+        let sygus = SyGuS.parse (get_in_channel sygus_path) in
+        let inv = read_inv_from_chan (get_in_channel inv_path) ~sygus in
+        let res = try is_sufficient_invariant ~zpath:z3_path ~sygus
+                                              (Sexplib.Sexp.to_string_hum inv)
+                  with _ -> FAIL [ "<parse>" ]
+        in Out_channel.output_string Stdio.stdout (string_of_result res)
+         ; Caml.exit (exit_code_of_result res)
+    ]
 
 let () =
-  Command.run
-    (Command.basic_spec spec main
-       ~summary: "Check sufficiency of a generated invariant for proving correctness.")
+  Command.run command

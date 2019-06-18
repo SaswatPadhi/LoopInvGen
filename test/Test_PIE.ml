@@ -26,8 +26,8 @@ let conflicts_to_string cgroup =
    ^ "}"
 
 let abs_conflict_failure () =
-  let (res, _) = learnPreCond abs_job ~conf:{ PIE.default_config
-                                              with disable_synth = true }
+  let (res, _) = learnPreCond abs_job ~config:{ PIE.Config.default with
+                                                disable_synth = true }
   in Alcotest.(check string) "identical" "false" (cnf_opt_to_desc res)
 
 let abs_conflict_group () =
@@ -39,22 +39,28 @@ let abs_precond_1_cnf () =
   let (res, _) = learnPreCond (Job.add_feature ~job:abs_job
                                  ((fun [@warning "-8"] [Value.Int x] -> x + x = x),
                                  "(= x (+ x x))"))
-                              ~conf:{ PIE.default_config
-                                      with disable_synth = true
-                                    ; _BFL = { BFL.default_config
-                                               with k = 1
-                                             ; auto_incr_k = false }}
+                              ~config:{ PIE.Config.default with
+                                        _BFL = {
+                                          BFL.Config.default with
+                                          min_clauses = 1
+                                        ; auto_increment_clauses = false
+                                        }
+                                      ; disable_synth = true
+                                      }
   in Alcotest.(check string) "identical" "false" (cnf_opt_to_desc res)
 
 let abs_precond_auto_1 () =
   let (res, _) = learnPreCond (Job.add_feature ~job:abs_job
                                  ((fun [@warning "-8"] [Value.Int x] -> x + x = x),
                                  "(= x (+ x x))"))
-                               ~conf:{ PIE.default_config
-                                       with disable_synth = true
-                                     ; _BFL = { BFL.default_config
-                                                with k = 1
-                                              ; auto_incr_k = true }}
+                               ~config:{ PIE.Config.default with
+                                        _BFL = {
+                                          BFL.Config.default with
+                                          min_clauses = 1
+                                        ; auto_increment_clauses = true
+                                        }
+                                      ; disable_synth = true
+                                      }
   in Alcotest.(check string) "identical" "(or (= x (+ x x)) (> x 0))"
                              (cnf_opt_to_desc res)
 

@@ -217,7 +217,7 @@ else
   for i in `seq 1 $RECORD_FORKS` ; do
     [ -z "${DO_LOG[record]}" ] || LOG_PARAM="${DO_LOG[record]}$i"
     (timeout $RECORD_TIMEOUT \
-             $RECORD -s $RECORD_STATES_PER_FORK -e "seed$i" $LOG_PARAM $RECORD_ARGS \
+             $RECORD -s $RECORD_STATES_PER_FORK -r "seed$i" $LOG_PARAM $RECORD_ARGS \
                      "$TESTCASE_PROCESSED") > "$TESTCASE_REC_STATES$i" &
   done
   wait
@@ -228,8 +228,8 @@ else
   show_status "(inferring)"
 
   timeout --foreground $INFER_TIMEOUT \
-          $INFER -s "$TESTCASE_ALL_STATES" -e "$EXPRESSIVENESS_LEVEL" $STATS_ARG \
-                 ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+          $INFER -s "$TESTCASE_ALL_STATES" -max-expressiveness-level "$EXPRESSIVENESS_LEVEL" \
+                 $STATS_ARG ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
   INFER_RESULT_CODE=$?
 fi
 

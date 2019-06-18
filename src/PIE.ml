@@ -10,28 +10,30 @@ type 'a conflict = {
   fvec : bool list ;
 }
 
-type config = {
-  _BFL : BFL.config ;
-  _Synthesizer : Synthesizer.config ;
+module Config = struct
+  type t = {
+    _BFL : BFL.Config.t ;
+    _Synthesizer : Synthesizer.Config.t ;
 
-  disable_synth : bool ;
-  max_conflict_group_size : int ;
-}
+    disable_synth : bool ;
+    max_conflict_group_size : int ;
+  }
+
+  let base_max_conflict_group_size = 128
+
+  let default : t = {
+    _BFL = BFL.Config.default ;
+    _Synthesizer = Synthesizer.Config.default ;
+
+    disable_synth = false ;
+    max_conflict_group_size = base_max_conflict_group_size ;
+  }
+end
 
 type stats = {
   mutable pi_time_ms : float ;
   mutable _Synthesizer : Synthesizer.stats list ;
 } [@@deriving sexp]
-
-let base_max_conflict_group_size = 128
-
-let default_config : config = {
-  _BFL = BFL.default_config ;
-  _Synthesizer = Synthesizer.default_config ;
-
-  disable_synth = false ;
-  max_conflict_group_size = base_max_conflict_group_size ;
-}
 
 let conflictingTests (job : Job.t) : 'a conflict list =
   let make_f_vecs = List.map ~f:(fun (t, fvec) -> (t, Lazy.force fvec)) in
@@ -48,11 +50,11 @@ let conflictingTests (job : Job.t) : 'a conflict list =
                                    ; neg = map ~f:fst ntests
                                    ; fvec = pfv }))
 
-let synthFeature ?(consts = []) ~(job : Job.t) ~(conf : Synthesizer.config)
+let synthFeature ?(consts = []) ~(job : Job.t) ~(config : Synthesizer.Config.t)
                  (conflict_group : Value.t list conflict) stats
                  : Value.t list Job.feature Job.with_desc =
   let open Synthesizer in
-  let result = solve ~config:conf {
+  let result = solve ~config {
     constants = consts ;
     arg_names = job.farg_names ;
     inputs = (let all_inputs = conflict_group.pos @ conflict_group.neg in
@@ -66,17 +68,17 @@ let synthFeature ?(consts = []) ~(job : Job.t) ~(conf : Synthesizer.config)
         (if result.constraints = [] then result.string
          else "(and " ^ result.string ^ (String.concat ~sep:" " result.constraints) ^ ")"))
 
-let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
+let resolveAConflict ?(config = Config.default) ?(consts = []) ~(job : Job.t)
                      (conflict_group' : Value.t list conflict) stats
                      : Value.t list Job.feature Job.with_desc =
   let group_size = List.((length conflict_group'.pos) + (length conflict_group'.neg))
-  in let conflict_group = if group_size < conf.max_conflict_group_size then conflict_group'
+  in let conflict_group = if group_size < config.max_conflict_group_size then conflict_group'
                    else { conflict_group' with
-                          pos = List.take conflict_group'.pos (conf.max_conflict_group_size / 2);
-                          neg = List.take conflict_group'.neg (conf.max_conflict_group_size / 2)
+                          pos = List.take conflict_group'.pos (config.max_conflict_group_size / 2);
+                          neg = List.take conflict_group'.neg (config.max_conflict_group_size / 2)
                         }
   in Log.debug (lazy ("Invoking synthesizer with "
-                      ^ (conf._Synthesizer.logic.name) ^ " logic."
+                      ^ (config._Synthesizer.logic.name) ^ " logic."
                       ^ (Log.indented_sep 0) ^ "Conflict group ("
                       ^ (List.to_string_map2 job.farg_names job.farg_types ~sep:" , "
                            ~f:(fun n t -> n ^ " :" ^ (Type.to_string t))) ^ "):" ^ (Log.indented_sep 2)
@@ -86,45 +88,45 @@ let resolveAConflict ?(conf = default_config) ?(consts = []) ~(job : Job.t)
           ^ "NEG (" ^ (Int.to_string (List.length conflict_group.neg)) ^ "):" ^ (Log.indented_sep 4)
                       ^ (List.to_string_map conflict_group.neg ~sep:(Log.indented_sep 4)
                            ~f:(fun vl -> "(" ^ (List.to_string_map vl ~f:Value.to_string ~sep:" , ") ^ ")"))))
-   ; let new_feature = synthFeature conflict_group ~conf:conf._Synthesizer ~consts ~job stats
+   ; let new_feature = synthFeature conflict_group ~config:config._Synthesizer ~consts ~job stats
      in Log.debug (lazy ("Synthesized feature:" ^ (Log.indented_sep 4) ^ (snd new_feature)))
       ; new_feature
 
-let rec resolveSomeConflicts ?(conf = default_config) ?(consts = []) ~(job : Job.t)
+let rec resolveSomeConflicts ?(config = Config.default) ?(consts = []) ~(job : Job.t)
                              (conflict_groups : Value.t list conflict list) stats
                              : Value.t list Job.feature Job.with_desc option =
   if conflict_groups = [] then None
-  else try Some (resolveAConflict (List.hd_exn conflict_groups) ~conf ~consts ~job stats)
+  else try Some (resolveAConflict (List.hd_exn conflict_groups) ~config ~consts ~job stats)
        with e -> Log.error (lazy ((Exn.to_string e) ^ (Printexc.get_backtrace ())))
-               ; resolveSomeConflicts (List.tl_exn conflict_groups) ~conf ~consts ~job stats
+               ; resolveSomeConflicts (List.tl_exn conflict_groups) ~config ~consts ~job stats
 
-let rec augmentFeatures ?(conf = default_config) ?(consts = []) (job : Job.t)
+let rec augmentFeatures ?(config = Config.default) ?(consts = []) (job : Job.t)
                         stats : Job.t =
   let conflict_groups = conflictingTests job
    in if conflict_groups = [] then job
-      else if conf.disable_synth
+      else if config.disable_synth
            then (Log.error (lazy ("CONFLICT RESOLUTION FAILED")) ; raise NoSuchFunction)
-      else match resolveSomeConflicts conflict_groups ~job ~conf ~consts stats with
+      else match resolveSomeConflicts conflict_groups ~job ~config ~consts stats with
            | None -> Log.error (lazy ("CONFLICT RESOLUTION FAILED"))
                    ; raise NoSuchFunction
            | Some new_feature
-             -> augmentFeatures (Job.add_feature ~job new_feature) ~conf ~consts stats
+             -> augmentFeatures (Job.add_feature ~job new_feature) ~config ~consts stats
 
-let learnPreCond ?(conf = default_config) ?(consts = []) (job : Job.t)
+let learnPreCond ?(config = Config.default) ?(consts = []) (job : Job.t)
                  : ('a Job.feature Job.with_desc) CNF.t option * stats =
   Log.info (lazy ("New PI task with "
                  ^ (Int.to_string (List.length job.pos_tests)) ^ " POS + "
                  ^ (Int.to_string (List.length job.neg_tests)) ^ " NEG tests")) ;
   let start_time = Time.now () in
   let stats = { _Synthesizer = [] ; pi_time_ms = 0.0 }
-   in try let job = augmentFeatures ~conf ~consts job stats
+   in try let job = augmentFeatures ~config ~consts job stats
            in let make_f_vecs = List.map ~f:(fun (_, fvec) -> Lazy.force fvec)
            in let (pos_vecs, neg_vecs) =
                 List.(dedup_and_sort ~compare:(List.compare Bool.compare)
                                      (make_f_vecs job.pos_tests),
                       dedup_and_sort ~compare:(List.compare Bool.compare)
                                      (make_f_vecs job.neg_tests))
-           in try let cnf = learnCNF pos_vecs neg_vecs ~conf:conf._BFL
+           in try let cnf = learnCNF pos_vecs neg_vecs ~config:config._BFL
                                      ~n:(List.length job.features)
                    in stats.pi_time_ms <- stats.pi_time_ms
                                        +. Time.(Span.(to_ms (diff (now ()) start_time)))

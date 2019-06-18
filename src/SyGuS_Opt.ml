@@ -5,7 +5,7 @@ open Exceptions
 open SyGuS
 open Utils
 
-module Bitarray = Core_extended.Bitarray
+module Bitarray = Bitarray
 
 (* * *
  * Optimization / Simplification of a SyGuS-INV problem:

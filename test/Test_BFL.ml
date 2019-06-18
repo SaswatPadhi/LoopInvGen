@@ -31,8 +31,10 @@ let prune_with_neg_example_3 () =
 let learnCNF_xor_k2 () =
   let res = BFL.learnCNF [[false ; true] ; [true ; false]]
                          [[true ; true] ; [false ; false]]
-                         ~n:2 ~conf:{ BFL.default_config with
-                                        k = 2 ; auto_incr_k = false ; }
+                         ~n:2 ~config:{ BFL.Config.default with
+                                        min_clauses = 2
+                                      ; auto_increment_clauses = false
+                                      }
   in Alcotest.(check string) "identical"
                              "(and (or (not 1) (not 2)) (or 1 2))"
                              (CNF.to_string res ~stringify:Int.to_string)
@@ -42,10 +44,10 @@ let learnCNF_xor_k1 () =
     fun () -> ignore (
                 BFL.learnCNF [[false ; true] ; [true ; false]]
                              [[true ; true] ; [false ; false]]
-                             ~n:2 ~conf:{ BFL.default_config with
-                                          k = 1
-                                        ; auto_incr_k = false
-                                        }))
+                             ~n:2 ~config:{ BFL.Config.default with
+                                            min_clauses = 1
+                                          ; auto_increment_clauses = false
+                                          }))
 
 let all = [
   "Negative Pruning 1", `Quick, prune_with_neg_example_1 ;

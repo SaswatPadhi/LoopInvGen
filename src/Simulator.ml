@@ -22,12 +22,12 @@ let gen_state_from_model (s : SyGuS.t) (m : ZProc.model option)
                          : Value.t list option Quickcheck.Generator.t =
   let open Quickcheck.Generator in
   match m with None -> singleton None
-  | Some m -> create (fun ~size rnd -> Some (
+  | Some m -> create (fun ~size ~random -> Some (
                 List.map s.synth_variables
                          ~f:(fun (v, t) ->
                                match List.Assoc.find m v ~equal:(=)
                                with Some d -> d
-                                  | None -> generate (TestGen.for_type t) ~size rnd)))
+                                  | None -> generate (TestGen.for_type t) ~size ~random)))
 
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : Value.t list)
                : Value.t list option Quickcheck.Generator.t =
@@ -56,12 +56,12 @@ let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : Value.t list option)
   let open Quickcheck.Generator in
   match head with None -> singleton []
   | Some head ->
-      let step head ~size rnd =
+      let step head ~size ~random =
         let rec step_internal head size =
           Log.info (lazy (" > " ^ (List.to_string_map ~sep:", " ~f:Value.to_string head))) ;
           head :: (match size with
                   | 0 -> []
-                  | n -> begin match generate (transition s z3 head) ~size rnd
+                  | n -> begin match generate (transition s z3 head) ~size ~random
                                with Some next when next <> head
                                     -> step_internal next (n-1)
                                   | _ -> []

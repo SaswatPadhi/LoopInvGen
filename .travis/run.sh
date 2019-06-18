@@ -31,7 +31,7 @@ opam pin add LoopInvGen . --no-action --yes --kind=path
 if [ -z "${MIN_REQS_ONLY}" ]; then
     opam install LoopInvGen --deps-only --with-test
 else
-    opam install --yes alcotest.0.7.0 core.v0.11.0 core_extended.v0.11.0 dune.1.6.0
+    opam install --yes alcotest.0.7.0 core.v0.12.2 dune.1.6.0 ppx_let.v0.12.0
 fi
 
 opam list
@@ -41,5 +41,5 @@ ls -lah
 ### Build LoopInvGen and test runner
 ### TODO: Need z3 to actually run the tests
 
-dune build --verbose --profile $PROFILE
-dune build test/Runner.exe --verbose --profile $PROFILE
+dune build --verbose
+dune build test/Runner.exe --verbose

@@ -115,13 +115,13 @@ except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 
 See <https://opam.ocaml.org/doc/Install.html> for detailed instructions.
 
-#### 2. Install `ocaml` >= 4.05.0.
-We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enable
-For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.07.1+flambda`.
+#### 2. Install `ocaml` >= 4.07.0.
+We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enabled.
+For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.08.0+flambda`.
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.10.0
+$ opam install alcotest.0.8.5 core.v0.12.2 dune.1.10.0 ppx_let.v0.12.0
 ```
 
 #### 4. Get the [Z3 project][z3].

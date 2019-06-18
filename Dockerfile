@@ -6,7 +6,7 @@ LABEL maintainer="padhi@cs.ucla.edu"
 
 
 ENV OPAM_VERSION  2.0.4
-ENV OCAML_VERSION 4.07.1+flambda
+ENV OCAML_VERSION 4.08.0+flambda
 ENV Z3_VERSION    Z3-4.8.5
 
 ENV HOME /home/opam
@@ -39,7 +39,7 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.5 core.v0.11.3 core_extended.v0.11.0 dune.1.10.0 && \
+RUN opam install --yes alcotest.0.8.5 core.v0.12.2 dune.1.10.0 ppx_let.v0.12.0 && \
     opam clean --yes && \
     git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 
