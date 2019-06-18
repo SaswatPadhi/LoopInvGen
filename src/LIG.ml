@@ -79,7 +79,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
   let open Simulator in
   let restart_with_new_states head =
     stats.lig_ce <- stats.lig_ce + 1 ;
-    Log.warn (lazy ("Restarting inference engine ...")) ;
+    Log.error (lazy ("Restarting inference engine ...")) ;
     let new_states = random_value ~size:config.max_steps_on_restart
                                   ~seed:(`Deterministic seed_string)
                                   (simulate_from sygus z3 head)
@@ -99,7 +99,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
     end
     else begin
       ZProc.create_scope z3 ;
-      Log.warn (lazy "Postcondition is not expressive within the provided grammar!") ;
+      Log.info (lazy "Postcondition is not expressive within the provided grammar!") ;
       let inv, vpie_stats =
           VPIE.learnVPreCond
             ~z3 ~config:config._VPIE ~consts:sygus.constants

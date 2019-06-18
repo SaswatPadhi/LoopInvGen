@@ -11,8 +11,9 @@
                     lig-verify
                     lig-score
     )
-    (libraries      LoopInvGen
+    (libraries      async
                     core
+                    LoopInvGen
     )
     (preprocess
       (pps          ppx_let))

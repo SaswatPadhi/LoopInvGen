@@ -1,32 +1,37 @@
 #!/usr/bin/env bash
 
-### Initialize `opam`
-
-export OPAMYES=1
+#
+# Because the ocaml/opam2 docker image uses a stale
+# local copy of opam repo, we just delete everything
+# and start from scratch :)
+#
+rm -rf ~/.opam
 
 opam init --compiler="${OCAML_VERSION}"
-eval `opam env`
-
 opam update
+
+eval `opam env`
 opam config report
 
-
-### Pin `LoopInvGen` package and install deps
-
-opam pin add LoopInvGen . --no-action --yes --kind=path
-
 if [ -z "${MIN_REQS_ONLY}" ]; then
-    opam install LoopInvGen --deps-only --with-test
+    opam install --yes alcotest         \
+                       async            \
+                       core             \
+                       dune             \
+                       ppx_let
 else
-    opam install --yes alcotest.0.8.0 core.v0.12.2 dune.1.6.0 ppx_let.v0.12.0
+    opam install --yes alcotest.0.8.0   \
+                       async.v0.12.0    \
+                       core.v0.12.2     \
+                       dune.1.6.0       \
+                       ppx_let.v0.12.0
 fi
 
 opam list
-ls -lah
+pwd ; ls -lah
 
-
-### Build LoopInvGen and test runner
 ### TODO: Need z3 to actually run the tests
 
 dune build --verbose
 dune build test/Runner.exe --verbose
+dune build app/App.exe

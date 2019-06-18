@@ -48,7 +48,7 @@ let learnVPreCond ?(config = Config.default) ?(eval_term = "true") ~(z3 : ZProc.
                       ^ "/" ^ (Int.to_string config.max_attempts) ^ ".")) ;
       match PIE.learnPreCond ~config:config._PIE ~consts job with
       | (None, pie_stats) | ((Some [[]]), pie_stats)
-        -> Log.warn (lazy ("Failed to learn a verified precondition!"))
+        -> Log.error (lazy ("Failed to learn a verified precondition!"))
          ; stats._PIE <- pie_stats :: stats._PIE
          ; stats.vpi_time_ms <- stats.vpi_time_ms +. pie_stats.pi_time_ms
          ; ((config.describe None), stats)

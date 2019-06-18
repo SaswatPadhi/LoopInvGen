@@ -4,7 +4,7 @@ open LoopInvGen
 
 let command =
   let open Command.Let_syntax in
-  Command.basic
+  Async.Command.async
     ~summary: "Check, simplify, and optimize a SyGuS-INV problem."
     [%map_open
       let z3_path     = flag "z3-path" (required string)
@@ -21,9 +21,11 @@ let command =
         in SyGuS.(write_to out_path (SyGuS_Opt.optimize sygus))
           ; Stdio.In_channel.close in_chan
           ; let post_as_inv = SyGuS.func_definition { sygus.inv_func with body = sygus.post_func.body }
-            in match Check.is_sufficient_invariant ~zpath:z3_path ~sygus sygus.post_func.body with
-                | PASS -> Out_channel.output_string Stdio.stdout post_as_inv
-                | _ -> ()
+            in begin match Check.is_sufficient_invariant ~zpath:z3_path ~sygus sygus.post_func.body with
+               | PASS -> Out_channel.output_string Stdio.stdout post_as_inv
+               | _ -> ()
+               end
+          ; Async.Deferred.return ()
     ]
 
 let () =

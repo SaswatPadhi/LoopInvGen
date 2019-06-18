@@ -37,7 +37,7 @@ let exit_code_of_result = function
 
 let command =
   let open Command.Let_syntax in
-  Command.basic
+  Async.Command.async
     ~summary: "Check sufficiency of a generated invariant for proving correctness."
     [%map_open
       let z3_path     = flag "z3-path" (required string)

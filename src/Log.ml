@@ -13,35 +13,31 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
   let disable () = ()
 
   let [@warning "-27"] enable ?msg ?level _ = ()
-
 [%%else]
   (* If logging has not been disabled, a user may still choose not to log
    * during a particular execution. Logging functions therefore accept `lazy`
    * strings that are forced only when they are actually logged. *)
 
-  open Core_extended.Logger
+  open Async
 
-  let logger = ref (create_default "")
-  let do_log level lazy_str =
-    try log (!logger) (level , (Lazy.force lazy_str))
-    with _ -> ()
+  let logger = ref (Log.create ~level:`Error ~output:[] ~on_error:`Raise)
 
-  let enabled = ref 0
+  let is_enabled = ref false
+  let do_log ~tags level lstr =
+    if !is_enabled then Log.string !logger ~tags ~level (Lazy.force lstr)
 
-  let fatal lstr = if !enabled > 0 then do_log `Fatal lstr
-  let error lstr = if !enabled > 1 then do_log `Error lstr
-  let warn  lstr = if !enabled > 2 then do_log `Warn lstr
-  let info  lstr = if !enabled > 3 then do_log `Info lstr
-  let debug lstr = if !enabled > 4 then do_log `Debug lstr
+  let error ?(tags = []) lstr = do_log ~tags `Error lstr
+  let info ?(tags = []) lstr = do_log ~tags `Info lstr
+  let debug ?(tags = []) lstr = do_log ~tags `Debug lstr
 
-  let disable () = enabled := 0
+  let disable () = is_enabled := false
 
-  let enable ?(msg = "") ?(level = 5) (file : string option) =
-    match file with
+  let enable ?(msg = "") ?(level = `Debug) = function
     | None -> ()
-    | Some file -> logger := create_default file
-                 ; clear_filter (!logger)
-                 ; enabled := level
-                 ; info (lazy "")
-                 ; info (lazy (msg ^ String.(make (79 - (length msg)) '=')))
+    | Some filename
+      -> logger := Log.create ~level ~output:[ Log.Output.file `Text ~filename ]
+                              ~on_error:(`Call (fun err -> error (lazy (Core.Error.to_string_hum err))))
+       ; is_enabled := true
+       ; info (lazy "")
+       ; info (lazy (msg ^ String.(make (79 - (length msg)) '=')))
 [%%endif]

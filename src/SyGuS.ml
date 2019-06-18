@@ -104,7 +104,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ]
                 -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ; _ ]
-                -> (* FIXME: Custom grammar *) Log.warn (lazy ("LoopInvGen currently does not allow custom grammars."))
+                -> (* FIXME: Custom grammar *) Log.error (lazy ("LoopInvGen currently does not allow custom grammars."))
                  ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List ( (Atom "declare-var") :: sexps )
                 -> let new_var = parse_variable_declaration (List sexps)

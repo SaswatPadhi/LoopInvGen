@@ -39,7 +39,11 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.5 core.v0.12.2 dune.1.10.0 ppx_let.v0.12.0 && \
+RUN opam install --yes alcotest.0.8.5       \
+                       async.v0.12.0        \
+                       core.v0.12.2         \
+                       dune.1.10.0          \
+                       ppx_let.v0.12.0 &&   \
     opam clean --yes && \
     git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
 

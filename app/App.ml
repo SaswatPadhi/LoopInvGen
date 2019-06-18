@@ -15,7 +15,7 @@ let print_PI_results (result, stats) =
 
 (* a job for inferring a precondition to ensure that the absolute value
    function has a result equal to its argument *)
-let abs_job = Job.create
+let abs_job = Job.create_unlabeled
   ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))
   ~args:([ ("x", Type.INT) ])
   ~post:(fun inp res ->
@@ -40,7 +40,7 @@ let with_synth_PI () =
    two lists is an empty list *)
 let append_job =
   let open Value
-   in Job.create
+   in Job.create_unlabeled
         ~f:(fun [@warning "-8"] [ List x ; List y ] -> List (x @ y))
         ~args:([ ("x", Type.LIST) ; ("y", Type.LIST) ])
         ~post:(fun inp res ->
@@ -60,8 +60,10 @@ let append_job =
 
 let no_synth_PI () =
   Stdio.print_endline "PI for { append(l1,l2) = [] } without feature learning:" ;
-  print_PI_results (PIE.learnPreCond append_job ~conf:{ PIE.default_config
-                                                        with disable_synth = true })
+  print_PI_results (
+    PIE.learnPreCond append_job
+                     ~config:{ PIE.Config.default with disable_synth = true }
+  )
 
 
 let () = with_synth_PI ()
