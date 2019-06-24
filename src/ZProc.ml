@@ -12,6 +12,11 @@ type t = {
 
 type model = (string * Value.t) list
 
+let rec print_list = function 
+[] -> ()
+| e::l -> print_string e ; print_string " " ; print_list l
+
+
 let query_for_model ?(eval_term = "true") () =
   [ "(check-sat)"
     (* forces z3 to generate complete models over variables in `eval_term` *)
@@ -44,7 +49,7 @@ let close z3 =
   Log.debug (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
 let process ?(init_options = []) ?(random_seed = None)
-            ~(zpath : string) (f : t -> 'a) : 'a =
+            ~(zpath : string) (f : t -> 'a) : 'a =     
   let z3 = create ~init_options ~random_seed zpath in
   let result = (f z3) in (close z3) ; result
 [@@inline always]
@@ -73,6 +78,8 @@ let close_scope (z3 : t) : unit =
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
+  print_string "print queries\n";
+  print_list db;
   if queries = []
   then begin
     if not scoped && db <> [] then
@@ -96,18 +103,21 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
       ; List.rev (!results)
   end
 
-let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
-  let open Sexp in
+let z3_sexp_to_value (sexp : Sexp.t) : Value.t =  
+  let open Sexp in  
   let vstr = match sexp with
              | Atom v -> v
-             | List([(Atom "-") ; (Atom v)]) -> "-" ^ v
+             | List([(Atom "-") ; (Atom v)]) -> "-" ^ v             
              | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                         ^ (to_string_hum sexp)))
   in Value.of_string vstr
 
-let z3_result_to_model (result : string list) : model option =
+
+
+let z3_result_to_model (result : string list) : model option =  
   let open Sexp in
-  try [@warning "-8"]
+  try [@warning "-8"]    
+  print_list result;
   match result with
   | "unsat" :: _ -> None
   | [ "sat" ; _ ; result ]
@@ -125,7 +135,7 @@ let z3_result_to_model (result : string list) : model option =
           ; raise e
 
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
-                          : model option =
+                          : model option =  
   z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
@@ -179,8 +189,9 @@ let model_to_constraint ?(negate=false) ?(ignore_primed=false) (model : model) :
  ^ (if negate then "))" else ")")
 
 let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) ?(run = fun _ -> ()) (z3 : t)
-                   : model list =
-  let query = query_for_model ~eval_term ()
+                   : model list =  
+  let query = query_for_model ~eval_term ()  
+  
    in create_scope z3
     ; ignore (run_queries ~scoped:false z3 ~db [])
     ; let rec helper accum = function

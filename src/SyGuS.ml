@@ -58,8 +58,12 @@ let rec extract_consts : Sexp.t -> Value.t list = function
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
 
-let parse_variable_declaration : Sexp.t -> var = function
-  | List [ Atom v ; Atom t ] -> (v, (Type.of_string t))
+let parse_variable_declaration : Sexp.t -> var = function  
+  | List [ Atom v ; Atom t ] ->  (v, (Type.of_string t))
+  | List([Atom(v) ; List([Atom(t) ; Atom(t2); Atom(t3)])]) ->                                  
+                                (v, (Type.of_string (t^" "^t2^" "^t3))) 
+  (* | List([Atom(v) ; List([Atom(t) ; Atom(t2); List(arrval)])]) ->                                  
+                                (v, (Type.of_string (t^" "^t2^" "^(Sexp.to_string_hum arrval))))                                                                                                                *)
   | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun : Sexp.t list -> func * Value.t list = function
@@ -85,7 +89,7 @@ let func_definition (f : func) : string =
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
-let parse_sexps (sexps : Sexp.t list) : t =
+let parse_sexps (sexps : Sexp.t list) : t =  
   let logic : string ref = ref "" in
   let consts : Value.t list ref = ref [] in
   let funcs : func list ref = ref [] in

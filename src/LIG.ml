@@ -138,7 +138,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                                         (gen_state_from_model sygus (Some ce_model)))
 
 let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
-                   ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =
+                   ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =  
   let open ZProc in
   let stats = { _VPIE = [] ; lig_time_ms = 0.0 ; lig_ce = 0 }
   in process ~zpath

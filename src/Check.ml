@@ -6,7 +6,7 @@ type result = PASS | FAIL of (string list) | NO_SOLUTION_PASS | NO_SOLUTION_FAIL
 
 let is_sufficient_invariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) : result =
   let open ZProc
-   in process ~zpath (fun z3 ->
+   in process ~zpath (fun z3 ->     
      Simulator.setup sygus z3 ;
      if (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body) <> None
      then (if String.equal inv "false" then NO_SOLUTION_PASS else NO_SOLUTION_FAIL)

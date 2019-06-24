@@ -38,7 +38,7 @@ INFER_TIMEOUT=86400
 MIN_INFER_TIMEOUT=5
 
 RECORD_TIMEOUT=0.5s
-RECORD_FORKS=4
+RECORD_FORKS=1
 RECORD_STATES_PER_FORK=512
 MIN_RECORD_STATES_PER_FORK=63
 
@@ -50,8 +50,8 @@ INFER_ARGS=""
 VERIFY_ARGS=""
 
 declare -A DO_LOG
-DO_LOG[process]=""
-DO_LOG[record]=""
+DO_LOG[process]="yes"
+DO_LOG[record]="yes"
 DO_LOG[infer]=""
 DO_LOG[verify]=""
 
@@ -206,6 +206,8 @@ show_status "(processsing)"
 
 $PROCESS -o "$TESTCASE_PROCESSED" ${DO_LOG[process]} $PROCESS_ARGS "$TESTCASE" > "$TESTCASE_INVARIANT"
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
+
+exit 1
 
 if [ -s "$TESTCASE_INVARIANT" ]; then
   INFER_RESULT_CODE=0
