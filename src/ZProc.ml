@@ -77,8 +77,7 @@ let close_scope (z3 : t) : unit =
   Out_channel.output_string z3.stdin "(pop)\n"
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
-                : string list =
-  print_string "print queries\n";
+                : string list =  
   print_list db;
   if queries = []
   then begin
@@ -103,14 +102,27 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
       ; List.rev (!results)
   end
 
+let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t = 
+  let open Sexp in 
+  match sexp with 
+  | _ -> raise (Internal_Exn ("Unable to deserialize lamda: "
+                              ^ (to_string_hum sexp)))
+                              
+
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =  
   let open Sexp in  
-  let vstr = match sexp with
+  print_string "\nz3_sexp_to_value\n";
+  print_string (to_string_hum sexp);  
+  match sexp with   
+  | _ -> Value.of_string sexp
+  (* let vstr = match sexp with
              | Atom v -> v
-             | List([(Atom "-") ; (Atom v)]) -> "-" ^ v             
+             | List([(Atom "-") ; (Atom v)]) -> "-" ^ v   
+             | List([(Atom "lambda") ; List([ param ]) ; exp ]) -> 
+                    raise (Internal_Exn ("TODO: Add support to parsing lambda expression: "^ (to_string_hum exp)))        
              | _ -> raise (Internal_Exn ("Unable to deserialize value: "
-                                        ^ (to_string_hum sexp)))
-  in Value.of_string vstr
+                                        ^ (to_string_hum sexp))) *)
+  (* in Value.of_string sexp *)
 
 
 

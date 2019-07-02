@@ -53,7 +53,7 @@ let rec remove_lets : Sexp.t -> Sexp.t = function
 
 let rec extract_consts : Sexp.t -> Value.t list = function
   | List [] -> []
-  | (Atom a) | List [Atom a] -> (try [ Value.of_string a ] with _ -> [])
+  | (Atom a) | List [Atom a] -> (try [ Value.of_atomic_string a ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
@@ -62,8 +62,8 @@ let parse_variable_declaration : Sexp.t -> var = function
   | List [ Atom v ; Atom t ] ->  (v, (Type.of_string t))
   | List([Atom(v) ; List([Atom(t) ; Atom(t2); Atom(t3)])]) ->                                  
                                 (v, (Type.of_string (t^" "^t2^" "^t3))) 
-  (* | List([Atom(v) ; List([Atom(t) ; Atom(t2); List(arrval)])]) ->                                  
-                                (v, (Type.of_string (t^" "^t2^" "^(Sexp.to_string_hum arrval))))                                                                                                                *)
+  | List([Atom(v) ; List([Atom(t) ; Atom(t2); List(arrval)])]) ->                                  
+                                raise (Parse_Exn ("TODO: Need to modify the parse to support nested array types"))
   | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun : Sexp.t list -> func * Value.t list = function

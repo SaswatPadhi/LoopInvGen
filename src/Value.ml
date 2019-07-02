@@ -32,8 +32,8 @@ let to_string : t -> string = function
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
   | Array (_, _)   -> raise (Internal_Exn "Array type (de/)serialization not implemented!")
 
-let of_string (s : string) : t =
-  try
+let of_atomic_string (s : string) : t =
+  try    
     Int (Int.of_string s)
   with Failure _ -> try
     Bool (Bool.of_string s)
@@ -44,3 +44,25 @@ let of_string (s : string) : t =
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
+
+let rec parse_ite (acc: (t*t) list) (sexp: Sexp.t) : t = 
+let open Sexp in 
+match sexp with  
+  |Atom v ->         
+        Array (acc, (of_atomic_string v))
+  | List([Atom("ite");index;Atom(v);default])  ->                       
+                      match index with 
+                          | List([ _; _; Atom(v)]) ->                                     
+                                    Array (acc, (parse_ite ([((of_atomic_string v),(of_atomic_string v))]@acc) default)) 
+                          |  List([ _; _; List([(Atom "-") ; (Atom v)])]) ->                                    
+                                    Array (acc, (parse_ite ([((of_atomic_string ("-" ^ v)),(of_atomic_string v))]@acc) default))                       
+  | List ([]) -> Array ([],(Int 0))
+
+let rec of_string (sexp: Sexp.t) : t =  
+  let open Sexp in    
+  match sexp with
+      | Atom v -> (of_atomic_string v)
+      | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))      
+      | List([(Atom "lambda") ; List([ param ]) ; exp ]) ->  (parse_ite [] exp)      
+      | _ -> raise (Internal_Exn ("Unable to deserialize value: "
+                                ^ (to_string_hum sexp)))
