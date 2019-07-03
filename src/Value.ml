@@ -24,13 +24,17 @@ let rec typeof : t -> Type.t = function
   | Array  ((k,v) :: _, _) -> Type.ARRAY ((typeof k),(typeof v))
   | Array  ([], _) -> raise (Internal_Exn "Empty array not implemented!")
 
-let to_string : t -> string = function
+let rec to_string : t -> string = function
   | Int i    -> Int.to_string i
   | Bool b   -> Bool.to_string b
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
-  | Array (_, _)   -> raise (Internal_Exn "Array type (de/)serialization not implemented!")
+  | Array (value, default_v)   ->                                                         
+                            "\n["^                                                                                                    
+                            List.fold_left ~f:(fun arr elem -> match elem with 
+                            | (key,value) -> arr ^ " ( "^ (to_string key) ^","^ (to_string value) ^" ) ") ~init:" " value                  
+                            ^ "| " ^ (to_string default_v) ^ "]\n"                                                
 
 let of_atomic_string (s : string) : t =
   try    
@@ -52,10 +56,10 @@ match sexp with
         Array (acc, (of_atomic_string v))
   | List([Atom("ite");index;Atom(v);default])  ->                       
                       match index with 
-                          | List([ _; _; Atom(v)]) ->                                     
-                                    Array (acc, (parse_ite ([((of_atomic_string v),(of_atomic_string v))]@acc) default)) 
-                          |  List([ _; _; List([(Atom "-") ; (Atom v)])]) ->                                    
-                                    Array (acc, (parse_ite ([((of_atomic_string ("-" ^ v)),(of_atomic_string v))]@acc) default))                       
+                          | List([ _; _; Atom(ind)]) ->                                     
+                                    Array (acc, (parse_ite ([((of_atomic_string ind),(of_atomic_string v))]@acc) default)) 
+                          |  List([ _; _; List([(Atom "-") ; (Atom ind)])]) ->                                    
+                                    Array (acc, (parse_ite ([((of_atomic_string ("-" ^ ind)),(of_atomic_string v))]@acc) default))                       
   | List ([]) -> Array ([],(Int 0))
 
 let rec of_string (sexp: Sexp.t) : t =  
@@ -63,6 +67,7 @@ let rec of_string (sexp: Sexp.t) : t =
   match sexp with
       | Atom v -> (of_atomic_string v)
       | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))      
-      | List([(Atom "lambda") ; List([ param ]) ; exp ]) ->  (parse_ite [] exp)      
+      | List([(Atom "lambda") ; List([ param ]) ; exp ]) ->  
+                                                            (parse_ite [] exp)
       | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                 ^ (to_string_hum sexp)))

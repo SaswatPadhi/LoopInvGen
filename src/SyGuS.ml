@@ -52,7 +52,7 @@ let rec remove_lets : Sexp.t -> Sexp.t = function
   | List l -> List (List.map l ~f:remove_lets)
 
 let rec extract_consts : Sexp.t -> Value.t list = function
-  | List [] -> []
+  | List [] -> []  
   | (Atom a) | List [Atom a] -> (try [ Value.of_atomic_string a ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)

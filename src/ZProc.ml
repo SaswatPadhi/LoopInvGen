@@ -78,7 +78,7 @@ let close_scope (z3 : t) : unit =
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =  
-  print_list db;
+  (* print_list db; *)
   if queries = []
   then begin
     if not scoped && db <> [] then
@@ -111,10 +111,13 @@ let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t =
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =  
   let open Sexp in  
-  print_string "\nz3_sexp_to_value\n";
-  print_string (to_string_hum sexp);  
+  (* print_string "\nz3_sexp_to_value\n"; *)
+  (* print_string (to_string_hum sexp);   *)
   match sexp with   
   | _ -> Value.of_string sexp
+  
+  (* print_string (Value.to_string (Value.of_string sexp)); *)
+          (* (Int 1) *)
   (* let vstr = match sexp with
              | Atom v -> v
              | List([(Atom "-") ; (Atom v)]) -> "-" ^ v   
@@ -129,7 +132,7 @@ let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
 let z3_result_to_model (result : string list) : model option =  
   let open Sexp in
   try [@warning "-8"]    
-  print_list result;
+  (* print_list result; *)
   match result with
   | "unsat" :: _ -> None
   | [ "sat" ; _ ; result ]
