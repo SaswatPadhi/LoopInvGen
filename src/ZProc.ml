@@ -115,6 +115,8 @@ let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   (* print_string (to_string_hum sexp);   *)
   match sexp with   
   | _ -> Value.of_string sexp
+  (* print_string (Value.to_string (Value.of_string sexp)); *)
+        (* (Int 1) *)
   
   (* print_string (Value.to_string (Value.of_string sexp)); *)
           (* (Int 1) *)

@@ -6,25 +6,24 @@ type t = INT
        | CHAR
        | STRING
        | LIST
-       | ARRAY of (t * t)
+       | ARRAY of (t * t)       
        [@@deriving sexp]
 
-let rec of_string : string -> t = function
+let of_atomic_string (s:string) : t = 
+  match s with 
   | "Int"    -> INT
   | "Bool"   -> BOOL
   | "Char"   -> CHAR
   | "String" -> STRING
-  | "List"   -> LIST   
-  | s -> 
-        match (String.split s ~on:' ') with
-        | ["Array";index;value] -> ARRAY ((of_string index), (of_string value))
-        | _ ->raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
-        (* ARRAY (of_string (String.concat (" " index))),(of_string (String.concat (" " value))) *)
-  (* | s  -> match Str.split (Str.regexp " ") s with 
-                | ["Array";index;value] -> ARRAY ((of_string index),(of_string value))                                
-                 *)
-  (* | "Array" -> ARRAY ((of_string "Int"),(of_string "Int")) *)
-  (* | s -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`.")) *)
+  | "List"   -> LIST    
+  | _ -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))  
+
+let rec of_string (sexp: Sexp.t) : t =          
+  match sexp with
+    | Sexp.(Atom v) -> (of_atomic_string v)                  
+    | Sexp.(List ([Atom("Array");index;value])) -> ARRAY ((of_string (index)),(of_string (value)))
+    | _ -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum sexp) ^ "`."))  
+    
 
 let rec to_string : t -> string = function
   | INT    -> "Int"

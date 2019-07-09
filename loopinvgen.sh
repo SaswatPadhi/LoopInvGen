@@ -52,8 +52,8 @@ VERIFY_ARGS=""
 declare -A DO_LOG
 DO_LOG[process]="yes"
 DO_LOG[record]="yes"
-DO_LOG[infer]=""
-DO_LOG[verify]=""
+DO_LOG[infer]="yes"
+DO_LOG[verify]="yes"
 
 STATS_ARG=""
 DO_CLEAN="no"
@@ -207,7 +207,7 @@ show_status "(processsing)"
 $PROCESS -o "$TESTCASE_PROCESSED" ${DO_LOG[process]} $PROCESS_ARGS "$TESTCASE" > "$TESTCASE_INVARIANT"
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
 
-exit 1
+# exit 1
 
 if [ -s "$TESTCASE_INVARIANT" ]; then
   INFER_RESULT_CODE=0

@@ -31,10 +31,18 @@ let rec to_string : t -> string = function
   | String s -> "\"" ^ s ^ "\""
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
   | Array (value, default_v)   ->                                                         
-                            "\n["^                                                                                                    
+                            (* "\n["^                                                                                                    
                             List.fold_left ~f:(fun arr elem -> match elem with 
                             | (key,value) -> arr ^ " ( "^ (to_string key) ^","^ (to_string value) ^" ) ") ~init:" " value                  
-                            ^ "| " ^ (to_string default_v) ^ "]\n"                                                
+                            ^ "|" ^ (to_string default_v) ^ "]\n"                                                 *)                            
+                            "(lambda ((x!1 _)) "^                                                                                                    
+                            List.fold_left ~f:(fun arr elem -> match elem with 
+                            | (key,value) -> arr ^ " (ite (= x!1 "^ (to_string key) ^") "^ (to_string value) ^" ") ~init:" " value                              
+                            ^ " " ^ (to_string default_v) ^
+                            List.fold_left ~f:(fun arr elem -> match elem with 
+                            | (key,value) -> arr ^ ")") ~init:" " value
+                            ^ ")"                                            
+                                                                            
 
 let of_atomic_string (s : string) : t =
   try    
@@ -49,18 +57,21 @@ let of_atomic_string (s : string) : t =
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
 
-let rec parse_ite (acc: (t*t) list) (sexp: Sexp.t) : t = 
+let rec parse_ite (acc: (t*t) list) (sexp: Sexp.t) : (t*t) list *t = 
 let open Sexp in 
-match sexp with  
-  |Atom v ->         
-        Array (acc, (of_atomic_string v))
-  | List([Atom("ite");index;Atom(v);default])  ->                       
-                      match index with 
-                          | List([ _; _; Atom(ind)]) ->                                     
-                                    Array (acc, (parse_ite ([((of_atomic_string ind),(of_atomic_string v))]@acc) default)) 
-                          |  List([ _; _; List([(Atom "-") ; (Atom ind)])]) ->                                    
-                                    Array (acc, (parse_ite ([((of_atomic_string ("-" ^ ind)),(of_atomic_string v))]@acc) default))                       
-  | List ([]) -> Array ([],(Int 0))
+match sexp with    
+|Atom v ->         
+        (acc, (of_atomic_string v))
+| List([Atom("ite");index;Atom(v);default])  ->                       
+                  match index with 
+                      | List([ _; _; Atom(ind)]) ->                                                                      
+                                (parse_ite (acc@[((of_atomic_string ind),(of_atomic_string v))]) default)                                                                                                         
+                    |  List([ _; _; List([(Atom "-") ; (Atom ind)])]) ->                                    
+                                (parse_ite (acc@[((of_atomic_string ("-" ^ ind)),(of_atomic_string v))]) default)  
+                          | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
+  | List ([]) -> ([],(Int 0))
+  | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
+    
 
 let rec of_string (sexp: Sexp.t) : t =  
   let open Sexp in    
@@ -68,6 +79,7 @@ let rec of_string (sexp: Sexp.t) : t =
       | Atom v -> (of_atomic_string v)
       | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))      
       | List([(Atom "lambda") ; List([ param ]) ; exp ]) ->  
-                                                            (parse_ite [] exp)
+                                                          (let arr,def = (parse_ite [] exp) in
+                                                              Array (arr, def))
       | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                 ^ (to_string_hum sexp)))
