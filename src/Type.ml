@@ -7,7 +7,7 @@ type t = INT
        | STRING
        | LIST
        | ARRAY of (t * t)       
-       [@@deriving sexp]
+       [@@deriving compare,sexp]
 
 let of_atomic_string (s:string) : t = 
   match s with 

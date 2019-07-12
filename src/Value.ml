@@ -8,7 +8,7 @@ module T = struct
          | Char of char
          | String of string
          | List of t list
-         | Array of (t * t) list * t
+         | Array of Type.t * Type.t * (t * t) list * t
          [@@deriving compare,sexp]
 end
 
@@ -21,8 +21,8 @@ let rec typeof : t -> Type.t = function
   | Char _   -> Type.CHAR
   | String _ -> Type.STRING
   | List _   -> Type.LIST  
-  | Array  ((k,v) :: _, _) -> Type.ARRAY ((typeof k),(typeof v))
-  | Array  ([], _) -> raise (Internal_Exn "Empty array not implemented!")
+  | Array  (key_type, value_type, _, _) -> Type.ARRAY (key_type,value_type)
+  (* | Array  ([], _) -> raise (Internal_Exn "Empty array not implemented!") *)
 
 let rec to_string : t -> string = function
   | Int i    -> Int.to_string i
@@ -30,19 +30,10 @@ let rec to_string : t -> string = function
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
-  | Array (value, default_v)   ->                                                         
-                            (* "\n["^                                                                                                    
-                            List.fold_left ~f:(fun arr elem -> match elem with 
-                            | (key,value) -> arr ^ " ( "^ (to_string key) ^","^ (to_string value) ^" ) ") ~init:" " value                  
-                            ^ "|" ^ (to_string default_v) ^ "]\n"                                                 *)                            
-                            "(lambda ((x!1 _)) "^                                                                                                    
-                            List.fold_left ~f:(fun arr elem -> match elem with 
-                            | (key,value) -> arr ^ " (ite (= x!1 "^ (to_string key) ^") "^ (to_string value) ^" ") ~init:" " value                              
-                            ^ " " ^ (to_string default_v) ^
-                            List.fold_left ~f:(fun arr elem -> match elem with 
-                            | (key,value) -> arr ^ ")") ~init:" " value
-                            ^ ")"                                            
-                                                                            
+  | Array (key_type, val_type, value, default_v)   ->                                                          
+                            (let default_string = "((as const (Array "^ (Type.to_string key_type) ^" "^ (Type.to_string val_type) ^")) "^ (to_string default_v) ^") " in
+                              List.fold_left ~f:(fun arr elem -> match elem with                             
+                              | (key,value) -> "(store "^arr^ (to_string key)^ " "^(to_string value) ^")") ~init:default_string value)                                                                            
 
 let of_atomic_string (s : string) : t =
   try    
@@ -56,30 +47,22 @@ let of_atomic_string (s : string) : t =
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
-
-let rec parse_ite (acc: (t*t) list) (sexp: Sexp.t) : (t*t) list *t = 
-let open Sexp in 
-match sexp with    
-|Atom v ->         
-        (acc, (of_atomic_string v))
-| List([Atom("ite");index;Atom(v);default])  ->                       
-                  match index with 
-                      | List([ _; _; Atom(ind)]) ->                                                                      
-                                (parse_ite (acc@[((of_atomic_string ind),(of_atomic_string v))]) default)                                                                                                         
-                    |  List([ _; _; List([(Atom "-") ; (Atom ind)])]) ->                                    
-                                (parse_ite (acc@[((of_atomic_string ("-" ^ ind)),(of_atomic_string v))]) default)  
-                          | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
-  | List ([]) -> ([],(Int 0))
-  | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
     
+let rec parse_array (acc: (t*t) list) (sexp: Sexp.t) : Type.t * Type.t * (t*t) list *t =
+let open Sexp in 
+match sexp with 
+| List([List([ Atom "as"; Atom "const"; List([Atom "Array";key_type;val_type])]); Atom def_val]) -> ((Type.of_string key_type),(Type.of_string val_type),acc, (of_atomic_string def_val))
+| List([Atom "store"; remaining_arr; Atom key; Atom value]) -> (parse_array (acc@[((of_atomic_string key),(of_atomic_string value))]) remaining_arr) 
+| _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
 
 let rec of_string (sexp: Sexp.t) : t =  
   let open Sexp in    
   match sexp with
       | Atom v -> (of_atomic_string v)
-      | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))      
-      | List([(Atom "lambda") ; List([ param ]) ; exp ]) ->  
-                                                          (let arr,def = (parse_ite [] exp) in
-                                                              Array (arr, def))
+      | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))
+      | List([List([ Atom "as"; Atom "const"; _ ]); _]) -> (let key_type, val_type, arr,def_val = (parse_array [] sexp) in                                                                
+                                                                Array ((key_type) , (val_type) ,arr, def_val))
+      | List([Atom "store";_;_;_])  -> (let key_type, val_type, arr,def_val = (parse_array [] sexp) in                                                                
+                                                Array ((key_type) , (val_type) ,arr, def_val))      
       | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                 ^ (to_string_hum sexp)))
