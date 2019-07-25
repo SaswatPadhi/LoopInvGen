@@ -16,24 +16,31 @@ let rec print_list = function
 [] -> ()
 | e::l -> print_string e ; print_string " " ; print_list l
 
-
+  
+let write_to_z3_query_file str is_append =
+  let filename = "smt_queries.smt2" in (
+  let outc =Out_channel.create ~append:is_append filename in
+  protect ~f:(fun ()->fprintf outc "%s\n" str)
+  ~finally:(fun() ->Out_channel.close outc))
+  
 let query_for_model ?(eval_term = "true") () =
   [ "(check-sat)"
     (* forces z3 to generate complete models over variables in `eval_term` *)
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
-let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
+let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =    
   let open Unix in
-  let open Process_info in
+  let open Process_info in  
   let pi = create_process ~prog:zpath ~args:["-in";"-smt2"] in
   let z3 = {
     procid = pi.pid ;
-    stdin  = out_channel_of_descr pi.stdin ;
+    stdin  = out_channel_of_descr pi.stdin ; 
     stdout = in_channel_of_descr pi.stdout ;
     stderr = in_channel_of_descr pi.stdout ;
   } in Log.debug (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
-     ; Out_channel.output_lines z3.stdin init_options
+     ;write_to_z3_query_file (String.concat ~sep:"\n" init_options) false
+     ;Out_channel.output_lines z3.stdin init_options
      ; (match random_seed with
         | None -> ()
         | Some seed -> Out_channel.output_lines z3.stdin [
@@ -41,7 +48,15 @@ let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
                          "(set-option :smt.phase_selection 5)" ;
                          "(set-option :smt.arith.random_initial_value true)" ;
                          "(set-option :smt.random_seed " ^ seed ^ ")"
-                       ])
+                       ];
+
+                       write_to_z3_query_file (String.concat ~sep:"\n" [
+                        "(set-option :auto_config false)" ;
+                        "(set-option :smt.phase_selection 5)" ;
+                        "(set-option :smt.arith.random_initial_value true)" ;
+                        "(set-option :smt.random_seed " ^ seed ^ ")"
+                      ]) true
+          )
      ; z3
 
 let close z3 =
@@ -70,20 +85,22 @@ let flush_and_collect (z3 : t) : string =
 let create_scope ?(db = []) (z3 : t) : unit =
   Log.debug (lazy (String.concat ("Created z3 scope." :: db)
                                  ~sep:(Log.indented_sep 4))) ;
+  write_to_z3_query_file (String.concat ~sep:"\n" ("(push)" :: db)) true;
   Out_channel.output_lines z3.stdin ("(push)" :: db)
 
 let close_scope (z3 : t) : unit =
   Log.debug (lazy ("Closed z3 scope.")) ;
+  write_to_z3_query_file ("(pop)\n") true;
   Out_channel.output_string z3.stdin "(pop)\n"
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
-                : string list =  
-  (* print_list db; *)
+                : string list =      
   if queries = []
   then begin
     if not scoped && db <> [] then
       begin
         Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
+        ;write_to_z3_query_file (String.concat ~sep:" " db) true
       ; Out_channel.output_lines z3.stdin db
       end ; []
     end
@@ -92,9 +109,12 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
      in (if scoped then create_scope z3 else ())
       ; Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
                            ~sep:(Log.indented_sep 4)))
+      ; write_to_z3_query_file (String.concat ~sep:" " db) true
       ; Out_channel.output_lines z3.stdin db
       ; Log.debug (lazy "Results:")
       ; List.iter queries ~f:(fun q ->
+          write_to_z3_query_file q true;
+          write_to_z3_query_file "\n" true;
           Out_channel.output_string z3.stdin q ;
           Out_channel.newline z3.stdin ;
           results := (flush_and_collect z3) :: (!results))
@@ -110,26 +130,20 @@ let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t =
                               
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =  
-  let open Sexp in  
-  (* print_string "\nz3_sexp_to_value\n"; *)
-  (* print_string (to_string_hum sexp);   *)
+  let open Sexp in    
   match sexp with   
   | _ -> Value.of_string sexp
   (* print_string (Value.to_string (Value.of_string sexp)); *)
-        (* (Int 1) *)
-  
-  (* print_string (Value.to_string (Value.of_string sexp)); *)
-          (* (Int 1) *)
-  (* let vstr = match sexp with
-             | Atom v -> v
-             | List([(Atom "-") ; (Atom v)]) -> "-" ^ v   
-             | List([(Atom "lambda") ; List([ param ]) ; exp ]) -> 
-                    raise (Internal_Exn ("TODO: Add support to parsing lambda expression: "^ (to_string_hum exp)))        
-             | _ -> raise (Internal_Exn ("Unable to deserialize value: "
-                                        ^ (to_string_hum sexp))) *)
-  (* in Value.of_string sexp *)
-
-
+        (* (Int 1) *)  
+        
+let contains_string s1 s2 =
+  try
+    let len = String.length s2 in
+    for i = 0 to String.length s1 - len do
+      if String.sub s1 i len = s2 then raise Exit
+    done;
+    false
+  with Exit -> true
 
 let z3_result_to_model (result : string list) : model option =  
   let open Sexp in
@@ -149,19 +163,20 @@ let z3_result_to_model (result : string list) : model option =
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
-          ; raise e
+          ; (if (contains_string (String.concat ~sep:"\n" result) "named expression")=true then (exit 0;) else raise e)
 
+  
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =  
   z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
-                                (a : string) (b : string) : model option =
-  sat_model_for_asserts z3 ~eval_term
-                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)
+                                (a : string) (b : string) : model option =    
+  sat_model_for_asserts z3 ~eval_term   
+                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)                                               
 
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
-                                (a : string) (b : string) : model option =
+                                (a : string) (b : string) : model option =    
   sat_model_for_asserts z3 ~eval_term
     ~db:(("(assert (not (and (=> " ^ a ^ " " ^ b ^ ") (=> " ^ b ^ " " ^ a ^ "))))") :: db)
 
@@ -170,7 +185,7 @@ let simplify (z3 : t) (q : string) : string =
   let goal =
     match
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
-                  ["(apply (repeat (then purify-arith simplify ctx-simplify ctx-solver-simplify)))"]
+                  ["(apply (repeat (then simplify ctx-simplify ctx-solver-simplify)))"]
     with [ goal ] -> goal
        | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n" ^ (String.concat ~sep:"\n" goals)))
   in match Sexp.parse goal with
@@ -206,9 +221,8 @@ let model_to_constraint ?(negate=false) ?(ignore_primed=false) (model : model) :
  ^ (if negate then "))" else ")")
 
 let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) ?(run = fun _ -> ()) (z3 : t)
-                   : model list =  
-  let query = query_for_model ~eval_term ()  
-  
+                   : model list =    
+  let query = query_for_model ~eval_term ()    
    in create_scope z3
     ; ignore (run_queries ~scoped:false z3 ~db [])
     ; let rec helper accum = function

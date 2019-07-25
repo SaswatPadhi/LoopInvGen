@@ -172,6 +172,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let char_candidates = empty_candidates () in
   let string_candidates = empty_candidates () in
   let list_candidates = empty_candidates () in
+  let array_candidates = empty_candidates () in
 
   let typed_candidates = function
     | Type.INT -> int_candidates
@@ -179,7 +180,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     | Type.CHAR -> char_candidates
     | Type.STRING -> string_candidates
     | Type.LIST -> list_candidates
-    | Type.ARRAY (_,_) -> raise (Parse_Exn ("Have not implemented list of candidates for arrays"))
+    | Type.ARRAY (_,_) -> array_candidates
   in
 
   let seen_outputs = ref (Set.empty (module Output)) in

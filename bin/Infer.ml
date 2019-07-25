@@ -55,6 +55,10 @@ let config_flags =
     }
   ]
 
+let rec print_t_list = function 
+[] -> ()
+| e::l -> print_string (Value.to_string e) ; print_string " " ; print_t_list l
+
 let command =
   let open Command.Let_syntax in
   Async.Command.async
@@ -76,7 +80,7 @@ let command =
         let states = List.(permute
           ~random_state:(Random.State.make [| 79 ; 97 |])
           (map (Stdio.In_channel.input_lines states_chan)
-              ~f:(fun l -> map (String.split ~on:'\t' l) ~f:Value.of_string)))
+              ~f:(fun l -> map (map ~f:(fun x -> (Sexp.of_string x)) (String.split ~on:'\t' l)) ~f:Value.of_string)))
         in Stdio.In_channel.close states_chan
           ; Log.debug (lazy ("Loaded " ^ (Int.to_string (List.length states)) ^ " states."))
           ; let sygus = SyGuS.read_from sygus_path in
@@ -99,7 +103,7 @@ let command =
             in Out_channel.output_string Stdio.stdout
                   SyGuS.(func_definition { sygus.inv_func with body = (translate_smtlib_expr inv) })
               ; output_stats stats report_path
-              ; Async.Deferred.return ()
+              ; Async.Deferred.return ()            
       end
     ]
 

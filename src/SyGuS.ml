@@ -30,26 +30,7 @@ type t = {
   synth_variables : var list ;
 }
 
-let replace bindings expr =
-  if bindings = [] then expr else
-  let table = ref (String.Map.empty)
-   in List.iter bindings
-                ~f:(function [@warning "-8"]
-                    | List [ (Atom key) ; data ]      (* SMTLIB *)
-                    | List [ (Atom key) ; _ ; data ]  (* SyGuS *)
-                    -> table := String.Map.add_exn !table ~key ~data)
-    ; let rec helper = function
-        | List l -> List (List.map l ~f:helper)
-        | Atom atom -> match String.Map.find !table atom with
-                       | None      -> Atom atom
-                       | Some data -> data
-       in helper expr
-
-let rec remove_lets : Sexp.t -> Sexp.t = function
-  | Atom _ as atom -> atom
-  | List [ (Atom "let") ; List bindings ; body ]
-    -> replace bindings (remove_lets body)
-  | List l -> List (List.map l ~f:remove_lets)
+  
 
 let rec extract_consts : Sexp.t -> Value.t list = function
   | List [] -> []  
@@ -138,7 +119,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
     ; if String.equal !logic ""
-      then (logic := "LIA" ; Log.debug (lazy ("Using default logic: LIA")))
+      then (logic := "ALIA" ; Log.debug (lazy ("Using default logic: ALIA")))
     ; { constants = !consts
       ; functions = List.rev !funcs
       ; logic = !logic
@@ -159,7 +140,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
 let parse (chan : Stdio.In_channel.t) : t =
   parse_sexps (Sexplib.Sexp.input_sexps chan)
 
-let write_to (filename : string) (sygus : t) : unit =
+let write_to (filename : string) (sygus : t) : unit =  
   let out_chan = Stdio.Out_channel.create filename
    in Caml.Marshal.to_channel out_chan sygus []
     ; Stdio.Out_channel.close out_chan

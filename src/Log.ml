@@ -24,7 +24,9 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
 
   let is_enabled = ref false
   let do_log ~tags level lstr =
-    if !is_enabled then Log.string !logger ~tags ~level (Lazy.force lstr)
+    let open Core
+     in prerr_endline (Lazy.force lstr)
+    (* if !is_enabled then Log.string !logger ~tags ~level (Lazy.force lstr) *)
 
   let error ?(tags = []) lstr = do_log ~tags `Error lstr
   let info ?(tags = []) lstr = do_log ~tags `Info lstr

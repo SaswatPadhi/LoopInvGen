@@ -30,13 +30,15 @@ let all_supported =
            |] ;
            sample_set_size_multiplier = 8
          } ; {
-          name = "ALIA" ;
-          components_per_level = [|
-            (BooleanComponents.all @ IntegerComponents.equality @ ArrayComponents.all) ;
-            (BooleanComponents.all @ IntegerComponents.intervals) ;
-            (BooleanComponents.all @ IntegerComponents.octagons) ;
-            (BooleanComponents.all @ IntegerComponents.polyhedra) ;
-          |] ;
+           name = "ALIA" ;
+           components_per_level = [|
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.equality) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.intervals) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.octagons) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.polyhedra) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.polynomials) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.peano) ;
+            |] ;
           sample_set_size_multiplier = 1
         }]
     ; table

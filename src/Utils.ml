@@ -40,3 +40,23 @@ let get_in_channel = function
   | "-"      -> Stdio.In_channel.stdin
   | filename -> Stdio.In_channel.create filename
 
+let replace bindings expr =    
+  if bindings = [] then expr else
+  let table = ref (String.Map.empty)
+    in List.iter bindings
+                ~f:(function [@warning "-8"]
+                    | Sexp.List [ (Atom key) ; data ]      (* SMTLIB *)
+                    | Sexp.List [ (Atom key) ; _ ; data ]  (* SyGuS *)
+                    -> table := String.Map.add_exn !table ~key ~data)
+    ; let rec helper = function
+        | Sexp.List l -> Sexp.List (List.map l ~f:helper)
+        | Atom atom -> match String.Map.find !table atom with
+                        | None      -> Atom atom
+                        | Some data -> data
+        in helper expr
+
+let rec remove_lets : Sexp.t -> Sexp.t = function  
+  | Atom _ as atom -> atom
+  | List [ (Atom "let") ; List bindings ; body ]
+    -> replace bindings (remove_lets body)
+  | List l -> List (List.map l ~f:remove_lets)
