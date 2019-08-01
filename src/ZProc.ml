@@ -100,7 +100,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
     if not scoped && db <> [] then
       begin
         Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
-        ;write_to_z3_query_file (String.concat ~sep:" " db) true
+        ;write_to_z3_query_file (String.concat ~sep:"\n" db) true
       ; Out_channel.output_lines z3.stdin db
       end ; []
     end
@@ -109,7 +109,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
      in (if scoped then create_scope z3 else ())
       ; Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
                            ~sep:(Log.indented_sep 4)))
-      ; write_to_z3_query_file (String.concat ~sep:" " db) true
+      ; write_to_z3_query_file (String.concat ~sep:"\n" db) true
       ; Out_channel.output_lines z3.stdin db
       ; Log.debug (lazy "Results:")
       ; List.iter queries ~f:(fun q ->
@@ -145,26 +145,34 @@ let contains_string s1 s2 =
     false
   with Exit -> true
 
-let z3_result_to_model (result : string list) : model option =  
+(* let z3_result_to_model (result : string list) : model option =
+  let intermediate_result = z3_result_to_model_helper result
+   in  *)
+
+let z3_result_to_model (result : string list) : model option =
   let open Sexp in
-  try [@warning "-8"]    
-  (* print_list result; *)
+  try [@warning "-8"]
   match result with
   | "unsat" :: _ -> None
   | [ "sat" ; _ ; result ]
     -> begin match Sexp.parse result with
         | Done (List((Atom _) :: varexps), _)
           -> let open List in
-            Some (map varexps ~f:(
+            Some (filter_map varexps ~f:(
               function
               | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                            in (n, (z3_sexp_to_value v))))
+                            in match v with
+                               | List [ _ ; Atom "as-array" ; func_name]
+                                 -> let Some val_sexp = List.find_map varexps ~f:(function List l -> let name, value = (nth_exn l 1), (nth_exn l 4)
+                                                                                                      in if Sexp.equal func_name name then Some value else None)
+                                     in Some (n, (Value.parse_array [] val_sexp))
+                               | _ -> try Some (n, (z3_sexp_to_value v))
+                                      with _ -> None))
       end
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
-          ; (if (contains_string (String.concat ~sep:"\n" result) "named expression")=true then (exit 0;) else raise e)
-
+          ; raise e
   
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =  
@@ -216,13 +224,13 @@ let model_to_constraint ?(negate=false) ?(ignore_primed=false) (model : model) :
    (if negate then "(not (and " else "(and ")
  ^ (List.filter_map model ~f:(fun (n, v) -> if ignore_primed && String.is_suffix n ~suffix:"!"
                                             then None
-                                            else Some ("(= " ^ n ^ " " ^ (Value.to_string v) ^ ")"))
+                                            else Some ("(= " ^ n ^ " " ^ (Value.to_string v) ^ ")")) 
       |> String.concat ~sep:" ")
  ^ (if negate then "))" else ")")
 
 let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) ?(run = fun _ -> ()) (z3 : t)
-                   : model list =    
-  let query = query_for_model ~eval_term ()    
+                   : model list =
+  let query = query_for_model ~eval_term ()
    in create_scope z3
     ; ignore (run_queries ~scoped:false z3 ~db [])
     ; let rec helper accum = function

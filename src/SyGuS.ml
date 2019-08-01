@@ -65,7 +65,7 @@ let func_definition (f : func) : string =
   ^ ") " ^ (Type.to_string f.return) ^ " " ^ f.body ^ ")"
 
 let var_declaration ((var_name, var_type) : var) : string =
-  "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
+  "(declare-const " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
 let parse_sexps (sexps : Sexp.t list) : t =  
   let logic : string ref = ref "" in

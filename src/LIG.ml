@@ -19,7 +19,7 @@ module Config = struct
 
     base_random_seed = "LoopInvGen" ;
     max_steps_on_restart = 256 ;
-    model_completion_mode = `RandomGeneration ;
+    model_completion_mode = `UsingZ3 ;
   }
 end
 

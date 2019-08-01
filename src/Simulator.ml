@@ -33,7 +33,7 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : Value.t list)
                : Value.t list option Quickcheck.Generator.t =
   gen_state_from_model s (
     try begin
-      match ZProc.sat_model_for_asserts z3
+      match ZProc.sat_model_for_asserts z3 ~eval_term:s.trans_func.body
               ~db:[ ("(assert " ^ s.trans_func.body ^ ")")
                   ; ( "(assert (and "
                     ^ (Utils.List.to_string_map2 ~sep:" " vals s.synth_variables
@@ -47,7 +47,7 @@ let gen_pre_state ?(use_trans = false) (s : SyGuS.t) (z3 : ZProc.t)
                   : Value.t list option Quickcheck.Generator.t =
   Log.info (lazy "Generating an initial state:");
   gen_state_from_model s
-    (ZProc.sat_model_for_asserts z3
+    (ZProc.sat_model_for_asserts z3 ~eval_term:s.trans_func.body
           ~db:[ "(assert (and " ^ s.pre_func.body ^ " "
               ^ (if use_trans then s.trans_func.body else "true") ^ "))" ])
 
