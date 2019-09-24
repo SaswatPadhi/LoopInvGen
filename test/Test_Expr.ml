@@ -14,7 +14,7 @@ let mock_store_component = {
   global_constraints = (fun _ -> []);
 }
 
-let unify_component_test () =
+let unify_success () =
   let arg_types = [ Type.ARRAY (Type.STRING,Type.INT) ; Type.STRING ] in
   let res = match unify_component mock_store_component arg_types with
     | None -> false
@@ -23,6 +23,12 @@ let unify_component_test () =
       && (List.equal Type.equal unified_comp.domain [Type.ARRAY (Type.STRING, Type.INT) ; Type.STRING])
    in Alcotest.(check bool) "identical" true res
 
+let unify_failure () =
+  let arg_types = [ Type.ARRAY (Type.STRING,Type.INT) ; Type.INT ] in
+  let res = unify_component mock_store_component arg_types
+   in Alcotest.(check bool) "identical" true (Option.is_none res)
+
 let all = [
-  "Component unification", `Quick, unify_component_test ;
+  "Successful unification",   `Quick, unify_success ;
+  "Unsuccessful unification", `Quick, unify_failure ;
 ]

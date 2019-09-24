@@ -7,7 +7,7 @@ module T = struct
          | Bool of bool
          | Char of char
          | String of string
-         | List of t list
+         | List of Type.t * t list
          | Array of Type.t * Type.t * (t * t) list * t
            (* FIXME: Use HashTable instead of List *)
          [@@deriving compare,sexp]
@@ -16,13 +16,14 @@ end
 include T
 include Comparable.Make (T)
 
-let typeof : t -> Type.t = function
-  | Int _    -> Type.INT
-  | Bool _   -> Type.BOOL
-  | Char _   -> Type.CHAR
-  | String _ -> Type.STRING
-  | List _   -> Type.LIST
-  | Array  (key_type, value_type, _, _) -> Type.ARRAY (key_type,value_type)
+let rec typeof : t -> Type.t = function
+  | Int _         -> Type.INT
+  | Bool _        -> Type.BOOL
+  | Char _        -> Type.CHAR
+  | String _      -> Type.STRING
+  | List (typ, _) -> Type.LIST typ
+  | Array (key_type, value_type, _, _)
+    -> Type.ARRAY (key_type,value_type)
 
 let rec to_string : t -> string = function
   | Int i    -> Int.to_string i
@@ -30,10 +31,10 @@ let rec to_string : t -> string = function
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
-  | Array (key_type, val_type, value, default_v) ->
-                            (let default_string = "((as const (Array "^ (Type.to_string key_type) ^" "^ (Type.to_string val_type) ^")) "^ (to_string default_v) ^")" in
-                              List.fold_left ~f:(fun arr elem -> match elem with
-                              | (key,value) -> "(store " ^ arr ^ " " ^ (to_string key)^ " "^(to_string value) ^")") ~init:default_string value)
+  | Array (key_type, val_type, value, default_v)
+    -> let default_string = "((as const (Array " ^ (Type.to_string key_type) ^ " " ^ (Type.to_string val_type) ^ ")) " ^ (to_string default_v) ^ ")"
+        in List.fold_left ~init:default_string value
+                          ~f:(fun arr -> function (k,v) -> "(store " ^ arr ^ " " ^ (to_string k) ^ " " ^ (to_string v) ^ ")")
 
 let of_atomic_string (s : string) : t =
   try
