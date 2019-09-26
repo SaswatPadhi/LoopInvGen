@@ -145,10 +145,6 @@ let contains_string s1 s2 =
     false
   with Exit -> true
 
-(* let z3_result_to_model (result : string list) : model option =
-  let intermediate_result = z3_result_to_model_helper result
-   in  *)
-
 let z3_result_to_model (result : string list) : model option =
   let open Sexp in
   try [@warning "-8"]
@@ -158,16 +154,10 @@ let z3_result_to_model (result : string list) : model option =
     -> begin match Sexp.parse result with
         | Done (List((Atom _) :: varexps), _)
           -> let open List in
-            Some (filter_map varexps ~f:(
+            Some (map varexps ~f:(
               function
               | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                            in match v with
-                               | List [ _ ; Atom "as-array" ; func_name]
-                                 -> let Some val_sexp = List.find_map varexps ~f:(function List l -> let name, value = (nth_exn l 1), (nth_exn l 4)
-                                                                                                      in if Sexp.equal func_name name then Some value else None)
-                                     in Some (n, (Value.parse_array [] val_sexp))
-                               | _ -> try Some (n, (z3_sexp_to_value v))
-                                      with _ -> None))
+                            in (n, (z3_sexp_to_value v))))
       end
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)

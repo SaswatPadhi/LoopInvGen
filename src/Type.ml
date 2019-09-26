@@ -6,7 +6,8 @@ type t = INT
        | CHAR
        | STRING
        | LIST
-       | ARRAY of (t * t)       
+       | TVAR of string
+       | ARRAY of (t * t)
        [@@deriving compare,sexp]
 
 let of_atomic_string (s:string) : t = 
@@ -15,14 +16,14 @@ let of_atomic_string (s:string) : t =
   | "Bool"   -> BOOL
   | "Char"   -> CHAR
   | "String" -> STRING
-  | "List"   -> LIST    
+  | "List"   -> LIST
   | _ -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))  
 
-let rec of_string (sexp: Sexp.t) : t =          
+let rec of_string (sexp: Sexp.t) : t =
   match sexp with
-    | Sexp.(Atom v) -> (of_atomic_string v)                  
+    | Sexp.(Atom v) -> (of_atomic_string v)
     | Sexp.(List ([Atom("Array");index;value])) -> ARRAY ((of_string (index)),(of_string (value)))
-    | _ -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum sexp) ^ "`."))  
+    | _ -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum sexp) ^ "`."))
     
 
 let rec to_string : t -> string = function
@@ -31,4 +32,5 @@ let rec to_string : t -> string = function
   | CHAR   -> "Char"
   | STRING -> "String"
   | LIST   -> "List"
+  | TVAR (a)    -> a
   | ARRAY (a,b) -> "(Array" ^ " " ^(to_string a) ^ " " ^ (to_string b) ^ ")"

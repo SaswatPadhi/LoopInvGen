@@ -5,13 +5,13 @@ open Expr
 let all = [
   {
     name = "select";
-    codomain = Type.INT;
-    domain = [Type.ARRAY (Type.INT,Type.INT); Type.INT];
+    codomain = Type.TVAR ("'b");
+    domain = [Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b"); Type.TVAR "'a"];
     is_argument_valid = (function
                          | _ -> true);
     evaluate = (function [@warning "-8"]
-                [Value.Array (_, _, elems, default_val) ; Value.Int key]
-                -> match List.Assoc.find elems ~equal:Value.equal (Value.Int key) with
+                [Value.Array (_, _, elems, default_val) ; key]
+                -> match List.Assoc.find elems ~equal:Value.equal key with
                    | None -> default_val
                    | Some value -> value);
     to_string = (fun [@warning "-8"] [a ; b] -> "(select " ^ a ^ " " ^ b ^ ")");
@@ -19,11 +19,11 @@ let all = [
   };
   {
     name = "store";
-    codomain = Type.ARRAY (Type.INT,Type.INT);
-    domain = [Type.ARRAY (Type.INT,Type.INT); Type.INT; Type.INT];
+    codomain = Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b");
+    domain = [Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b"); Type.TVAR "'a"; Type.TVAR "'b"];
     is_argument_valid = (function
                          | _ -> true);
-    evaluate = (function [@warning "-8"] [Value.Array (key_type, val_type, elems, default_val) ; Value.Int key; Value.Int value] -> Value.Array (key_type,val_type, (Value.Int key, Value.Int value)::elems,default_val));
+    evaluate = (function [@warning "-8"] [Value.Array (key_type, val_type, elems, default_val) ; key; value] -> Value.Array (key_type,val_type, (key, value)::elems,default_val));
     to_string = (fun [@warning "-8"] [a ; b ; c] -> "(store " ^ a ^ " " ^ b ^ " " ^ c ^")");
     global_constraints = (fun _ -> [])
   }
