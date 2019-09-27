@@ -3,10 +3,23 @@ open Type
 open Exceptions
 
 
+let rec find_typ (typ : t) (env: (string * t) list) =
+  match typ with
+  | TVAR name -> begin match List.find ~f:(fun (id,value) -> (if String.equal id name then true else false)) env with
+                       | Some (_,value) -> value
+                       | None -> raise (Internal_Exn "Problem with substitution")
+                       | _ -> raise (Internal_Exn "Problem with substitution")
+                 end
+  | Type.ARRAY (key,value) -> Type.ARRAY((find_typ key env), (find_typ value env))
+  | _ -> typ
+
+let apply_env (env: (string * t) list) (typ : t): t option =
+   try Some (find_typ typ env) with _ -> None
+
 let rec unifyvar (var : string) (rhs : t) (env: (string * t) list) =
   match List.Assoc.find env ~equal:String.equal var with
   | None ->
-          (match rhs with 
+          (match rhs with
             | TVAR var_rhs ->
             (match List.Assoc.find env ~equal:String.equal var_rhs with
                           | None -> List.fold ((var,rhs)::env) ~init:[] ~f:(fun acc elem -> (resolve elem ((var,rhs)::env))::acc)

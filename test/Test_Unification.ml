@@ -24,8 +24,28 @@ let unify_incorrect_self () =
   let res = is_unifiable domain1 domain2
 in Alcotest.(check bool) "cannot unify" false res
 
+let apply_env_correct () =
+  let env = [("a",INT);("b",INT)] in
+  let codomain = ARRAY((TVAR "a"),(TVAR "b")) in
+  let applied_codomain = ARRAY(INT,INT) in
+  let res = match (apply_env env codomain) with
+            | Some res -> (Poly.equal res applied_codomain)
+            | None -> false
+in Alcotest.(check bool) "correct application of env" true res
+
+let apply_env_incorrect () =
+  let env = [("a",INT)] in
+  let codomain = ARRAY((TVAR "a"),(TVAR "b")) in
+  let applied_codomain = ARRAY (INT ,INT) in
+  let res = match (apply_env env codomain) with
+            | Some res -> (Poly.equal res applied_codomain)
+            | None -> false
+in Alcotest.(check bool) "incorrect application of env" false res
+
 let all = [
   "'a and 'b unifies",        `Quick, unify_correct ;
   "'a and 'b does not unify",     `Quick, unify_incorrect_circular;
   "'a and 'b does not unify",     `Quick, unify_incorrect_self;
+  "codomain substitution works",    `Quick, apply_env_correct;
+  "codomain substitution does not work",    `Quick, apply_env_incorrect;
 ]

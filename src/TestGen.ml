@@ -14,3 +14,4 @@ let for_type (t : Type.t) : Value.t Generator.t =
                                   >>= fun s -> singleton (Value.String s))
   | Type.LIST -> raise (Exceptions.Internal_Exn "Generators for List type not implemented!")
   | Type.ARRAY (_,_) -> raise (Exceptions.Internal_Exn "Generators for ARRAY type not implemented!")
+  | Type.TVAR _ -> raise (Exceptions.Internal_Exn "Generators for TVAR type not implemented!")

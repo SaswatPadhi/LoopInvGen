@@ -1,6 +1,8 @@
 open Base
 
 open Utils
+open Exceptions
+open TypeUnification
 
 type component = {
   evaluate : Value.t list -> Value.t ;
@@ -65,6 +67,18 @@ type synthesized = {
   expr : t ;
   outputs : Value.t array ;
 } [@@deriving sexp]
+
+let unify_component (comp : component) (args : synthesized list) : component option =
+  let typs = List.map args ~f:(fun s -> Value.typeof s.outputs.(0)) in
+  let env = begin match (unify typs comp.domain) with
+                  | Some res -> res
+                  | None -> raise (Internal_Exn "Cannot unify the given args and domain")
+            end
+  in
+  let new_codomain = match (apply_env env comp.codomain) with
+                     | Some cod -> cod
+                     | None -> raise (Internal_Exn "Cannot substitute for codomain types")
+  in Some {comp with codomain = new_codomain}
 
 let apply (comp : component) (args : synthesized list) : synthesized option =
   if (not (comp.is_argument_valid (List.map args ~f:(fun arg -> arg.expr)))) then None
