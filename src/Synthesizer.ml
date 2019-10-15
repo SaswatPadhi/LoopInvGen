@@ -148,12 +148,18 @@ let subtract ~(from : Expr.component list) (comps : Expr.component list) =
                                        ~equal:(fun c1 c2 -> String.equal c1.name c2.name)))
 
 let solve_impl (config : Config.t) (task : task) (stats : stats) =
-  let typed_components t_type = Array.append
+  let typed_components t_type =
+    let equal_f cod = match cod , t_type with
+      | Type.ARRAY _ , Type.ARRAY _ -> true
+      | Type.TVAR _, _ -> true
+      | cod, t_type -> Poly.equal cod t_type
+    in
+    Array.append
     (Array.create ~len:1 [])
     (Array.mapi (Array.init (Int.min config.max_expressiveness_level (Array.length config.logic.components_per_level))
                             ~f:(fun i -> config.logic.components_per_level.(i)))
                 ~f:(fun level comps
-                    -> List.filter ~f:(fun c -> Poly.equal c.codomain t_type)
+                    -> List.filter ~f:(fun c -> equal_f c.codomain)
                                    (if level < 1 then comps
                                     else subtract ~from:comps (config.logic.components_per_level.(level - 1))))) in
 
@@ -162,6 +168,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let char_components = typed_components Type.CHAR in
   let string_components = typed_components Type.STRING in
   let list_components = typed_components Type.LIST in
+  let poly_array_components = typed_components (Type.ARRAY ((TVAR "_"), (TVAR "_"))) in
 
   let empty_candidates () =
     Array.init ((Array.length config.logic.components_per_level) + 1)
@@ -174,13 +181,18 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let list_candidates = empty_candidates () in
   let array_candidates = empty_candidates () in
 
-  let typed_candidates = function
+  let typed_candidates ?(no_tvar = false) = function
     | Type.INT -> int_candidates
     | Type.BOOL -> bool_candidates
     | Type.CHAR -> char_candidates
     | Type.STRING -> string_candidates
     | Type.LIST -> list_candidates
     | Type.ARRAY (_,_) -> array_candidates
+    | Type.TVAR _ when no_tvar = false -> raise (Internal_Exn "No candidates for TVAR")
+    | Type.TVAR _ -> let (@) = Array.append
+                      in
+                      int_candidates @ array_candidates
+                      (* int_candidates @ bool_candidates @ char_candidates @ string_candidates @ list_candidates @ array_candidates *)
   in
 
   let seen_outputs = ref (Set.empty (module Output)) in
@@ -222,29 +234,45 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
 
   let task_codomain = Value.typeof task.outputs.(1)
    in DList.iter ~f:check (typed_candidates task_codomain).(0).(1)
-  ;
-
-  let apply_component op_level expr_level cost arg_types applier =
-    let rec apply_cells acc types locations =
-      match types, locations with
-      | (typ :: types, (lvl,loc) :: locations)
-        -> DList.iter ~f:(fun x -> apply_cells (x :: acc) types locations)
-                      (typed_candidates typ).(lvl).(loc)
+  ;let apply_component op_level expr_level cost arg_types applier =
+    let rec apply_cells acc arg_types locations =
+      match arg_types , locations with
+      | typ :: arg_types , (lvl,loc) :: locations
+        -> DList.iter ~f:(fun x -> apply_cells (x :: acc) arg_types locations)
+                      (typed_candidates ~no_tvar:true typ).(lvl).(loc)
       | ([], []) -> applier (List.rev acc)
       | _ -> raise (Internal_Exn "Impossible case!")
     in f_divide (apply_cells [] arg_types) (List.length arg_types) op_level expr_level (cost - 1)
   in
-  let expand_component op_level expr_level cost candidates component =
-    let applier args =
+  let expand_component op_level expr_level cost candidates cand_type (component : Expr.component) =
+    let applier (args : Expr.synthesized list) =
+    Log.debug (lazy ( "Unifying domain (" ^ (List.to_string_map ~sep:"," ~f:Type.to_string component.domain)
+                    ^ ") of (" ^ component.name ^ ") with ("
+                    ^ (List.to_string_map ~sep:"," ~f:(fun a -> Expr.to_string (Array.of_list task.arg_names) a.expr) args)
+                    ^ ")"));
       stats.enumerated <- stats.enumerated + 1;
-      match Expr.apply component args with
-      | None -> stats.pruned <- stats.pruned + 1
-      | Some result
-        -> let expr_cost = f_cost result.expr
-            in if expr_cost < config.cost_limit
-               then (if Poly.equal task_codomain component.codomain then check result)
-             ; if not (add_candidate candidates expr_level expr_cost result)
-               then stats.pruned <- stats.pruned + 1
+      let unified_component = begin match (Expr.unify_component component args) with
+                                    |Some comp -> comp
+                                    |None -> raise (Unification_Exn "Cannot unify component")
+                              end
+      in let cod = match unified_component.codomain with
+         | Type.ARRAY (_,_) -> Type.ARRAY((Type.TVAR "a"),(Type.TVAR "b"))
+         | cod -> cod
+      in 
+      Log.debug (lazy("cod is: " ^ (Type.to_string cod) ^ "cand_type is: " ^ (Type.to_string cand_type)));
+        if (Poly.equal cod cand_type) then
+            begin match Expr.apply unified_component args with 
+                  | None -> stats.pruned <- stats.pruned + 1
+                  | Some result
+                    -> let expr_cost = f_cost result.expr
+                        in if expr_cost < config.cost_limit
+                          then (if Poly.equal task_codomain unified_component.codomain then check result)
+                        ; if not (add_candidate candidates expr_level expr_cost result)
+                          then stats.pruned <- stats.pruned + 1
+            end
+        else
+        Log.debug(lazy("The candidate type "^ (Type.to_string cod) ^ " did not match the codomain " ^ (Type.to_string cand_type))); 
+        (* raise (Unification_Exn ("The candidate type "^ (Type.to_string cod) ^ " did not match the codomain " ^ (Type.to_string cand_type))) *)
     in apply_component op_level expr_level cost component.domain applier
   in
   let ordered_level_cost =
@@ -274,10 +302,10 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
          ; seen_level_cost := (Set.add !seen_level_cost (level, cost))
          ; List.iter (List.range 1 ~stop:`inclusive level)
              ~f:(fun l -> List.iter2_exn
-                            [bool_candidates ; int_candidates ; char_candidates ; string_candidates ; list_candidates]
-                            [bool_components.(l) ; int_components.(l) ; char_components.(l) ; string_components.(l) ; list_components.(l)]
-                            ~f:(fun cands comps
-                                -> List.iter comps ~f:(expand_component l level cost cands))))
+                            [(Type.BOOL, bool_candidates) ; (Type.INT, int_candidates) ; (Type.CHAR, char_candidates) ; (Type.STRING, string_candidates) ; (Type.LIST, list_candidates); (Type.ARRAY ((Type.TVAR "a"), (Type.TVAR "b")), array_candidates)]
+                            [bool_components.(l) ; int_components.(l) ; char_components.(l) ; string_components.(l) ; list_components.(l); poly_array_components.(l)]
+                            ~f:(fun (cand_type, cands) comps
+                                -> List.iter comps ~f:(expand_component l level cost cands cand_type))))
 
 let solve ?(config = Config.default) (task : task) : result =
   Log.debug (lazy ("Running enumerative synthesis:"));

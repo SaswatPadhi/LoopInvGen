@@ -122,20 +122,20 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
       ; List.rev (!results)
   end
 
-let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t = 
+let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t =
   let open Sexp in 
   match sexp with 
   | _ -> raise (Internal_Exn ("Unable to deserialize lamda: "
                               ^ (to_string_hum sexp)))
                               
 
-let z3_sexp_to_value (sexp : Sexp.t) : Value.t =  
-  let open Sexp in    
-  match sexp with   
+let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
+  let open Sexp in
+  match sexp with
   | _ -> Value.of_string sexp
   (* print_string (Value.to_string (Value.of_string sexp)); *)
-        (* (Int 1) *)  
-        
+        (* (Int 1) *)
+
 let contains_string s1 s2 =
   try
     let len = String.length s2 in
@@ -154,10 +154,20 @@ let z3_result_to_model (result : string list) : model option =
     -> begin match Sexp.parse result with
         | Done (List((Atom _) :: varexps), _)
           -> let open List in
-            Some (map varexps ~f:(
+            Some (filter_map varexps ~f:(
               function
               | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                            in (n, (z3_sexp_to_value v))))
+                            in match v with
+                               | List [ _ ; Atom "as-array" ; func_name]
+                                 -> let Some (sexp, param, val_type) = List.find_map varexps ~f:(function List l -> (let name, key_type_repr, val_type, value
+                                                                                                     = (nth_exn l 1), (nth_exn l 2), (nth_exn l 3), (nth_exn l 4)
+                                                                                                     in if Sexp.equal func_name name
+                                                                                                     then (Some (value, key_type_repr, val_type))
+                                                                                                     else None))
+                                     in Some (n, (Value.parse_named_array sexp param val_type))
+                               | _ -> try Some (n, (z3_sexp_to_value v))
+                                      with _ -> None))
+                            (* in (n, (z3_sexp_to_value v)))) *)
       end
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)

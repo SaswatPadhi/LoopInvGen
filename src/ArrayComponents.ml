@@ -5,8 +5,8 @@ open Expr
 let all = [
   {
     name = "select";
-    codomain = Type.TVAR ("'b");
-    domain = [Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b"); Type.TVAR "'a"];
+    codomain = Type.TVAR ("b");
+    domain = [Type.ARRAY (Type.TVAR "a", Type.TVAR "b"); Type.TVAR "a"];
     is_argument_valid = (function
                          | _ -> true);
     evaluate = (function [@warning "-8"]
@@ -16,7 +16,8 @@ let all = [
                    | Some value -> value);
     to_string = (fun [@warning "-8"] [a ; b] -> "(select " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
-  };
+  }
+  ;
   {
     name = "store";
     codomain = Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b");
