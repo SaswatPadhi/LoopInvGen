@@ -3,7 +3,7 @@ open Core_kernel
 open Utils
 
 module Config = struct
-  let base_additional_counterexamples = 2
+  let base_additional_counterexamples = 31
 
   type 'a t = {
     _PIE : PIE.Config.t ;
@@ -21,7 +21,7 @@ module Config = struct
     num_counterexamples = base_additional_counterexamples ;
     base_random_seed = "VPIE" ;
     describe = PIE.cnf_opt_to_desc ;
-    max_attempts = 2 ;
+    max_attempts = 512 ;
     do_simplify = true ;
   }
 end

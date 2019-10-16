@@ -10,14 +10,14 @@ type t = INT
        | ARRAY of (t * t)
        [@@deriving compare,sexp]
 
-let of_atomic_string (s:string) : t = 
+let of_atomic_string (s:string) : t =
   match s with 
   | "Int"    -> INT
   | "Bool"   -> BOOL
   | "Char"   -> CHAR
   | "String" -> STRING
   | "List"   -> LIST
-  | _ -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))  
+  | _ -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
 
 let rec of_string (sexp: Sexp.t) : t =
   match sexp with

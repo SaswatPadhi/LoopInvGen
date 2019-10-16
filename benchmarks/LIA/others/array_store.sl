@@ -6,7 +6,7 @@
 (declare-primed-var n Int)
 
 (define-fun pre_fun ((x (Array Int Int)) (i Int) (n Int)) Bool
-(and (= i 0) (= n 1)))
+(and (= i 0) (= n 3)))
 
 
 (define-fun trans_fun ((x (Array Int Int)) (i Int) (n Int) (x! (Array Int Int)) (i! Int) (n! Int)) Bool
