@@ -83,7 +83,10 @@ let optimize (sygus : t) : t =
       = let data = String.Table.find_exn call_table fname
          in List.filter_mapi data.caller.args ~f:(fun i v -> if Bitarray.get data.used_args i then Some v else None)
   in let ts_funcs = toposort_funcs sygus.post_func.name call_table
-  in Log.debug (lazy ("Initial synth variables: " ^ (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
+  in Log.debug (lazy ("Initial synth variables (" ^
+                      (Int.to_string (List.length sygus.synth_variables)) ^
+                      "): " ^
+                      (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
    ; Log.debug (lazy ("Topological sort of functions: " ^ (String.concat ~sep:"; " ts_funcs)))
    ; List.(iter (rev ts_funcs) ~f:(update_used_args call_table))
    ; Log.debug (lazy (String.Table.fold call_table ~init:"Used function arguments:"
@@ -101,5 +104,8 @@ let optimize (sygus : t) : t =
                                                                      | Some v' -> (v', t)))
                                        @ (get_used_vars sygus.post_func.name))
                  }
-      in Log.debug (lazy ("Reduced synth variables: " ^ (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
+      in Log.debug (lazy ("Reduced synth variables (" ^
+                          (Int.to_string (List.length sygus.synth_variables)) ^
+                          "): " ^
+                          (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
        ; sygus
