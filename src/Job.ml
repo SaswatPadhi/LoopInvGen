@@ -3,6 +3,16 @@ open Core_kernel
 open Exceptions
 open Utils
 
+module Config = struct
+  type t = {
+    promote_bool_vars_to_features : bool
+  }
+
+  let default : t = {
+    promote_bool_vars_to_features = true
+  }
+end
+
 type desc = string
 type 'a feature = 'a -> bool
 type 'a with_desc = 'a * desc
@@ -29,13 +39,18 @@ let compute_feature_vector (test : 'a) (features : 'a feature with_desc list)
   List.map ~f:(compute_feature_value test) features
 [@@inline always]
 
-let create ~f ~args ~post ?(features = []) ?(pos_tests = []) ?(neg_tests = []) () : t =
-  { f ; post ; features
-  ; farg_names = List.map args ~f:fst
-  ; farg_types = List.map args ~f:snd
-  ; pos_tests = List.map pos_tests ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
-  ; neg_tests = List.map neg_tests ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
-  }
+let create ?(config = Config.default) ~f ~args ?(features = []) ?(pos_tests = []) ?(neg_tests = []) post : t =
+  let features =
+      if not config.promote_bool_vars_to_features then features
+      else (List.filter_mapi args ~f:(fun i (v,t) -> if t <> Type.BOOL then None
+                                                     else Some ((fun ts -> (List.nth_exn ts i) = Value.Bool true), v)))
+         @ features
+   in { f ; post ; features
+      ; farg_names = List.map args ~f:fst
+      ; farg_types = List.map args ~f:snd
+      ; pos_tests = List.map pos_tests ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
+      ; neg_tests = List.map neg_tests ~f:(fun t -> (t, lazy (compute_feature_vector t features)))
+      }
 
 let split_tests ~f ~post tests =
   List.fold ~init:([],[]) tests
@@ -44,10 +59,10 @@ let split_tests ~f ~post tests =
                          with IgnoreTest -> (l1, l2)
                             | _ -> (l1, t :: l2))
 
-let create_unlabeled ~f ~args ~post ?(features = []) tests : t =
+let create_unlabeled ?(config = Config.default) ~f ~args ?(features = []) ?(tests = []) post : t =
   let tests = List.dedup_and_sort ~compare:(List.compare Value.compare) tests in
   let (pos_tests, neg_tests) = split_tests tests ~f ~post
-   in create ~f ~args ~post ~features ~pos_tests ~neg_tests ()
+   in create ~config ~f ~args ~features ~pos_tests ~neg_tests post
 
 let add_pos_test ~(job : t) (test : Value.t list) : t =
   if List.exists job.pos_tests ~f:(fun (pt, _) -> pt = test)

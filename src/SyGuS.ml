@@ -27,6 +27,7 @@ type t = {
   constants : Value.t list ;
   functions : func list ;
   variables : var list ;
+
   synth_variables : var list ;
 }
 

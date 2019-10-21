@@ -1,11 +1,8 @@
 open Core_kernel
-open Sexplib
 
 open Exceptions
 open SyGuS
 open Utils
-
-module Bitarray = Bitarray
 
 (* * *
  * Optimization / Simplification of a SyGuS-INV problem:
@@ -42,7 +39,7 @@ let make_call_table (sygus : t) : func_info String.Table.t =
       in List.iter sygus.functions ~f:(fun func -> String.Table.set table ~key:func.name ~data:(init_info func))
        ; List.iter sygus.functions ~f:(fun func ->
            let parsed_expr = Parsexp.Single.parse_string_exn func.body in
-           let ops =  extract_operators parsed_expr in
+           let ops = extract_operators parsed_expr in
            let callees = List.filter ops ~f:(fun op -> String.Table.find table op <> None)
             in String.Table.update table func.name
                                    ~f:(fun [@warning "-8"] (Some data) -> {data with callees ; parsed_expr}))
@@ -95,17 +92,15 @@ let optimize (sygus : t) : t =
                                                    (List.filter_mapi data.caller.args
                                                       ~f:(fun i (v, _) -> if Bitarray.get data.used_args i
                                                                           then Some v else None))))))
-   ; let sygus = { sygus with
-                   synth_variables = List.dedup_and_sort ~compare:Poly.compare
-                                       ((get_used_vars sygus.pre_func.name)
-                                       @ (List.map (get_used_vars sygus.trans_func.name)
-                                                   ~f:(fun (v, t) -> match String.chop_suffix ~suffix:"!" v with
-                                                                     | None -> (v, t)
-                                                                     | Some v' -> (v', t)))
-                                       @ (get_used_vars sygus.post_func.name))
-                 }
+   ; let synth_variables = List.dedup_and_sort ~compare:Poly.compare
+                             ( (get_used_vars sygus.pre_func.name)
+                             @ (List.map (get_used_vars sygus.trans_func.name)
+                                         ~f:(fun (v, t) -> match String.chop_suffix ~suffix:"!" v with
+                                                           | None -> (v, t)
+                                                           | Some v' -> (v', t)))
+                             @ (get_used_vars sygus.post_func.name))
       in Log.debug (lazy ("Reduced synth variables (" ^
-                          (Int.to_string (List.length sygus.synth_variables)) ^
+                          (Int.to_string (List.length synth_variables)) ^
                           "): " ^
-                          (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
-       ; sygus
+                          (List.to_string_map synth_variables ~sep:"; " ~f:fst)))
+       ; { sygus with synth_variables }
