@@ -10,6 +10,7 @@ module Config = struct
     cost_limit : int ;
     cost_attribute : cost_attr ;
     cost_function : int -> int -> float ;
+    ignore_bool_variables : bool ;
     logic : Logic.t ;
     max_expressiveness_level : int ;
   }
@@ -18,6 +19,7 @@ module Config = struct
     cost_limit = 25 ;
     cost_attribute = Size ;
     cost_function = (fun g_cost e_cost -> (Int.to_float e_cost) *. (Float.log (Int.to_float g_cost))) ;
+    ignore_bool_variables = true ;
     logic = Logic.of_string "LIA" ;
     max_expressiveness_level = 4 ;
   }
@@ -204,8 +206,10 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   ;
 
   List.iteri task.inputs ~f:(fun i input ->
-    ignore (add_candidate (typed_candidates (Value.typeof input.(1))) 0 1
-                          { expr = Expr.Var i ; outputs = input }))
+    let vtype = Value.typeof input.(1)
+     in if config.ignore_bool_variables && vtype = Type.BOOL then ()
+        else ignore (add_candidate (typed_candidates vtype) 0 1
+                                   { expr = Expr.Var i ; outputs = input }))
   ;
 
   let f_cost = match config.cost_attribute with Height -> Expr.height | Size -> Expr.size in

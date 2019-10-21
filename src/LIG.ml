@@ -5,6 +5,7 @@ open Utils
 
 module Config = struct
   type 'a t = {
+    _Job : Job.Config.t ;
     _VPIE : 'a VPIE.Config.t ;
 
     base_random_seed : string ;
@@ -14,6 +15,7 @@ module Config = struct
   }
 
   let default : 'a t = {
+    _Job = Job.Config.default ;
     _VPIE = {
       VPIE.Config.default with do_simplify = false ;
     } ;
@@ -56,7 +58,8 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
      ; let pre_inv, vpie_stats =
          VPIE.learnVPreCond ~z3 ~eval_term
            ~config:config._VPIE ~consts:sygus.constants ~post_desc:invf'_call
-           (Job.create ()
+           (Job.create
+              ~config:config._Job
               ~pos_tests:states
               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
@@ -64,7 +67,7 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
               ~features: (List.map ~f:(fun (_, name) -> ( (ZProc.build_feature name z3)
                                                         , ("(" ^ name ^ " " ^ all_state_vars ^ ")")))
                                    config.user_features)
-              ~post:(fun _ res -> res = Ok (Value.Bool false)))
+              (fun _ res -> res = Ok (Value.Bool false)))
         in ZProc.close_scope z3
          ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
          ; if String.equal pre_inv "true"
@@ -113,21 +116,22 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
             ~post_desc:sygus.post_func.body
             ~eval_term:(if not (config.model_completion_mode = `UsingZ3)
                         then "true" else sygus.post_func.body)
-          (Job.create ()
-              ~pos_tests:states
-               ~f:(ZProc.constraint_sat_function
-                     (if String.is_prefix sygus.post_func.body ~prefix:"("
-                      then ("(not " ^ sygus.post_func.body ^ ")")
-                      else ("(not (" ^ sygus.post_func.body ^ "))"))
-                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
-               ~args: sygus.synth_variables
-               ~post: (fun _ res -> res = Ok (Value.Bool false)))
+          (Job.create
+             ~config:config._Job
+             ~pos_tests:states
+             ~f:(ZProc.constraint_sat_function
+                   (if String.is_prefix sygus.post_func.body ~prefix:"("
+                    then ("(not " ^ sygus.post_func.body ^ ")")
+                    else ("(not (" ^ sygus.post_func.body ^ "))"))
+                   ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
+             ~args:sygus.synth_variables
+             (fun _ res -> res = Ok (Value.Bool false)))
          in stats.lig_time_ms <- stats.lig_time_ms +. vpie_stats.vpi_time_ms
           ; stats.lig_ce <- stats.lig_ce + vpie_stats.vpi_ce
           ; stats._VPIE <- vpie_stats :: stats._VPIE
           ; ZProc.close_scope z3
           ; ((ZProc.implication_counter_example z3 sygus.pre_func.body inv), inv)
-      end
+    end
   ) with Some ce, _
          -> restart_with_new_states
                (random_value ~seed:(`Deterministic seed_string)
