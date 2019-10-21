@@ -67,28 +67,28 @@ show_status() {
 usage() {
   if [ -n "$1" ]; then echo -e "\nERROR: $1" >&2 ; fi
   echo -en "
-Usage: $0 [options] <benchmark.sl>
+Usage: $0 [options] <path/to/benchmark.sl>
 
 Flags:
     [--clean-intermediates, -c]
     [--verify, -v]
 
 Parameters:
-    [--expressiveness-level, -L <int>]              ($EXPRESSIVENESS_LEVEL)\t\t    {1 = Eq .. 4 = Polyhedra .. 6 = Peano}
-    [--max-states-per-fork,  -s <count>]            ($RECORD_STATES_PER_FORK)\t    {> $MIN_RECORD_STATES_PER_FORK}
-    [--infer-timeout,        -t <seconds>]          ($INFER_TIMEOUT)\t    {> $MIN_INFER_TIMEOUT}
+    [--expressiveness-level, -L <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--max-states-per-fork,  -s <count>]           ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
+    [--infer-timeout,        -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
 
 Configuration:
-    [--intermediates-dir,    -i <path>]             (_log)
-    [--log,                  -l <src>[,<src>...]]   ()\t\t    src <- {process|record|infer|verify}
-    [--stats-file,           -S <path>]             ()
-    [--z3-exe-path,          -z <path>]             (_dep/z3)
+    [--intermediates-dir,    -i <path>]            (_log)
+    [--log,                  -l <src>[,<src>...]]  ()\t\tsrc <- {process|record|infer|verify}
+    [--stats-file,           -S <path>]            ()
+    [--z3-exe-path,          -z <path>]            (_dep/z3)
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
-    [--Process-args,         -P \"<args>\"]           see \``basename "$PROCESS"` -h\` for details
-    [--Record-args,          -R \"<args>\"]           see \``basename "$RECORD"` -h\` for details
-    [--Infer-args,           -I \"<args>\"]           see \``basename "$INFER"` -h\` for details
-    [--Verify-args,          -V \"<args>\"]           see \``basename "$VERIFY"` -h\` for details
+    [--Process-args,         -P \"<args>\"]          see \``basename "$PROCESS"` -h\` for details
+    [--Record-args,          -R \"<args>\"]          see \``basename "$RECORD"` -h\` for details
+    [--Infer-args,           -I \"<args>\"]          see \``basename "$INFER"` -h\` for details
+    [--Verify-args,          -V \"<args>\"]          see \``basename "$VERIFY"` -h\` for details
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 

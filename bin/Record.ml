@@ -4,7 +4,7 @@ open LoopInvGen
 
 let command =
   let open Command.Let_syntax in
-  Async.Command.async
+  Command.basic
     ~summary: "Record program states for a given SyGuS-INV benchmark."
     [%map_open
       let z3_path       = flag "z3-path" (required string)
@@ -19,14 +19,13 @@ let command =
       in fun () ->
         Log.enable ~msg:"RECORD" log_path ;
         let sygus = SyGuS.read_from sygus_path
-        in begin if states_count < 1 then ()
-                 else Simulator.record_states sygus ~zpath:z3_path ~size:states_count
-                        ~state_chan:Stdio.Out_channel.stdout
-                        ~seed:(match random_seed with
-                               | None -> `Nondeterministic
-                               | Some seed -> `Deterministic seed)
-           end
-         ; Async.Deferred.return ()
+         in begin if states_count < 1 then ()
+                  else Simulator.record_states sygus ~zpath:z3_path ~size:states_count
+                         ~state_chan:Stdio.Out_channel.stdout
+                         ~seed:(match random_seed with
+                                | None -> `Nondeterministic
+                                | Some seed -> `Deterministic seed)
+            end
     ]
 
 let () =

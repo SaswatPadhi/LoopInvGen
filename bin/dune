@@ -11,8 +11,7 @@
                     lig-verify
                     lig-score
     )
-    (libraries      async
-                    core
+    (libraries      core
                     LoopInvGen
     )
     (preprocess

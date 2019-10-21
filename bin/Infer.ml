@@ -57,7 +57,7 @@ let config_flags =
 
 let command =
   let open Command.Let_syntax in
-  Async.Command.async
+  Command.basic
     ~summary: "Infer a loop invariant sufficient for proving the correctness of the input problem."
     [%map_open
       let states_path     = flag "states-path" (required string)
@@ -96,10 +96,10 @@ let command =
               }
             }
             in let inv, stats = LIG.learnInvariant ~config ~zpath:z3_path ~states sygus
-            in Out_channel.output_string Stdio.stdout
-                  SyGuS.(func_definition { sygus.inv_func with body = (translate_smtlib_expr inv) })
-              ; output_stats stats report_path
-              ; Async.Deferred.return ()
+            in Out_channel.output_string
+                 Stdio.stdout
+                 SyGuS.(func_definition { sygus.inv_func with body = (translate_smtlib_expr inv) })
+             ; output_stats stats report_path
       end
     ]
 

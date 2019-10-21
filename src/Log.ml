@@ -1,4 +1,4 @@
-let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
+let indented_sep (indent : int) = "\n" ^ (String.make (45 + indent) ' ')
 
 [%%import "config.h"]
 
@@ -18,25 +18,45 @@ let indented_sep (indent : int) = "\n" ^ (String.make (42 + indent) ' ')
    * during a particular execution. Logging functions therefore accept `lazy`
    * strings that are forced only when they are actually logged. *)
 
-  open Async
+  open Core
 
-  let logger = ref (Log.create ~level:`Error ~output:[] ~on_error:`Raise)
+  type level = Debug | Error | Info
+  let level_str = function Debug -> "( debug )"
+                         | Error -> "< ERROR >"
+                         | Info  -> "(  info )"
+
+  let log_chan = ref stderr
+  let log_level = ref Debug
 
   let is_enabled = ref false
-  let do_log ~tags level lstr =
-    if !is_enabled then Log.string !logger ~tags ~level (Lazy.force lstr)
+  let should_log level =
+    if not !is_enabled then false
+    else match level, !log_level with
+         | Error , _ | Info , Info | _ , Debug -> true
+         | _ -> false
 
-  let error ?(tags = []) lstr = do_log ~tags `Error lstr
-  let info ?(tags = []) lstr = do_log ~tags `Info lstr
-  let debug ?(tags = []) lstr = do_log ~tags `Debug lstr
+  let do_log level lstr =
+    if should_log level
+    then begin
+      Out_channel.fprintf
+        !log_chan
+        "%s  %s  %s\n"
+        Time.(to_string (now ()))
+        (level_str level)
+        (Lazy.force lstr)
+    end
+
+  let info lstr = do_log Info lstr
+  let debug lstr = do_log Debug lstr
+  let error lstr = do_log Error lstr
 
   let disable () = is_enabled := false
 
-  let enable ?(msg = "") ?(level = `Debug) = function
+  let enable ?(msg = "") ?(level = Debug) = function
     | None -> ()
     | Some filename
-      -> logger := Log.create ~level ~output:[ Log.Output.file `Text ~filename ]
-                              ~on_error:(`Call (fun err -> error (lazy (Core.Error.to_string_hum err))))
+      -> log_chan := Out_channel.create ~append:true filename
+       ; log_level := level
        ; is_enabled := true
        ; info (lazy "")
        ; info (lazy (msg ^ String.(make (79 - (length msg)) '=')))
