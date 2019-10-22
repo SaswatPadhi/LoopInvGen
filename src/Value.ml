@@ -49,12 +49,11 @@ let of_atomic_string (s : string) : t =
     
 let rec parse_array (acc: (t*t) list) (sexp: Sexp.t) : Type.t * Type.t * (t*t) list *t =
 match sexp with
-| List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array";key_type;val_type])]); Atom def_val]) -> ((Type.of_string key_type),(Type.of_string val_type),acc, (of_atomic_string def_val))
-| List([Sexp.Atom "store"; rest_of_array; Sexp.Atom key; Sexp.Atom value]) -> (parse_array (acc@[((of_atomic_string key),(of_atomic_string value))]) rest_of_array)
-| List([Sexp.Atom "store"; rest_of_array; Sexp.Atom key; List([(Atom "-") ; (Atom v)])]) -> (parse_array (acc@[((of_atomic_string key),(of_atomic_string ("-" ^ v)))]) rest_of_array)
+| List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array";key_type;val_type])]); def_val]) -> ((Type.of_string key_type),(Type.of_string val_type),acc, (of_string def_val))
+| List([Sexp.Atom "store"; rest_of_array; key; value]) -> (parse_array (acc@[((of_string key),(of_string value))]) rest_of_array)
 | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
 
-let rec parse_ite (acc: (t*t) list) (sexp: Sexp.t): (t*t) list *t =
+and parse_ite (acc: (t*t) list) (sexp: Sexp.t): (t*t) list *t =
   match sexp with
   | List[ Sexp.Atom "ite"; List[ _; _ ; key]; value; rest] -> (parse_ite (acc@[((of_string key),(of_string value))]) (rest))
   | default -> (acc, (of_string default))

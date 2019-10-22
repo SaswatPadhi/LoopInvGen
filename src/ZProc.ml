@@ -12,7 +12,7 @@ type t = {
 
 type model = (string * Value.t) list
 
-let rec print_list = function 
+let rec print_list = function
 [] -> ()
 | e::l -> print_string e ; print_string " " ; print_list l
 
@@ -29,7 +29,7 @@ let query_for_model ?(eval_term = "true") () =
   ; "(eval " ^ eval_term ^ " :completion true)"
   ; "(get-model)" ]
 
-let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =    
+let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let open Unix in
   let open Process_info in  
   let pi = create_process ~prog:zpath ~args:["-in";"-smt2"] in
@@ -133,8 +133,6 @@ let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
   match sexp with
   | _ -> Value.of_string sexp
-  (* print_string (Value.to_string (Value.of_string sexp)); *)
-        (* (Int 1) *)
 
 let contains_string s1 s2 =
   try
@@ -154,19 +152,38 @@ let z3_result_to_model (result : string list) : model option =
     -> begin match Sexp.parse result with
         | Done (List((Atom _) :: varexps), _)
           -> let open List in
-            Some (filter_map varexps ~f:(
-              function
-              | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                            in match v with
-                               | List [ _ ; Atom "as-array" ; func_name]
-                                 -> let Some (sexp, param, val_type) = List.find_map varexps ~f:(function List l -> (let name, key_type_repr, val_type, value
-                                                                                                     = (nth_exn l 1), (nth_exn l 2), (nth_exn l 3), (nth_exn l 4)
-                                                                                                     in if Sexp.equal func_name name
-                                                                                                     then (Some (value, key_type_repr, val_type))
-                                                                                                     else None))
-                                     in Some (n, (Value.parse_named_array sexp param val_type))
-                               | _ -> try Some (n, (z3_sexp_to_value v))
-                                      with _ -> None))
+             let aux_parsed_hash = (String.Table.create ()) in
+             let red_varexps = (filter_map varexps ~f:(
+                                  function List l
+                                    -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
+                                      in match v with
+                                        | List [ _ ; Atom "as-array" ; func_name]
+                                          -> (Hashtbl.set aux_parsed_hash (Sexp.to_string_hum func_name) n);
+                                             None
+                                         | _ -> Some l
+                                ))
+              in
+              Some (map red_varexps ~f: (
+                function l
+                  -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
+                      in match v with
+                        (* | List [ _ ; Atom "as-array" ; func_name]
+                          -> let Some (sexp, param, val_type) = List.find_map varexps ~f:(function List l -> (let name, key_type_repr, val_type, value
+                                                                                                      = (nth_exn l 1), (nth_exn l 2), (nth_exn l 3), (nth_exn l 4)
+                                                                                                      in if Sexp.equal func_name name
+                                                                                                      then ((Hashtbl.set aux_parsed_hash (Sexp.to_string_hum name) true);Some (value, key_type_repr, val_type))
+                                                                                                      else None))
+                              in (n, (Value.parse_named_array sexp param val_type)) *)
+                        | _ -> begin
+                                    let aux_name = (Hashtbl.find aux_parsed_hash n) in
+                                    match aux_name with
+                                    | Some name -> begin
+                                                  let key_type_repr, val_type, value = (nth_exn l 2), (nth_exn l 3), (nth_exn l 4) in
+                                                  (name, (Value.parse_named_array value key_type_repr val_type))
+                                                end
+                                    | None _ -> (n, (z3_sexp_to_value v))
+                               end
+                                ))
                             (* in (n, (z3_sexp_to_value v)))) *)
       end
   with e -> Log.error (lazy ("Error parsing z3 model: "
