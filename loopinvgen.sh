@@ -21,6 +21,8 @@ RECORD="$BIN_DIR/lig-record"
 INFER="$BIN_DIR/lig-infer"
 VERIFY="$BIN_DIR/lig-verify"
 
+INVGAME_FEATURE_PARSER="$BIN_DIR/lig-tools-invgame-feature-parser"
+
 if [ ! -f $PROCESS ] || [ ! -f $RECORD ] || [ ! -f $INFER ] || [ ! -f $VERIFY ]; then
   echo -en "
 One or more dependencies not found. Building OCaml modules ...
@@ -55,7 +57,10 @@ DO_LOG[record]=""
 DO_LOG[infer]=""
 DO_LOG[verify]=""
 
+INVGAME_FEATURES_ARG=""
+FEATURES_ARG=""
 STATS_ARG=""
+
 DO_CLEAN="no"
 DO_VERIFY="no"
 
@@ -74,52 +79,56 @@ Flags:
     [--verify, -v]
 
 Parameters:
-    [--expressiveness-level, -L <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
-    [--max-states-per-fork,  -s <count>]           ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
-    [--infer-timeout,        -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
+    [--expressiveness-level,  -L <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--max-states-per-fork,   -s <count>]           ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
+    [--infer-timeout,         -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
 
 Configuration:
-    [--intermediates-dir,    -i <path>]            (_log)
-    [--log,                  -l <src>[,<src>...]]  ()\t\tsrc <- {process|record|infer|verify}
-    [--stats-file,           -S <path>]            ()
-    [--z3-exe-path,          -z <path>]            (_dep/z3)
+    [--features-path,         -F <path>]            ()
+    [--invgame-features-path, -f <path>]            ()
+    [--intermediates-dir,     -i <path>]            (_log)
+    [--log,                   -l <src>[,<src>...]]  ()\t\tsrc <- {process|record|infer|verify}
+    [--stats-file,            -S <path>]            ()
+    [--z3-exe-path,           -z <path>]            (_dep/z3)
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
-    [--Process-args,         -P \"<args>\"]          see \``basename "$PROCESS"` -h\` for details
-    [--Record-args,          -R \"<args>\"]          see \``basename "$RECORD"` -h\` for details
-    [--Infer-args,           -I \"<args>\"]          see \``basename "$INFER"` -h\` for details
-    [--Verify-args,          -V \"<args>\"]          see \``basename "$VERIFY"` -h\` for details
+    [--Process-args,          -P \"<args>\"]          see \``basename "$PROCESS"` -h\` for details
+    [--Record-args,           -R \"<args>\"]          see \``basename "$RECORD"` -h\` for details
+    [--Infer-args,            -I \"<args>\"]          see \``basename "$INFER"` -h\` for details
+    [--Verify-args,           -V \"<args>\"]          see \``basename "$VERIFY"` -h\` for details
 " >&2 ; exit $EXIT_CODE_USAGE_ERROR
 }
 
 for opt in "$@"; do
   shift
   case "$opt" in
-    "--clean-intermediates")  set -- "$@" "-c" ;;
-    "--verify")               set -- "$@" "-v" ;;
+    "--clean-intermediates")   set -- "$@" "-c" ;;
+    "--verify")                set -- "$@" "-v" ;;
 
-    "--expressiveness-level") set -- "$@" "-L" ;;
-    "--max-states-per-fork")  set -- "$@" "-s" ;;
-    "--infer-timeout")        set -- "$@" "-t" ;;
+    "--expressiveness-level")  set -- "$@" "-L" ;;
+    "--max-states-per-fork")   set -- "$@" "-s" ;;
+    "--infer-timeout")         set -- "$@" "-t" ;;
 
-    "--intermediates-path")   set -- "$@" "-i" ;;
-    "--log")                  set -- "$@" "-l" ;;
-    "--stats-file")           set -- "$@" "-S" ;;
-    "--z3-exe-path")          set -- "$@" "-z" ;;
+    "--features-path")         set -- "$@" "-F" ;;
+    "--invgame-features-path") set -- "$@" "-f" ;;
+    "--intermediates-path")    set -- "$@" "-i" ;;
+    "--log")                   set -- "$@" "-l" ;;
+    "--stats-file")            set -- "$@" "-S" ;;
+    "--z3-exe-path")           set -- "$@" "-z" ;;
 
-    "--Process-args")         set -- "$@" "-P" ;;
-    "--Record-args")          set -- "$@" "-R" ;;
-    "--Infer-args")           set -- "$@" "-I" ;;
-    "--Verify-args")          set -- "$@" "-V" ;;
+    "--Process-args")          set -- "$@" "-P" ;;
+    "--Record-args")           set -- "$@" "-R" ;;
+    "--Infer-args")            set -- "$@" "-I" ;;
+    "--Verify-args")           set -- "$@" "-V" ;;
 
-    "--")                     set -- "$@" "--" ;;
-    "--"*)                    usage "Unrecognized option: $opt." ;;
-    *)                        set -- "$@" "$opt"
+    "--")                      set -- "$@" "--" ;;
+    "--"*)                     usage "Unrecognized option: $opt." ;;
+    *)                         set -- "$@" "$opt"
   esac
 done
 
 OPTIND=1
-while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
+while getopts ':P:R:I:V:cvf:F:l:L:p:s:S:t:z:' OPTION ; do
   case "$OPTION" in
     "c" ) DO_CLEAN="yes" ;;
     "v" ) DO_VERIFY="yes" ;;
@@ -137,6 +146,12 @@ while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
           INFER_TIMEOUT="$OPTARG"
           ;;
 
+    "f" ) [ -f "$OPTARG" ] || usage "InvGame features file [$OPTARG] not found."
+          INVGAME_FEATURES_ARG="$OPTARG"
+          ;;
+    "F" ) [ -f "$OPTARG" ] || usage "Features file [$OPTARG] not found."
+          FEATURES_ARG="$OPTARG"
+          ;;
     "i" ) INTERMEDIATES_DIR="$OPTARG"
           ;;
     "l" ) for LOG_SRC in `echo "$OPTARG" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
@@ -146,9 +161,9 @@ while getopts ':P:R:I:V:cvl:L:p:s:S:t:z:' OPTION ; do
             esac
           done
           ;;
-    "S" ) [ -d "$OPT_ARG" ] && usage "Stats file [$OPT_ARG] is a directory!"
-          [ -f "$OPT_ARG" ] && rm -rf $OPTARG
-          STATS_ARG="-t $OPTARG"
+    "S" ) [ -d "$OPTARG" ] && usage "Stats file [$OPTARG] is a directory!"
+          [ -f "$OPTARG" ] && rm -rf $OPTARG
+          STATS_ARG="-report-path $OPTARG"
           ;;
     "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
           Z3_PATH="$OPTARG"
@@ -175,6 +190,7 @@ TESTCASE="$1"
 TESTCASE_NAME="`basename "$TESTCASE" "$SYGUS_EXT"`"
 TESTCASE_PREFIX="$INTERMEDIATES_DIR/$TESTCASE_NAME"
 
+TESTCASE_FEATURES="$TESTCASE_PREFIX.feat"
 TESTCASE_PROCESSED="$TESTCASE_PREFIX.bin"
 TESTCASE_INVARIANT="$TESTCASE_PREFIX.inv"
 
@@ -191,7 +207,9 @@ VERIFY="$VERIFY -z $Z3_PATH"
 
 INFER_TIMEOUT="${INFER_TIMEOUT}s"
 
-rm -rf "$TESTCASE_REC_STATES"* "$TESTCASE_ALL_STATES" "$TESTCASE_INVARIANT" "$TESTCASE_ALL_LOG"
+rm -rf "$TESTCASE_REC_STATES"* "$TESTCASE_ALL_STATES" \
+       "$TESTCASE_ALL_LOG" "$TESTCASE_INVARIANT"
+echo > "$TESTCASE_FEATURES"
 
 [ -z "${DO_LOG[process]}" ] || DO_LOG[process]="-l $TESTCASE_ALL_LOG"
 [ -z "${DO_LOG[record]}" ] || DO_LOG[record]="-l $TESTCASE_REC_LOG"
@@ -204,7 +222,15 @@ rm -rf "$TESTCASE_REC_STATES"* "$TESTCASE_ALL_STATES" "$TESTCASE_INVARIANT" "$TE
 
 show_status "(processsing)"
 
-$PROCESS -o "$TESTCASE_PROCESSED" ${DO_LOG[process]} $PROCESS_ARGS "$TESTCASE" > "$TESTCASE_INVARIANT"
+(
+  if [ -n "$INVGAME_FEATURES_ARG" ]; then
+    $INVGAME_FEATURE_PARSER "$INVGAME_FEATURES_ARG" | sort -u -o "$TESTCASE_FEATURES"
+  fi
+  cat "$FEATURES_ARG" "$TESTCASE_FEATURES" 2> /dev/null | sort -u -o "$TESTCASE_FEATURES"
+) &
+
+$PROCESS -o "$TESTCASE_PROCESSED" ${DO_LOG[process]} $PROCESS_ARGS \
+         "$TESTCASE" > "$TESTCASE_INVARIANT"
 [ $? == 0 ] || exit $EXIT_CODE_PROCESS_ERROR
 
 if [ -s "$TESTCASE_INVARIANT" ]; then
@@ -228,7 +254,8 @@ else
 
   timeout --foreground $INFER_TIMEOUT \
           $INFER -s "$TESTCASE_ALL_STATES" -max-expressiveness-level "$EXPRESSIVENESS_LEVEL" \
-                 $STATS_ARG ${DO_LOG[infer]} $INFER_ARGS "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+                 -features-path $TESTCASE_FEATURES $STATS_ARG ${DO_LOG[infer]} $INFER_ARGS   \
+                 "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
   INFER_RESULT_CODE=$?
 fi
 

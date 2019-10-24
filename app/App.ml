@@ -1,4 +1,5 @@
 open Core_kernel
+
 open LoopInvGen
 
 let print_PI_results (result, stats) =
@@ -27,9 +28,9 @@ let abs_job = Job.create_unlabeled
    * We generate 64 random Value.Int elements
    * and then wrap them in singleton lists (single arguments to abs). *)
   (List.map ~f:(fun i -> [ i ])
-           Quickcheck.(random_value
-             (Generator.list_with_length 64
-                (TestGen.for_type Type.INT))))
+            Quickcheck.(random_value
+              (Generator.list_with_length 64
+                 (TestGen.for_type Type.INT))))
 
 let with_synth_PI () =
   Stdio.print_endline "PI for { x = abs(x) } with feature learning:" ;

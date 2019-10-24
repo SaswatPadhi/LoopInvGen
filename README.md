@@ -168,6 +168,14 @@ $ ./loopinvgen.sh -t 8 benchmarks/LIA/2016.SyGuS-Comp/array.sl
 
 For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulimit.html).
 
+#### Manually Adding Features
+
+You may use the `-F` flag to preseed LoopInvGen's inference engine
+with custom features (written in SMTLib format).
+```bash
+$ ./loopinvgen.sh -F benchmarks/NIA/2018.CHI_InvGame/~features/s10.some.smt2.input benchmarks/NIA/2018.CHI_InvGame/s10.desugared.sl
+```
+
 <details>
 
 <summary><kbd>CLICK</kbd> for further details</summary>
