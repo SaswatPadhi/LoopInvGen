@@ -6,7 +6,7 @@ let parse (s : string) : string =
 let command =
   let open Command.Let_syntax in
   Command.basic
-    ~summary: "Parses user inputs for InvGame project"
+    ~summary: "Parses predicates written in the InvGame format"
     [%map_open
       let feature_file = anon ("FILENAME" %: string)
        in fun () ->

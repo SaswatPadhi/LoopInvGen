@@ -201,9 +201,9 @@ let collect_models ?(eval_term = "true") ?(db = []) ?(n = 1) ?(init = None) ?(ru
 
 let build_feature (name : string) (z3 : t) (vals : Value.t list) : bool =
   let arguments = List.to_string_map vals ~sep:" " ~f:Value.to_string in
-  let result = run_queries z3 [ "(assert (" ^ name ^ " " ^ arguments ^ "))"
-                              ; "(check-sat)" ]
+  let result = run_queries z3 ~db:["(assert (" ^ name ^ " " ^ arguments ^ "))"]
+                           ["(check-sat)"]
    in match result with
-      | ["sat"] | [_;"sat"] -> true
-      | ["unsat"] | [_;"unsat"] -> false
-      | _ -> raise (Internal_Exn "z3 could not verify the query.")
+      | ["sat"] -> true
+      | ["unsat"] -> false
+      | _ -> raise (Internal_Exn ("Failed to build feature" ^ name ^ "."))
