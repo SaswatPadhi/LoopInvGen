@@ -1,0 +1,4 @@
+(= top.res.abs_4 0)
+(>= top.res.abs_3 0)
+(>= top.res.abs_3 10)
+(>= top.res.abs_3 11)

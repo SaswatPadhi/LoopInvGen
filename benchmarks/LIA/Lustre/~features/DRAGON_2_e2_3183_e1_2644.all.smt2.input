@@ -1,0 +1,1 @@
+(= top.res.abs_0 (+ (* -1 top.res.abs_1) (* -1 top.res.abs_2) (* -1 top.res.abs_3) (* -1 top.res.abs_4) top.res.abs_9))

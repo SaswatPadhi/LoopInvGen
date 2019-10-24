@@ -1,0 +1,6 @@
+(>= top.res.abs_1 0)
+(>= top.res.abs_2 0)
+(>= top.res.abs_0 0)
+(>= top.res.abs_2 4)
+(>= top.res.abs_1 3)
+(>= top.res.abs_0 4)
