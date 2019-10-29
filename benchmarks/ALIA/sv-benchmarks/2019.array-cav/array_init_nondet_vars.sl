@@ -22,13 +22,14 @@
        (= n! n)
        (> k! 0)
        (< k! 10000)
-       (= a! (store a i (+ i j k)))
+       (= a! (store a i (+ i j k!)))
   )
 )
 
 (define-fun post_fun ((a (Array Int Int)) (n Int) (i Int) (j Int) (k Int)) Bool
-  (or (<= i n)
-      (forall ((m Int)) (and (>= m 0) (<= m (* 2 n)) (= 0 (select a m))))
+  (or (< i n)
+      (forall ((m Int)) ( => (and (> m 0) (< m n))
+                             (>= (select a m) (+ m 2))))
   )
 )
 

@@ -19,15 +19,16 @@
        (= n! n)
        (> x! -100000)
        (< x! 100000)
-       (= a! (store a i x))
-       (= b! (store b i (- x)))
+       (= a! (store a i x!))
+       (= b! (store b i (- x!)))
        (= c! (store c i (+ (select a i) (select b i))))
   )
 )
 
 (define-fun post_fun ((a (Array Int Int)) (b (Array Int Int)) (c (Array Int Int)) (x Int) (n Int) (i Int)) Bool
   (or (< i n)
-      (forall ((j Int)) (and (>= j 0) (=> (< j n) (>= (select c j) 0))))
+      (forall ((j Int)) (=> (and (>= j 0) (< j n))
+                            (= (select c j) 0)))
   )
 )
 

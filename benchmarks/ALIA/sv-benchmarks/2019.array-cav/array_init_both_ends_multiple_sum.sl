@@ -5,24 +5,26 @@
 (declare-primed-var a (Array Int Int))
 (declare-primed-var b (Array Int Int))
 (declare-primed-var i Int)
+(declare-primed-var i1 Int)
 (declare-primed-var n Int)
 (declare-primed-var sum Int)
 
-(define-fun pre_fun ((a (Array Int Int)) (b (Array Int Int)) (n Int) (i Int) (sum Int)) Bool
-  (and (>= n 0) (= i 0) (= sum 0) ))
+(define-fun pre_fun ((a (Array Int Int)) (b (Array Int Int)) (n Int) (i Int) (i1 Int) (sum Int)) Bool
+  (and (>= n 0) (= i 0) (= sum 0) (= i1 0)))
 
-(define-fun trans_fun ((a (Array Int Int)) (b (Array Int Int)) (n Int) (i Int) (sum Int) (a! (Array Int Int)) (b! (Array Int Int)) (n! Int) (i! Int) (sum! Int)) Bool
-  (and (< i n)
-       (= i! (+ i 1))
+(define-fun trans_fun ((a (Array Int Int)) (b (Array Int Int)) (n Int) (i Int) (i1 Int) (sum Int) (a! (Array Int Int)) (b! (Array Int Int)) (n! Int) (i! Int) (i1! Int) (sum! Int)) Bool
+  (and (< i1 (* 2 n))
+       (= i1! (+ i1! 1))
        (= n! n)
-       (= a! (store a i i))
-       (= b! (store b (+ n (- i) (- 1)) i))
-       (= sum! (+ sum (- (select a i) (select b (+ n (- i) (- 1))))))
+       (ite (< i1 n)
+                    (and (< i n) (= i! (+ i 1)) (= a! (store a i i)) (= b! (store b (+ n (- i) (- 1)) i)))
+                    (= sum! (+ sum (- (select a (- i1 n)) (select b (+ n (- (- i1 n)) (- 1))))))
+       )
   )
 )
 
-(define-fun post_fun ((a (Array Int Int)) (b (Array Int Int)) (n Int) (i Int) (sum Int)) Bool
-  (or (< i n)
+(define-fun post_fun ((a (Array Int Int)) (b (Array Int Int)) (n Int) (i Int) (i1 Int) (sum Int)) Bool
+  (or (< i1 (* 2 n))
       (= sum 0)
   )
 )
