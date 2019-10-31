@@ -36,7 +36,6 @@ let replace bindings expr =
    in List.iter bindings
                 ~f:(function [@warning "-8"]
                     | List [ (Atom key) ; data ]      (* SMTLIB *)
-                    | List [ (Atom key) ; _ ; data ]  (* SyGuS *)
                     -> table := String.Map.add_exn !table ~key ~data)
     ; let rec helper = function
         | List l -> List (List.map l ~f:helper)
@@ -54,6 +53,7 @@ let rec remove_lets : Sexp.t -> Sexp.t = function
 let rec extract_consts : Sexp.t -> Value.t list = function
   | List [] -> []
   | (Atom a) | List [Atom a] -> (try [ Value.of_string a ] with _ -> [])
+  | List [(Atom op); (Atom a)] | List [List [(Atom op); (Atom a)]] -> (try [ Value.of_string (op^a) ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
@@ -85,6 +85,10 @@ let func_definition (f : func) : string =
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
+let rec gen_variables = function
+  | (_var, _type)::t -> (_var, _type)::(_var ^ "!", _type)::(gen_variables t)
+  | [] -> []
+
 let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in
   let consts : Value.t list ref = ref [] in
@@ -102,32 +106,21 @@ let parse_sexps (sexps : Sexp.t list) : t =
                 -> if String.equal !logic "" then logic := _logic
                    else raise (Parse_Exn ("Logic already set to: " ^ !logic))
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ]
-                -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
+                -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars ; variables := gen_variables !invf_vars
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ; _ ]
                 -> (* FIXME: Custom grammar *) Log.error (lazy ("LoopInvGen currently does not allow custom grammars."))
-                 ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
+                 ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars ; variables := gen_variables !invf_vars
               | List ( (Atom "declare-var") :: sexps )
                 -> let new_var = parse_variable_declaration (List sexps)
                     in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
                        then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
                        else variables := new_var :: !variables
-              | List [ (Atom "declare-fun") ; name ; args ; rtype ]
-                -> if args <> List [] then raise (Parse_Exn "Only nullary function (i.e. variable) declarations supported.") else
-                   let new_var = parse_variable_declaration (List [name ; rtype])
-                    in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
-                       then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
-                       else variables := new_var :: !variables
-              | List ( (Atom "declare-primed-var") :: sexps )
-                -> let _var, _type = parse_variable_declaration (List sexps)
-                    in if List.mem !variables (_var, _type) ~equal:(fun x y -> String.equal (fst x) (fst y))
-                       then raise (Parse_Exn ("Multiple declarations of variable " ^ _var))
-                       else variables := (_var, _type) :: (_var ^ "!", _type) :: !variables
               | List ( (Atom "define-fun") :: func_sexps )
                 -> let (func, fconsts) = parse_define_fun func_sexps
                     in if List.mem !funcs func ~equal:(fun x y -> String.equal x.name y.name)
                        (* FIXME: SyGuS format allows overloaded functions with different signatures *)
                        then raise (Parse_Exn ("Multiple definitions of function " ^ func.name))
-                       else funcs := func :: !funcs ; consts := fconsts @ !consts
+                       else funcs := func :: !funcs ; consts := fconsts @ !consts 
               | List [ (Atom "inv-constraint") ; (Atom _invf_name) ; (Atom _pref_name)
                                                ; (Atom _transf_name) ; (Atom _postf_name) ]
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
