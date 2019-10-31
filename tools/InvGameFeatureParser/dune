@@ -1,0 +1,9 @@
+(ocamllex Lexer)
+(ocamlyacc Parser)
+
+(executables
+     (names Main)
+     (public_names lig-tools-invgame-feature-parser)
+     (libraries core)
+     (preprocess (pps ppx_let))
+     (preprocessor_deps Lexer.ml Parser.ml))

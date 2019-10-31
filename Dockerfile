@@ -5,9 +5,9 @@ FROM ubuntu:18.04
 LABEL maintainer="padhi@cs.ucla.edu"
 
 
-ENV OPAM_VERSION  2.0.4
-ENV OCAML_VERSION 4.08.0+flambda
-ENV Z3_VERSION    Z3-4.8.5
+ENV OPAM_VERSION  2.0.5
+ENV OCAML_VERSION 4.09.0+flambda
+ENV Z3_VERSION    z3-4.8.6
 
 ENV HOME /home/opam
 
@@ -24,7 +24,8 @@ RUN apt-get update && \
                         patch python3 python3-distutils \
                         sudo \
                         time tzdata \
-                        unzip && \
+                        unzip \
+                        && \
     apt-get autoremove -y --purge
 
 
@@ -39,13 +40,14 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.5       \
-                       async.v0.12.0        \
-                       core.v0.12.2         \
-                       dune.1.10.0          \
-                       ppx_let.v0.12.0 &&   \
+RUN opam install --yes alcotest.0.8.5 \
+                       async.v0.12.0 \
+                       core.v0.12.4 \
+                       dune.1.11.4 \
+                       ppx_let.v0.12.0 \
+                       && \
     opam clean --yes && \
-    git clone https://github.com/SaswatPadhi/LoopInvGen.git LoopInvGen
+    git clone https://github.com/SaswatPadhi/LoopInvGen.git
 
 
 WORKDIR $HOME/LoopInvGen

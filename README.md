@@ -117,11 +117,11 @@ See <https://opam.ocaml.org/doc/Install.html> for detailed instructions.
 
 #### 2. Install `ocaml` >= 4.07.0.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enabled.
-For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.08.0+flambda`.
+For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.09.0+flambda`.
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.5 async.v0.12.0 core.v0.12.2 dune.1.10.0 ppx_let.v0.12.0
+$ opam install alcotest.0.8.5 async.v0.12.0 core.v0.12.4 dune.1.11.4 ppx_let.v0.12.0
 ```
 
 #### 4. Get the [Z3 project][z3].
@@ -167,6 +167,14 @@ $ ./loopinvgen.sh -t 8 benchmarks/LIA/2016.SyGuS-Comp/array.sl
 ```
 
 For timeout based on CPU time, you may use [`ulimit`](https://ss64.com/bash/ulimit.html).
+
+#### Manually Adding Features
+
+You may use the `-F` flag to preseed LoopInvGen's inference engine
+with custom features (written in SMTLib format).
+```bash
+$ ./loopinvgen.sh -F benchmarks/NIA/2018.CHI_InvGame/~features/s10.some.smt2.input benchmarks/NIA/2018.CHI_InvGame/s10.desugared.sl
+```
 
 <details>
 
@@ -262,15 +270,15 @@ Try `./scripts/test_all.sh -h` for more options.
 }
 ```
 
-[benchmarks/LIA]: benchmarks/LIA
+[benchmarks/LIA]:     benchmarks/LIA
 
-[flambda]:        https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
-[bind mount]:     https://docs.docker.com/storage/bind-mounts
+[flambda]:            https://caml.inria.fr/pub/docs/manual-ocaml/flambda.html
+[bind mount]:         https://docs.docker.com/storage/bind-mounts
 
 [SyGuS-Comp 2017]:    https://sygus.org/comp/2017
 [SyGuS-Comp 2018]:    https://sygus.org/comp/2018
 [SyGuS-Comp 2019]:    https://sygus.org/comp/2019
 
-[docker-hub]:     https://hub.docker.com/r/padhi/loopinvgen
-[travis]:         https://travis-ci.org/SaswatPadhi/LoopInvGen
-[z3]:             https://github.com/Z3Prover/z3
+[docker-hub]:         https://hub.docker.com/r/padhi/loopinvgen
+[travis]:             https://travis-ci.org/SaswatPadhi/LoopInvGen
+[z3]:                 https://github.com/Z3Prover/z3
