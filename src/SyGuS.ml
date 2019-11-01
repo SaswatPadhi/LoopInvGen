@@ -85,9 +85,12 @@ let func_definition (f : func) : string =
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
-let rec gen_variables = function
-  | (_var, _type)::t -> (_var, _type)::(_var ^ "!", _type)::(gen_variables t)
-  | [] -> []
+let rec check_arg_order variables =
+  let isequal (v1, _) (v2, _) = String.equal v1 v2 in
+  function
+  | [pref; _; postf] -> List.is_prefix variables ~prefix:pref.args ~equal:isequal &&
+                          List.is_prefix variables ~prefix:postf.args ~equal:isequal
+  | _ -> raise (Parse_Exn ("A pre-, trans-, and post- function were not declared"))
 
 let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in
@@ -106,10 +109,10 @@ let parse_sexps (sexps : Sexp.t list) : t =
                 -> if String.equal !logic "" then logic := _logic
                    else raise (Parse_Exn ("Logic already set to: " ^ !logic))
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ]
-                -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars ; variables := gen_variables !invf_vars
+                -> invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List [ (Atom "synth-inv") ; (Atom _invf_name) ; (List _invf_vars) ; _ ]
                 -> (* FIXME: Custom grammar *) Log.error (lazy ("LoopInvGen currently does not allow custom grammars."))
-                 ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars ; variables := gen_variables !invf_vars
+                 ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List ( (Atom "declare-var") :: sexps )
                 -> let new_var = parse_variable_declaration (List sexps)
                     in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
@@ -120,12 +123,16 @@ let parse_sexps (sexps : Sexp.t list) : t =
                     in if List.mem !funcs func ~equal:(fun x y -> String.equal x.name y.name)
                        (* FIXME: SyGuS format allows overloaded functions with different signatures *)
                        then raise (Parse_Exn ("Multiple definitions of function " ^ func.name))
-                       else funcs := func :: !funcs ; consts := fconsts @ !consts 
+                       else funcs := func :: !funcs ; consts := fconsts @ !consts ;
+                       (if String.equal func.name "trans_fun"
+                        then variables := func.args)
               | List [ (Atom "inv-constraint") ; (Atom _invf_name) ; (Atom _pref_name)
                                                ; (Atom _transf_name) ; (Atom _postf_name) ]
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
-                 ; if not (String.equal !invf_name _invf_name)
-                   then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared"))
+                 ; (if not (String.equal !invf_name _invf_name)
+                   then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared")))
+                 ; if not (check_arg_order !variables !funcs)
+                   then raise (Parse_Exn ("Argument order not consistent for declared functions"))
               | sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
