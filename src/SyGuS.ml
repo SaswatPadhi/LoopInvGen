@@ -126,10 +126,12 @@ let parse_sexps (sexps : Sexp.t list) : t =
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
                  ; (if not (String.equal !invf_name _invf_name)
                     then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared")))
-                 ; (if not (String.equal !postf_name _postf_name)
-                    then raise (Parse_Exn ("Post function [" ^ _postf_name ^ "] not declared")))
+                 ; (if not (String.equal !pref_name _pref_name)
+                    then raise (Parse_Exn ("Precondition function [" ^ _pref_name ^ "] not declared")))
                  ; (if not (String.equal !transf_name _transf_name)
                     then raise (Parse_Exn ("Transition function [" ^ _transf_name ^ "] not declared")))
+                 ; (if not (String.equal !postf_name _postf_name)
+                    then raise (Parse_Exn ("Postcondition function [" ^ _postf_name ^ "] not declared")))
                  ; (match List.map ~f:(fun name -> func_from_funcs !funcs name) [_pref_name; _transf_name; _postf_name] with
                    | [[pref];[transf];[postf]] -> variables := transf.args ;
                                                   if not ((check_arg_order !variables pref) && (check_arg_order !variables postf))
