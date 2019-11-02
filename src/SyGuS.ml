@@ -114,18 +114,13 @@ let parse_sexps (sexps : Sexp.t list) : t =
                 -> (* FIXME: Custom grammar *) Log.error (lazy ("LoopInvGen currently does not allow custom grammars."))
                  ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List ( (Atom "declare-var") :: sexps )
-                -> let new_var = parse_variable_declaration (List sexps)
-                    in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
-                       then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
-                       else variables := new_var :: !variables
+                -> raise (Parse_Exn ("LoopInvGen currently does not allow 'declare-var'."))
               | List ( (Atom "define-fun") :: func_sexps )
                 -> let (func, fconsts) = parse_define_fun func_sexps
                     in if List.mem !funcs func ~equal:(fun x y -> String.equal x.name y.name)
                        (* FIXME: SyGuS format allows overloaded functions with different signatures *)
                        then raise (Parse_Exn ("Multiple definitions of function " ^ func.name))
-                       else funcs := func :: !funcs ; consts := fconsts @ !consts ;
-                       (if String.equal func.name "trans_fun"
-                        then variables := func.args)
+                       else funcs := func :: !funcs ; consts := fconsts @ !consts
               | List [ (Atom "inv-constraint") ; (Atom _invf_name) ; (Atom _pref_name)
                                                ; (Atom _transf_name) ; (Atom _postf_name) ]
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
@@ -139,7 +134,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
                    | [[pref];[transf];[postf]] -> variables := transf.args ;
                                                   if not ((check_arg_order !variables pref) && (check_arg_order !variables postf))
                                                   then raise (Parse_Exn ("Argument order not consistent between pre, trans, and post functions"))
-                   | _ -> raise (Parse_Exn ("Multiple definitions of function.")) (* Should be impossible to get here. *))
+                   | _ -> raise (Parse_Exn ("Multiple definitions of a pre, trans, or post function.")) (* Should be impossible to get here. *))
               | sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
