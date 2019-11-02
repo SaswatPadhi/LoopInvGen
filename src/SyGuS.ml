@@ -85,12 +85,12 @@ let func_definition (f : func) : string =
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
-let rec check_arg_order variables =
+let rec check_arg_order variables func =
   let isequal (v1, _) (v2, _) = String.equal v1 v2 in
-  function
-  | [pref; _; postf] -> List.is_prefix variables ~prefix:pref.args ~equal:isequal &&
-                          List.is_prefix variables ~prefix:postf.args ~equal:isequal
-  | _ -> raise (Parse_Exn ("A pre-, trans-, and post- function were not declared"))
+  List.is_prefix variables ~prefix:func.args ~equal:isequal
+
+let func_from_funcs funcs fname=
+  List.filter funcs ~f:(fun func -> if String.equal fname func.name then true else false)
 
 let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in
@@ -130,9 +130,16 @@ let parse_sexps (sexps : Sexp.t list) : t =
                                                ; (Atom _transf_name) ; (Atom _postf_name) ]
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
                  ; (if not (String.equal !invf_name _invf_name)
-                   then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared")))
-                 ; if not (check_arg_order !variables !funcs)
-                   then raise (Parse_Exn ("Argument order not consistent for declared functions"))
+                    then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared")))
+                 ; (if not (String.equal !postf_name _postf_name)
+                    then raise (Parse_Exn ("Post function [" ^ _postf_name ^ "] not declared")))
+                 ; (if not (String.equal !transf_name _transf_name)
+                    then raise (Parse_Exn ("Transition function [" ^ _transf_name ^ "] not declared")))
+                 ; (match List.map ~f:(fun name -> func_from_funcs !funcs name) [_pref_name; _transf_name; _postf_name] with
+                   | [[pref];[transf];[postf]] -> variables := transf.args ;
+                                                  if not ((check_arg_order !variables pref) && (check_arg_order !variables postf))
+                                                  then raise (Parse_Exn ("Argument order not consistent between pre, trans, and post functions"))
+                   | _ -> raise (Parse_Exn ("Multiple definitions of function.")) (* Should be impossible to get here. *))
               | sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
