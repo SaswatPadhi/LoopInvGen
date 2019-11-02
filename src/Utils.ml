@@ -40,7 +40,7 @@ let get_in_channel = function
   | "-"      -> Stdio.In_channel.stdin
   | filename -> Stdio.In_channel.create filename
 
-let replace bindings expr =    
+let replace bindings expr =
   if bindings = [] then expr else
   let table = ref (String.Map.empty)
     in List.iter bindings
@@ -60,3 +60,22 @@ let rec remove_lets : Sexp.t -> Sexp.t = function
   | List [ (Atom "let") ; List bindings ; body ]
     -> replace bindings (remove_lets body)
   | List l -> List (List.map l ~f:remove_lets)
+
+let make_user_features feature_strings vars : (string * string) list =
+  let feature_strings =
+      List.filter_map feature_strings
+                      ~f:(fun fs -> let fs = String.strip fs
+                                     in match String.is_empty fs with
+                                        | true -> None
+                                        | _ -> Some fs)
+   in begin
+     if feature_strings = [] then [] else
+     let decl_var (s,t) = "(" ^ s ^ " " ^ (Type.to_string t) ^ ")" in
+     let var_decls = List.to_string_map vars ~sep:" " ~f:decl_var in
+     let sign = " (" ^ var_decls ^ ") Bool "
+      in List.mapi
+           feature_strings
+           ~f:(fun i fs -> let fname = "f_" ^ (Int.to_string i) in
+                           let fdef = "(define-fun " ^ fname ^ sign ^ fs ^ ")"
+                            in (fdef, fname))
+   end

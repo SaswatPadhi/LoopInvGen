@@ -3,12 +3,13 @@ open Core_kernel
 open SyGuS
 open Utils
 
-let setup (s : SyGuS.t) (z3 : ZProc.t) : unit =
+let setup ?(user_features = []) (s : SyGuS.t) (z3 : ZProc.t) : unit =
   ignore (ZProc.run_queries ~scoped:false z3 ~db:((
     (" ")
     :: ("(define-fun-rec pow ((x Int) (y Int)) Int (ite (= y 0) 1 (* x (pow x (- y 1)))))")
     :: (List.map ~f:var_declaration s.variables))
-     @ (List.map ~f:func_definition s.functions)) [])
+     @ (List.map ~f:func_definition s.functions)
+     @ user_features) [])
 
 let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
   if trans

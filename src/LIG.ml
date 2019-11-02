@@ -10,6 +10,7 @@ module Config = struct
     base_random_seed : string ;
     max_steps_on_restart : int ;
     model_completion_mode : [ `RandomGeneration | `UsingZ3 ] ;
+    user_features: (string * string) list ;
   }
 
   let default : 'a t = {
@@ -19,7 +20,8 @@ module Config = struct
 
     base_random_seed = "LoopInvGen" ;
     max_steps_on_restart = 256 ;
-    model_completion_mode = `UsingZ3 ;
+    model_completion_mode = `RandomGeneration ;
+    user_features = [] ;
   }
 end
 
@@ -46,7 +48,9 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
     let inv_def = "(define-fun invf ("
                 ^ (List.to_string_map sygus.inv_func.args ~sep:" "
                                       ~f:(fun (s, t) -> "(" ^ s ^ " " ^ (Type.to_string t) ^ ")"))
-                ^ ") Bool " ^ inv ^ ")"
+                ^ ") Bool " ^ inv ^ ")" in
+    let all_state_vars =
+          (List.to_string_map sygus.synth_variables ~sep:" " ~f:(fun (s, _) -> s))
     in ZProc.create_scope z3 ~db:[ inv_def ; "(assert " ^ sygus.trans_func.body ^ ")"
                                            ; "(assert " ^ invf_call ^ ")" ]
      ; let pre_inv, vpie_stats =
@@ -57,6 +61,9 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
               ~args:sygus.synth_variables
+              ~features: (List.map ~f:(fun (_, name) -> ( (ZProc.build_feature name z3)
+                                                        , ("(" ^ name ^ " " ^ all_state_vars ^ ")")))
+                                   config.user_features)
               ~post:(fun _ res -> res = Ok (Value.Bool false)))
         in ZProc.close_scope z3
          ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
@@ -144,7 +151,7 @@ let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
   in process ~zpath
        ~random_seed:(Some (Int.to_string (Quickcheck.(random_value ~seed:(`Deterministic config.base_random_seed)
                                                                    (Generator.small_non_negative_int)))))
-       (fun z3 -> Simulator.setup sygus z3
+       (fun z3 -> Simulator.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
                 ; if (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body) <> None
                   then ("false", stats)
                   else learnInvariant_internal ~config ~states sygus config.base_random_seed z3 stats)

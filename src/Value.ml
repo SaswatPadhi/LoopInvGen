@@ -46,7 +46,7 @@ let of_atomic_string (s : string) : t =
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
-    
+
 let rec parse_array (acc: (t*t) list) (sexp: Sexp.t) : Type.t * Type.t * (t*t) list *t =
 match sexp with
 | List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array";key_type;val_type])]); def_val]) -> ((Type.of_string key_type),(Type.of_string val_type),acc, (of_string def_val))
