@@ -121,13 +121,13 @@ let parse_sexps (sexps : Sexp.t list) : t =
                  ; variables := (!invf_vars @ (List.map !invf_vars ~f:(fun (v,t) -> (v^"!",t)))) ;
                  let [@warning "-8"] [pref; transf; postf]  = List.map [_pref_name ; _transf_name ; _postf_name]
                                                 ~f:(fun name -> List.find !funcs ~f:(fun func -> String.equal func.name name)) in
-                 (match pref with Some pref -> if not (List.equal (fun (v1, t1) (v2, t2) -> String.equal v1 v2) pref.args !invf_vars)
+                 (match pref with Some pref -> if not (List.equal (fun (v1, _) (v2, _) -> String.equal v1 v2) pref.args !invf_vars)
                                                then raise (Parse_Exn ("[" ^ _invf_name ^ "] and [" ^ _pref_name ^ "] have inconsistent arguments!"))
                                 | _ -> raise (Parse_Exn ("Precondition [" ^ _pref_name ^ "] not defined!")))
-                 ; (match postf with Some postf -> if not (List.equal (fun (v1, t1) (v2, t2) -> String.equal v1 v2) postf.args !invf_vars)
+                 ; (match postf with Some postf -> if not (List.equal (fun (v1, _) (v2, _) -> String.equal v1 v2) postf.args !invf_vars)
                                                    then raise (Parse_Exn ("[" ^ _invf_name ^ "] and [" ^ _postf_name ^ "] have inconsistent arguments!"))
                                    | _ -> raise (Parse_Exn ("Postcondition [" ^ _postf_name ^ "] not defined!")))
-                 ; (match transf with Some transf -> if not (List.equal (fun (v1, t1) (v2, t2) -> String.equal v1 v2) transf.args !variables)
+                 ; (match transf with Some transf -> if not (List.equal (fun (v1, _) (v2, _) -> String.equal v1 v2) transf.args !variables)
                                                      then raise (Parse_Exn ("[" ^ _invf_name ^ "] and [" ^ _transf_name ^ "] have inconsistent arguments!"))
                                     | _ -> raise (Parse_Exn ("Transition function [" ^ _transf_name ^ "] not defined!")))
               | sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
