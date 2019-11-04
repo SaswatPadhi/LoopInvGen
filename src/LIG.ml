@@ -76,7 +76,7 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                    in Log.info (lazy ("PRE >> Checking if the following candidate is weaker than precond:"
                                      ^ (Log.indented_sep 4) ^ new_inv))
                     ; let ce = ZProc.implication_counter_example z3 sygus.pre_func.body new_inv
-                       in if ce = None then helper new_inv else (new_inv, ce)) 
+                       in if ce = None then helper new_inv else (new_inv, ce))
    in helper inv
 
 let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t list list)
@@ -135,7 +135,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
        | None, inv
          -> Log.info (lazy ("Starting with the following initial invariant:"
                            ^ (Log.indented_sep 4) ^ inv))
-          ; match satisfyTrans ~config ~sygus ~states ~z3 inv stats with          
+          ; match satisfyTrans ~config ~sygus ~states ~z3 inv stats with
             | inv, None
               -> if inv <> "false" then ((ZProc.simplify z3 inv), stats)
                   else restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
@@ -145,7 +145,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                                         (gen_state_from_model sygus (Some ce_model)))
 
 let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
-                   ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =  
+                   ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =
   let open ZProc in
   let stats = { _VPIE = [] ; lig_time_ms = 0.0 ; lig_ce = 0 }
   in process ~zpath

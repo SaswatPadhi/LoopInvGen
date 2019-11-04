@@ -15,7 +15,7 @@ end
 include T
 include Comparable.Make (T)
 
-let rec typeof : t -> Type.t = function
+let typeof : t -> Type.t = function
   | Int _    -> Type.INT
   | Bool _   -> Type.BOOL
   | Char _   -> Type.CHAR
@@ -49,7 +49,7 @@ let of_atomic_string (s : string) : t =
 
 let rec parse_array (acc: (t*t) list) (sexp: Sexp.t) : Type.t * Type.t * (t*t) list *t =
 match sexp with
-| List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array";key_type;val_type])]); def_val]) -> ((Type.of_string key_type),(Type.of_string val_type),acc, (of_string def_val))
+| List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array"; key_type ; val_type])]); def_val]) -> ((Type.of_sexp key_type),(Type.of_sexp val_type),acc, (of_string def_val))
 | List([Sexp.Atom "store"; rest_of_array; key; value]) -> (parse_array (acc@[((of_string key),(of_string value))]) rest_of_array)
 | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
 
@@ -61,10 +61,10 @@ and parse_ite (acc: (t*t) list) (sexp: Sexp.t): (t*t) list *t =
 and parse_named_array  (sexp: Sexp.t) (param: Sexp.t) (val_type : Sexp.t): t =
   let key_name, key_type = begin
                             match param with
-                            | List [List [name ; value]] -> (name, (Type.of_string value))
+                            | List [List [name ; value]] -> (name, (Type.of_sexp value))
                            end
   in let parsed_array, default = (parse_ite [] sexp) in
-  Array(key_type, (Type.of_string val_type), parsed_array, default)
+  Array(key_type, (Type.of_sexp val_type), parsed_array, default)
 
 and of_string (sexp: Sexp.t) : t =
   let open Sexp in

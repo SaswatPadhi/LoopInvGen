@@ -10,27 +10,23 @@ type t = INT
        | ARRAY of (t * t)
        [@@deriving compare,sexp]
 
-let of_atomic_string (s:string) : t =
-  match s with 
-  | "Int"    -> INT
-  | "Bool"   -> BOOL
-  | "Char"   -> CHAR
-  | "String" -> STRING
-  | "List"   -> LIST
-  | _ -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
-
-let rec of_string (sexp: Sexp.t) : t =
+let rec of_sexp (sexp: Sexp.t) : t = 
+  let open Sexp in
   match sexp with
-    | Sexp.(Atom v) -> (of_atomic_string v)
-    | Sexp.(List ([Atom("Array");index;value])) -> ARRAY ((of_string (index)),(of_string (value)))
-    | _ -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum sexp) ^ "`."))
-    
+    | Atom "Int"    -> INT
+    | Atom "Bool"   -> BOOL
+    | Atom "Char"   -> CHAR
+    | Atom "String" -> STRING
+    | Atom "List"   -> LIST
+    | List [Atom "Array" ; index ; value]
+      -> ARRAY ((of_sexp index) , (of_sexp value))
+    | s -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum s) ^ "`."))
 
 let rec to_string : t -> string = function
-  | INT    -> "Int"
-  | BOOL   -> "Bool"
-  | CHAR   -> "Char"
-  | STRING -> "String"
-  | LIST   -> "List"
+  | INT         -> "Int"
+  | BOOL        -> "Bool"
+  | CHAR        -> "Char"
+  | STRING      -> "String"
+  | LIST        -> "List"
   | TVAR (a)    -> a
-  | ARRAY (a,b) -> "(Array" ^ " " ^(to_string a) ^ " " ^ (to_string b) ^ ")"
+  | ARRAY (a,b) -> "(Array" ^ " " ^ (to_string a) ^ " " ^ (to_string b) ^ ")"

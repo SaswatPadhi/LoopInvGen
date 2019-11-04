@@ -13,17 +13,6 @@ type t = {
 
 type model = (string * Value.t) list
 
-let rec print_list = function
-[] -> ()
-| e::l -> print_string e ; print_string " " ; print_list l
-
-  
-let write_to_z3_query_file str is_append =
-  let filename = "smt_queries.smt2" in (
-  let outc =Out_channel.create ~append:is_append filename in
-  protect ~f:(fun ()->fprintf outc "%s\n" str)
-  ~finally:(fun() ->Out_channel.close outc))
-  
 let query_for_model ?(eval_term = "true") () =
   [ "(check-sat)"
     (* forces z3 to generate complete models over variables in `eval_term` *)
@@ -32,7 +21,7 @@ let query_for_model ?(eval_term = "true") () =
 
 let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let open Unix in
-  let open Process_info in  
+  let open Process_info in
   let pi = create_process ~prog:zpath ~args:["-in";"-smt2"] in
   let z3 = {
     procid = pi.pid ;
@@ -40,7 +29,6 @@ let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
     stdout = in_channel_of_descr pi.stdout ;
     stderr = in_channel_of_descr pi.stdout ;
   } in Log.debug (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
-     ;write_to_z3_query_file (String.concat ~sep:"\n" init_options) false
      ;Out_channel.output_lines z3.stdin init_options
      ; (match random_seed with
         | None -> ()
@@ -50,13 +38,6 @@ let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
                          "(set-option :smt.arith.random_initial_value true)" ;
                          "(set-option :smt.random_seed " ^ seed ^ ")"
                        ];
-
-                       write_to_z3_query_file (String.concat ~sep:"\n" [
-                        "(set-option :auto_config false)" ;
-                        "(set-option :smt.phase_selection 5)" ;
-                        "(set-option :smt.arith.random_initial_value true)" ;
-                        "(set-option :smt.random_seed " ^ seed ^ ")"
-                      ]) true
           )
      ; z3
 
@@ -65,7 +46,7 @@ let close z3 =
   Log.debug (lazy ("Closed z3 instance. PID = " ^ (Pid.to_string z3.procid)))
 
 let process ?(init_options = []) ?(random_seed = None)
-            ~(zpath : string) (f : t -> 'a) : 'a =     
+            ~(zpath : string) (f : t -> 'a) : 'a =
   let z3 = create ~init_options ~random_seed zpath in
   let result = (f z3) in (close z3) ; result
 [@@inline always]
@@ -86,22 +67,19 @@ let flush_and_collect (z3 : t) : string =
 let create_scope ?(db = []) (z3 : t) : unit =
   Log.debug (lazy (String.concat ("Created z3 scope." :: db)
                                  ~sep:(Log.indented_sep 4))) ;
-  write_to_z3_query_file (String.concat ~sep:"\n" ("(push)" :: db)) true;
   Out_channel.output_lines z3.stdin ("(push)" :: db)
 
 let close_scope (z3 : t) : unit =
   Log.debug (lazy ("Closed z3 scope.")) ;
-  write_to_z3_query_file ("(pop)\n") true;
   Out_channel.output_string z3.stdin "(pop)\n"
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
-                : string list =      
+                : string list =
   if queries = []
   then begin
     if not scoped && db <> [] then
       begin
         Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
-        ;write_to_z3_query_file (String.concat ~sep:"\n" db) true
       ; Out_channel.output_lines z3.stdin db
       end ; []
     end
@@ -110,12 +88,9 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
      in (if scoped then create_scope z3 else ())
       ; Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
                            ~sep:(Log.indented_sep 4)))
-      ; write_to_z3_query_file (String.concat ~sep:"\n" db) true
       ; Out_channel.output_lines z3.stdin db
       ; Log.debug (lazy "Results:")
       ; List.iter queries ~f:(fun q ->
-          write_to_z3_query_file q true;
-          write_to_z3_query_file "\n" true;
           Out_channel.output_string z3.stdin q ;
           Out_channel.newline z3.stdin ;
           results := (flush_and_collect z3) :: (!results))
@@ -197,12 +172,12 @@ let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
   z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
-                                (a : string) (b : string) : model option =    
+                                (a : string) (b : string) : model option =
   sat_model_for_asserts z3 ~eval_term   
-                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)                                               
+                        ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)
 
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
-                                (a : string) (b : string) : model option =    
+                                (a : string) (b : string) : model option =
   sat_model_for_asserts z3 ~eval_term
     ~db:(("(assert (not (and (=> " ^ a ^ " " ^ b ^ ") (=> " ^ b ^ " " ^ a ^ "))))") :: db)
 
@@ -242,7 +217,7 @@ let model_to_constraint ?(negate=false) ?(ignore_primed=false) (model : model) :
    (if negate then "(not (and " else "(and ")
  ^ (List.filter_map model ~f:(fun (n, v) -> if ignore_primed && String.is_suffix n ~suffix:"!"
                                             then None
-                                            else Some ("(= " ^ n ^ " " ^ (Value.to_string v) ^ ")")) 
+                                            else Some ("(= " ^ n ^ " " ^ (Value.to_string v) ^ ")"))
       |> String.concat ~sep:" ")
  ^ (if negate then "))" else ")")
 

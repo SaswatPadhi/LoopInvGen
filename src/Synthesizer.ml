@@ -187,12 +187,10 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     | Type.CHAR -> char_candidates
     | Type.STRING -> string_candidates
     | Type.LIST -> list_candidates
-    | Type.ARRAY (_,_) -> array_candidates
+    | Type.ARRAY _ -> array_candidates
     | Type.TVAR _ when no_tvar = false -> raise (Internal_Exn "No candidates for TVAR")
     | Type.TVAR _ -> let (@) = Array.append
-                      in
-                      int_candidates @ array_candidates
-                      (* int_candidates @ bool_candidates @ char_candidates @ string_candidates @ list_candidates @ array_candidates *)
+                      in int_candidates @ bool_candidates @ char_candidates @ string_candidates @ list_candidates @ array_candidates
   in
 
   let seen_outputs = ref (Set.empty (module Output)) in
@@ -234,7 +232,9 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
 
   let task_codomain = Value.typeof task.outputs.(1)
    in DList.iter ~f:check (typed_candidates task_codomain).(0).(1)
-  ;let apply_component op_level expr_level cost arg_types applier =
+  ;
+  
+  let apply_component op_level expr_level cost arg_types applier =
     let rec apply_cells acc arg_types locations =
       match arg_types , locations with
       | typ :: arg_types , (lvl,loc) :: locations

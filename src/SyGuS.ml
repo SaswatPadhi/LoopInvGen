@@ -39,9 +39,8 @@ let rec extract_consts : Sexp.t -> Value.t list = function
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
 
-let parse_variable_declaration : Sexp.t -> var = function  
-  | List [ Atom v ; t ] ->  (v, (Type.of_string t))  
-  (* | List([Atom(v) ; arr]) -> (v,(Type.of_string arr))                                *)
+let parse_variable_declaration : Sexp.t -> var = function
+  | List [ Atom v ; t ] ->  (v, (Type.of_sexp t))
   | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun : Sexp.t list -> func * Value.t list = function
@@ -52,7 +51,7 @@ let parse_define_fun : Sexp.t list -> func * Value.t list = function
         in ({ name = name
             ; body = (Sexp.to_string_hum expr)
             ; args = args
-            ; return = (Type.of_string r_typ)
+            ; return = (Type.of_sexp r_typ)
             ; expressible = true (* TODO: Check if function is expressible in the provided grammar, when we sypport it. *)
             }, consts)
   | sexp_list -> raise (Parse_Exn ("Invalid function definition: "
@@ -67,7 +66,7 @@ let func_definition (f : func) : string =
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-const " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
-let parse_sexps (sexps : Sexp.t list) : t =  
+let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in
   let consts : Value.t list ref = ref [] in
   let funcs : func list ref = ref [] in
@@ -119,7 +118,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
     ; if String.equal !logic ""
-      then (logic := "ALIA" ; Log.debug (lazy ("Using default logic: ALIA")))
+      then (logic := "LIA" ; Log.debug (lazy ("Using default logic: LIA")))
     ; { constants = !consts
       ; functions = List.rev !funcs
       ; logic = !logic

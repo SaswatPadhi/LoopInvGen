@@ -55,10 +55,6 @@ let config_flags =
     }
   ]
 
-let rec print_t_list = function 
-[] -> ()
-| e::l -> print_string (Value.to_string e) ; print_string " " ; print_t_list l
-
 let command =
   let open Command.Let_syntax in
   Command.basic
