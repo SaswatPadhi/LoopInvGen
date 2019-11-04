@@ -53,7 +53,6 @@ let rec remove_lets : Sexp.t -> Sexp.t = function
 let rec extract_consts : Sexp.t -> Value.t list = function
   | List [] -> []
   | (Atom a) | List [Atom a] -> (try [ Value.of_string a ] with _ -> [])
-  | List [(Atom op); (Atom a)] | List [List [(Atom op); (Atom a)]] -> (try [ Value.of_string (op^a) ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
@@ -84,13 +83,6 @@ let func_definition (f : func) : string =
 
 let var_declaration ((var_name, var_type) : var) : string =
   "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
-
-let rec check_arg_order variables func =
-  let isequal (v1, _) (v2, _) = String.equal v1 v2 in
-  List.is_prefix variables ~prefix:func.args ~equal:isequal
-
-let func_from_funcs funcs fname=
-  List.filter funcs ~f:(fun func -> if String.equal fname func.name then true else false)
 
 let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in
@@ -126,17 +118,18 @@ let parse_sexps (sexps : Sexp.t list) : t =
                 -> pref_name := _pref_name ; transf_name := _transf_name ; postf_name := _postf_name
                  ; (if not (String.equal !invf_name _invf_name)
                     then raise (Parse_Exn ("Invariant function [" ^ _invf_name ^ "] not declared")))
-                 ; (if not (String.equal !pref_name _pref_name)
-                    then raise (Parse_Exn ("Precondition function [" ^ _pref_name ^ "] not declared")))
-                 ; (if not (String.equal !transf_name _transf_name)
-                    then raise (Parse_Exn ("Transition function [" ^ _transf_name ^ "] not declared")))
-                 ; (if not (String.equal !postf_name _postf_name)
-                    then raise (Parse_Exn ("Postcondition function [" ^ _postf_name ^ "] not declared")))
-                 ; (match List.map ~f:(fun name -> func_from_funcs !funcs name) [_pref_name; _transf_name; _postf_name] with
-                   | [[pref];[transf];[postf]] -> variables := transf.args ;
-                                                  if not ((check_arg_order !variables pref) && (check_arg_order !variables postf))
-                                                  then raise (Parse_Exn ("Argument order not consistent between pre, trans, and post functions"))
-                   | _ -> raise (Parse_Exn ("Multiple definitions of a pre, trans, or post function.")) (* Should be impossible to get here. *))
+                 ; variables := (!invf_vars @ (List.map !invf_vars ~f:(fun (v,t) -> (v^"!",t)))) ;
+                 let [@warning "-8"] [pref; transf; postf]  = List.map [_pref_name ; _transf_name ; _postf_name]
+                                                ~f:(fun name -> List.find !funcs ~f:(fun func -> String.equal func.name name)) in
+                 (match pref with Some pref -> if not (List.equal (fun (v1, t1) (v2, t2) -> String.equal v1 v2) pref.args !invf_vars)
+                                               then raise (Parse_Exn ("[" ^ _invf_name ^ "] and [" ^ _pref_name ^ "] have inconsistent arguments!"))
+                                | _ -> raise (Parse_Exn ("Precondition [" ^ _pref_name ^ "] not defined!")))
+                 ; (match postf with Some postf -> if not (List.equal (fun (v1, t1) (v2, t2) -> String.equal v1 v2) postf.args !invf_vars)
+                                                   then raise (Parse_Exn ("[" ^ _invf_name ^ "] and [" ^ _postf_name ^ "] have inconsistent arguments!"))
+                                   | _ -> raise (Parse_Exn ("Postcondition [" ^ _postf_name ^ "] not defined!")))
+                 ; (match transf with Some transf -> if not (List.equal (fun (v1, t1) (v2, t2) -> String.equal v1 v2) transf.args !variables)
+                                                     then raise (Parse_Exn ("[" ^ _invf_name ^ "] and [" ^ _transf_name ^ "] have inconsistent arguments!"))
+                                    | _ -> raise (Parse_Exn ("Transition function [" ^ _transf_name ^ "] not defined!")))
               | sexp -> raise (Parse_Exn ("Unknown command: " ^ (Sexp.to_string_hum sexp))))
     ; consts := List.dedup_and_sort ~compare:Poly.compare !consts
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
