@@ -14,7 +14,7 @@
   (and (>= n 0) (= i 0) (= j 0) (= k 0)))
 
 (define-fun trans_fun ((a (Array Int Int)) (n Int) (j Int) (i Int) (x Int) (k Int) (a! (Array Int Int)) (n! Int) (j! Int) (i! Int) (x! Int) (k! Int)) Bool
-  (and (or (< i n) (= x 0))
+  (and (and (< i n) (= x 0))
        (= n! n)
        (= k! (- k 1))
        (= j! (+ j 1))
@@ -23,12 +23,12 @@
 )
 
 (define-fun post_fun ((a (Array Int Int)) (n Int) (j Int) (i Int) (x Int)) Bool
-  (or (or (< i n) (= x 0))
-      (forall ((l Int)) (=> (and (>= l 1) (< l i))
+  (or (and (< i n) (= x 0))
+      (forall ((l Int)) (=> (and (>= l 0) (< l i))
                             (>= k (select a l))))
   )
 )
-    
+
 (inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)

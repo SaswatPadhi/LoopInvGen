@@ -8,4 +8,5 @@ let () =
          ; "Test_Synthesizer", Test_Synthesizer.all
          ; "Test_Unification", Test_Unification.all
          ; "Test_Expr", Test_Expr.all
+         ; "Test_ArrayComponents", Test_ArrayComponents.all
          ])

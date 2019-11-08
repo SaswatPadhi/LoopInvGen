@@ -78,7 +78,7 @@ let command =
         let states = List.(permute
           ~random_state:(Random.State.make [| 79 ; 97 |])
           (map (Stdio.In_channel.input_lines states_chan)
-              ~f:(fun l -> map (map ~f:(fun x -> (Sexp.of_string x)) (String.split ~on:'\t' l)) ~f:Value.of_string)))
+              ~f:(fun l -> map (String.split ~on:'\t' l) ~f:Value.of_string)))
         in Stdio.In_channel.close states_chan
           ; Log.debug (lazy ("Loaded " ^ (Int.to_string (List.length states)) ^ " states."))
           ; let sygus = SyGuS.read_from sygus_path in

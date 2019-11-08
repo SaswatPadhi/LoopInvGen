@@ -108,7 +108,7 @@ let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t =
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
   match sexp with
-  | _ -> Value.of_string sexp
+  | _ -> Value.of_sexp sexp
 
 let contains_string s1 s2 =
   try

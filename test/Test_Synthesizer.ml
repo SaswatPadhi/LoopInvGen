@@ -44,14 +44,14 @@ let select () =
   let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
     arg_names = [ "a" ; "k" ];
     inputs = [ (Array.map ~f:(fun (a,b,c,d) -> Value.Array (a,b,c,d))
-                         [| (Type.INT, Type.INT, [ (Value.Int 3, Value.Int 30)
-                                                 ; (Value.Int 2, Value.Int 20)
-                                                 ; (Value.Int 1, Value.Int 10) ],
-                                                 Value.Int 1)
-                          ; (Type.INT, Type.INT, [ (Value.Int 2, Value.Int 20)
-                                                 ; (Value.Int 1, Value.Int 1024) ],
-                                                 Value.Int 0)
-                          ; (Type.INT, Type.INT, [(Value.Int 0 , Value.Int 0)], Value.Int 30) |])
+                     [| (Type.INT, Type.INT, [ (Value.Int 3, Value.Int 30)
+                                             ; (Value.Int 2, Value.Int 20)
+                                             ; (Value.Int 1, Value.Int 10) ]
+                                             ,  Value.Int 1)
+                      ; (Type.INT, Type.INT, [ (Value.Int 2, Value.Int 20)
+                                             ; (Value.Int 1, Value.Int 1024) ]
+                                             ,  Value.Int 0)
+                      ; (Type.INT, Type.INT, [(Value.Int 0 , Value.Int 0)], Value.Int 30) |])
              ; [| Value.Int 1 ; Value.Int 2 ; Value.Int 3 |] ];
     outputs = [| Value.Int 10 ; Value.Int 20 ; Value.Int 30 |];
     constants = []
@@ -62,14 +62,12 @@ let open Synthesizer in
 let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
   arg_names = [ "a" ; "k" ; "v"];
   inputs = [ (Array.map ~f:(fun (a,b,c,d) -> Value.Array (a,b,c,d))
-                        [| (Type.INT, Type.INT, [ ],
-                                                Value.Int 1)
+                        [| (Type.INT, Type.INT, [ ], Value.Int 1)
                         ; (Type.INT, Type.INT, [ ],
                                                 Value.Int 0)
                         ; (Type.INT, Type.INT, [], Value.Int 30) |])
             ; [| Value.Int 1 ; Value.Int 2 ; Value.Int 3 |]
-            ; [| Value.Int 20 ; Value.Int 40 ; Value.Int 6 |]
-            ];
+            ; [| Value.Int 20 ; Value.Int 40 ; Value.Int 6 |] ];
   outputs = [| Value.Array((Type.INT, Type.INT, [ (Value.Int 1, Value.Int 20) ],
                                                   Value.Int 1))
               ; Value.Array((Type.INT, Type.INT, [ (Value.Int 2, Value.Int 40)],
@@ -96,11 +94,10 @@ let two_store () =
                                                     Value.Int 1))
                 ; Value.Array((Type.INT, Type.INT, [ (Value.Int 2, Value.Int 40) ;(Value.Int 6, Value.Int 20)],
                                                      Value.Int 0))
-                ; Value.Array((Type.INT, Type.INT, [ (Value.Int 3 , Value.Int 6); (Value.Int 1, Value.Int 20)], 
+                ; Value.Array((Type.INT, Type.INT, [ (Value.Int 3 , Value.Int 6); (Value.Int 1, Value.Int 20)],
                                                       Value.Int 30))|];
     constants = []
   } in Alcotest.(check string) "identical" "(store a k v)" result.string
-
 
 let all = [
   "(+ x y)",              `Quick, y_PLUS_x ;

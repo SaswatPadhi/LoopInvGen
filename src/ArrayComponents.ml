@@ -31,4 +31,21 @@ let all = [
     global_constraints = (fun _ -> [])
   }
 
+  ;
+  {
+    name = "equal";
+    codomain = Type.BOOL;
+    domain = [Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b"); Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b")];
+    is_argument_valid = (function
+                         | _ -> true);
+    evaluate = (function [@warning "-8"]
+                [Value.Array (a_key_type, a_val_type, a_elems, a_default_val) ; Value.Array (b_key_type, b_val_type, b_elems, b_default_val)]
+                -> Value.Bool (    (Poly.equal a_key_type b_key_type)
+                                && (Poly.equal a_val_type b_val_type)
+                                && (Poly.equal a_default_val b_default_val)
+                                && (Poly.equal a_elems b_elems)));
+    to_string = (fun [@warning "-8"] [a ; b ] -> "(= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
+  }
+
 ]
