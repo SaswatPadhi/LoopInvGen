@@ -233,7 +233,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let task_codomain = Value.typeof task.outputs.(1)
    in DList.iter ~f:check (typed_candidates task_codomain).(0).(1)
   ;
-  
+
   let apply_component op_level expr_level cost arg_types applier =
     let rec apply_cells acc arg_types locations =
       match arg_types , locations with

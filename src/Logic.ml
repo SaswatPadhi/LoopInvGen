@@ -6,7 +6,7 @@ type t = {
   sample_set_size_multiplier : int
 }
 
-let all_supported =  
+let all_supported =
    let table = String.Table.create () ~size:2
    in List.iter ~f:(fun component -> String.Table.set table ~key:component.name ~data:component)
         [{

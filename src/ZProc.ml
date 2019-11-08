@@ -166,14 +166,14 @@ let z3_result_to_model (result : string list) : model option =
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
           ; raise e
-  
+
 let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
-                          : model option =  
+                          : model option =
   z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  sat_model_for_asserts z3 ~eval_term   
+  sat_model_for_asserts z3 ~eval_term
                         ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)
 
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)

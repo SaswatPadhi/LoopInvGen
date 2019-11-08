@@ -33,14 +33,14 @@ type t = {
   
 
 let rec extract_consts : Sexp.t -> Value.t list = function
-  | List [] -> []  
+  | List [] -> []
   | (Atom a) | List [Atom a] -> (try [ Value.of_atomic_string a ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
 
 let parse_variable_declaration : Sexp.t -> var = function
-  | List [ Atom v ; t ] ->  (v, (Type.of_sexp t))
+  | List [ Atom v ; t ] -> (v, (Type.of_sexp t))
   | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun : Sexp.t list -> func * Value.t list = function
@@ -139,7 +139,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
 let parse (chan : Stdio.In_channel.t) : t =
   parse_sexps (Sexplib.Sexp.input_sexps chan)
 
-let write_to (filename : string) (sygus : t) : unit =  
+let write_to (filename : string) (sygus : t) : unit =
   let out_chan = Stdio.Out_channel.create filename
    in Caml.Marshal.to_channel out_chan sygus []
     ; Stdio.Out_channel.close out_chan

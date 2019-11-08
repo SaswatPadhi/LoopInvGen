@@ -41,8 +41,8 @@ let learnVPreCond ?(config = Config.default) ?(eval_term = "true") ~(z3 : ZProc.
     then (Log.error (lazy ("VPIE Reached MAX attempts ("
                             ^ (Int.to_string config.max_attempts)
                             ^ "). Giving up ..."))
-         ; (config.describe None, stats)) 
-    else begin      
+         ; (config.describe None, stats))
+    else begin
       Log.info (lazy ("VPIE Attempt "
                       ^ (Int.to_string (1 + config.max_attempts - tries_left))
                       ^ "/" ^ (Int.to_string config.max_attempts) ^ ".")) ;

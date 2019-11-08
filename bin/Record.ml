@@ -16,7 +16,7 @@ let command =
       and log_path      = flag "log-path" (optional string)
                                 ~doc:"FILENAME enable logging and output to the specified path"
       and sygus_path    = anon ("filename" %: string)
-      in fun () ->                
+      in fun () ->
         Log.enable ~msg:"RECORD" log_path ;
         let sygus = SyGuS.read_from sygus_path
          in begin if states_count < 1 then ()
