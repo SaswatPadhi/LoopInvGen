@@ -1,3 +1,4 @@
+open Base
 open Exceptions
 
 type t = INT
@@ -5,6 +6,7 @@ type t = INT
        | CHAR
        | STRING
        | LIST
+       | BITVEC of int
        [@@deriving sexp]
 
 let of_string : string -> t = function
@@ -13,7 +15,11 @@ let of_string : string -> t = function
   | "Char"   -> CHAR
   | "String" -> STRING
   | "List"   -> LIST
+  (* | "BitVec" -> BITVEC *)
   | s -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
+
+let of_params : string * int -> t = function
+  | "BitVec", n -> BITVEC n
 
 let to_string : t -> string = function
   | INT    -> "Int"
@@ -21,3 +27,4 @@ let to_string : t -> string = function
   | CHAR   -> "Char"
   | STRING -> "String"
   | LIST   -> "List"
+  | BITVEC n -> "(_ BitVec " ^ (Int.to_string_hum n) ^ ")"

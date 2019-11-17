@@ -60,6 +60,7 @@ let rec extract_consts : Sexp.t -> Value.t list = function
 
 let parse_variable_declaration : Sexp.t -> var = function
   | List [ Atom v ; Atom t ] -> (v, (Type.of_string t))
+  | List [ Atom v ; List [Atom "_"; Atom "BitVec"; Atom n]] -> (v, (Type.of_params ("BitVec", (int_of_string n))))
   | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun : Sexp.t list -> func * Value.t list = function
