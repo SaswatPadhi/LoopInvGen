@@ -13,3 +13,4 @@ let for_type (t : Type.t) : Value.t Generator.t =
                   >>= fun len -> (String.gen_with_length len (Char.gen_print)
                                   >>= fun s -> singleton (Value.String s))
   | Type.LIST -> raise (Exceptions.Internal_Exn "Generators for List type not implemented!")
+  | Type.BITVEC _ -> raise (Exceptions.Internal_Exn "Generators for BitVec type not implemented!")

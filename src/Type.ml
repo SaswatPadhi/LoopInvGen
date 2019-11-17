@@ -21,7 +21,7 @@ let of_string : string -> t = function
 let of_params : string * int -> t = function
   | "BitVec", n -> BITVEC n
 
-let to_string : t -> string = function
+let to_string : t -> string = function [@warning "-8"]
   | INT    -> "Int"
   | BOOL   -> "Bool"
   | CHAR   -> "Char"
