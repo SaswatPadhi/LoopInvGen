@@ -10,7 +10,7 @@ type t = INT
        | ARRAY of (t * t)
        [@@deriving compare,sexp]
 
-let rec of_sexp (sexp: Sexp.t) : t = 
+let rec of_sexp (sexp: Sexp.t) : t =
   let open Sexp in
   match sexp with
     | Atom "Int"    -> INT

@@ -55,6 +55,14 @@ let equal_arr_elems_test () =
  in let res = (Poly.equal equal_ret (Value.Bool true))
  in Alcotest.(check bool) "identical" true res
 
+let equal_arr_elems_dedup_test () =
+ let a_arr = Value.Array((Type.INT, Type.INT, [(Value.Int 4, Value.Int 5);(Value.Int 10, Value.Int 5)], Value.Int 1))
+ in let b_arr = Value.Array((Type.INT, Type.INT, [(Value.Int 4, Value.Int 5);(Value.Int 4, Value.Int 6);(Value.Int 10, Value.Int 5)], Value.Int 1))
+ in let equal_eval = (Array.of_list ArrayComponents.all).(2).evaluate
+ in let equal_ret = (equal_eval [a_arr; b_arr])
+ in let res = (Poly.equal equal_ret (Value.Bool true))
+ in Alcotest.(check bool) "identical" true res
+
 let order_indp_equal_arr_elems_test () =
  let a_arr = Value.Array((Type.INT, Type.INT, [(Value.Int 10, Value.Int 5);(Value.Int 4, Value.Int 5)], Value.Int 1))
  in let b_arr = Value.Array((Type.INT, Type.INT, [(Value.Int 4, Value.Int 5);(Value.Int 10, Value.Int 5)], Value.Int 1))
@@ -71,5 +79,6 @@ let all = [
   "check two un-equal default value arrays", `Quick, un_def_equal_test ;
   "check two equal arrays with elements",    `Quick, equal_arr_elems_test ;
   "select after storing twice in the same index", `Quick, select_sem_test ;
+  "check two equal arrays with elements after dedup",    `Quick, equal_arr_elems_dedup_test ;
   "check two equal arrays with elements in different order",    `Quick, order_indp_equal_arr_elems_test ;
 ]

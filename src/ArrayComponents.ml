@@ -40,10 +40,12 @@ let all = [
                          | _ -> true);
     evaluate = (function [@warning "-8"]
                 [Value.Array (a_key_type, a_val_type, a_elems, a_default_val) ; Value.Array (b_key_type, b_val_type, b_elems, b_default_val)]
-                -> Value.Bool (    (Poly.equal a_key_type b_key_type)
-                                && (Poly.equal a_val_type b_val_type)
-                                && (Poly.equal a_default_val b_default_val)
-                                && (Poly.equal a_elems b_elems)));
+                -> let dedup_a = (Utils.dedup_and_sort_keep_first a_elems ~compare:(fun (k1,_) (k2,_) -> Poly.compare k1 k2))
+                   in  let dedup_b = (Utils.dedup_and_sort_keep_first b_elems ~compare:(fun (k1,_) (k2,_) -> Poly.compare k1 k2))
+                   in Value.Bool (   (Poly.equal a_key_type b_key_type)
+                                  && (Poly.equal a_val_type b_val_type)
+                                  && (Poly.equal a_default_val b_default_val)
+                                  && (Poly.equal dedup_a dedup_b)));
     to_string = (fun [@warning "-8"] [a ; b ] -> "(= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   }

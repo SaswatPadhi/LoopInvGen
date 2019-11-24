@@ -55,7 +55,7 @@ let replace bindings expr =
                         | Some data -> data
         in helper expr
 
-let rec remove_lets : Sexp.t -> Sexp.t = function  
+let rec remove_lets : Sexp.t -> Sexp.t = function
   | Atom _ as atom -> atom
   | List [ (Atom "let") ; List bindings ; body ]
     -> replace bindings (remove_lets body)
@@ -79,3 +79,11 @@ let make_user_features feature_strings vars : (string * string) list =
                            let fdef = "(define-fun " ^ fname ^ sign ^ fs ^ ")"
                             in (fdef, fname))
    end
+
+let dedup_and_sort_keep_first ~compare list =
+  match list with
+  | [] -> []
+  | _ ->
+    let equal x x' = compare x x' = 0 in
+    let sorted = List.sort ~compare list in
+    List.remove_consecutive_duplicates ~which_to_keep:`First ~equal sorted
