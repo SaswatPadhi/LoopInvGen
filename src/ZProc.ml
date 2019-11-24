@@ -25,11 +25,11 @@ let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
   let pi = create_process ~prog:zpath ~args:["-in";"-smt2"] in
   let z3 = {
     procid = pi.pid ;
-    stdin  = out_channel_of_descr pi.stdin ; 
+    stdin  = out_channel_of_descr pi.stdin ;
     stdout = in_channel_of_descr pi.stdout ;
     stderr = in_channel_of_descr pi.stdout ;
   } in Log.debug (lazy ("Created z3 instance. PID = " ^ (Pid.to_string pi.pid)))
-     ;Out_channel.output_lines z3.stdin init_options
+     ; Out_channel.output_lines z3.stdin init_options
      ; (match random_seed with
         | None -> ()
         | Some seed -> Out_channel.output_lines z3.stdin [
@@ -37,8 +37,7 @@ let create ?(init_options = []) ?(random_seed = None) (zpath : string) : t =
                          "(set-option :smt.phase_selection 5)" ;
                          "(set-option :smt.arith.random_initial_value true)" ;
                          "(set-option :smt.random_seed " ^ seed ^ ")"
-                       ];
-          )
+                       ])
      ; z3
 
 let close z3 =
@@ -98,26 +97,10 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
       ; List.rev (!results)
   end
 
-let lamda_sexpt_to_list (sexp: Sexp.t): (t * t) list * t =
-  let open Sexp in 
-  match sexp with 
-  | _ -> raise (Internal_Exn ("Unable to deserialize lamda: "
-                              ^ (to_string_hum sexp)))
-                              
-
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
   match sexp with
   | _ -> Value.of_sexp sexp
-
-let contains_string s1 s2 =
-  try
-    let len = String.length s2 in
-    for i = 0 to String.length s1 - len do
-      if String.sub s1 i len = s2 then raise Exit
-    done;
-    false
-  with Exit -> true
 
 let z3_result_to_model (result : string list) : model option =
   let open Sexp in
@@ -186,7 +169,7 @@ let simplify (z3 : t) (q : string) : string =
   let goal =
     match
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
-                  ["(apply (repeat (then simplify ctx-simplify ctx-solver-simplify)))"]
+                  ["(apply (repeat (then purify-arith simplify ctx-simplify ctx-solver-simplify)))"]
     with [ goal ] -> goal
        | goals -> raise (Internal_Exn ("Unexpected z3 goals:\n" ^ (String.concat ~sep:"\n" goals)))
   in match Sexp.parse goal with

@@ -1,5 +1,5 @@
-open Exceptions
 open Core
+open Exceptions
 
 type t = INT
        | BOOL
@@ -28,5 +28,5 @@ let rec to_string : t -> string = function
   | CHAR        -> "Char"
   | STRING      -> "String"
   | LIST        -> "List"
-  | TVAR (a)    -> a
   | ARRAY (a,b) -> "(Array" ^ " " ^ (to_string a) ^ " " ^ (to_string b) ^ ")"
+  | TVAR (a)    -> raise (Internal_Exn ("Attempted to serialize a type variable."))

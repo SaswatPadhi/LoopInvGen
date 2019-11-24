@@ -1,7 +1,7 @@
-open LoopInvGen
-open TypeUnification
-open Expr
 open Base
+open LoopInvGen
+open Expr
+open TypeUnification
 
 let unify_component_test () =
   let comp = {

@@ -24,6 +24,7 @@ let indented_sep (indent : int) = "\n" ^ (String.make (45 + indent) ' ')
   let level_str = function Debug -> "( debug )"
                          | Error -> "< ERROR >"
                          | Info  -> "(  info )"
+
   let log_chan = ref stderr
   let log_level = ref Debug
 

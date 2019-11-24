@@ -1,7 +1,8 @@
 open Base
+open Sexp
 open LoopInvGen
 open LoopInvGen.ZProc
-open Sexp
+
 
 let model_to_string (m : model option) : string =
   match m with
@@ -36,21 +37,27 @@ let simplification ~(zpath : string) () =
 
 let z3_result_to_model_as_array () =
   let result = ["sat"; "true";
-  "(model 
-                                             (define-fun x () (Array Int Int)
-                                                (_ as-array k!10!12))
-                                              (define-fun y () Int
-                                                10)
-                                                (define-fun k!10!12 ((x!0 Int)) Int
-                                                (ite (= x!0 2) 2
-                                                (ite (= x!0 1) 1
-                                                  3)))
-                                            )"]
+  "(model
+        (define-fun x () (Array Int Int)
+          (_ as-array k!10!12))
+        (define-fun y () Int
+          10)
+          (define-fun k!10!12 ((x!0 Int)) Int
+          (ite (= x!0 2) 2
+          (ite (= x!0 1) 1
+            3))))"]
   in let res = match (z3_result_to_model result) with 
-                | Some model -> (let (name, res) = (List.nth_exn model 1); 
-                                  in (print_string (Value.to_string res)); let res_x = (String.equal (Value.to_string res) "(store (store ((as const (Array Int Int)) 3) 2 2) 1 1)")
-                                  in let (name, res) = (List.nth_exn model 0)
-                                  in (print_string (Value.to_string res)); res_x && (String.equal (Value.to_string res) "10")
+                | Some model -> (
+                                  let res_x = match List.Assoc.find model ~equal:String.equal "x" with
+                                              | None -> false
+                                              | Some value -> (String.equal (Value.to_string value) "(store (store ((as const (Array Int Int)) 3) 2 2) 1 1)")
+                                  in let res_y = match List.Assoc.find model ~equal:String.equal "y" with
+                                                 | None -> false
+                                                 | Some value -> (String.equal (Value.to_string value) "10")
+                                  in let res_asarray = match List.Assoc.find model ~equal:String.equal "k!10!12" with
+                                                       | None -> true
+                                                       | Some value -> false
+                                  in res_x && res_y && res_asarray
                                 )
                 | None -> false
   in Alcotest.(check bool) "identical" true res

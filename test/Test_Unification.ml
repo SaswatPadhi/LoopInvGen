@@ -1,7 +1,7 @@
-open LoopInvGen
-open TypeUnification
-open Type
 open Base
+open LoopInvGen
+open Type
+open TypeUnification
 
 let unify_correct () =
   let domain1 = [Type.ARRAY (Type.TVAR "'a", Type.TVAR "'b")] in
@@ -43,9 +43,9 @@ let apply_env_incorrect () =
 in Alcotest.(check bool) "incorrect application of env" false res
 
 let all = [
-  "'a and 'b unifies",        `Quick, unify_correct ;
-  "'a and 'b does not unify",     `Quick, unify_incorrect_circular;
-  "'a and 'b does not unify",     `Quick, unify_incorrect_self;
-  "codomain substitution works",    `Quick, apply_env_correct;
-  "codomain substitution does not work",    `Quick, apply_env_incorrect;
+  "'a and 'b unifies",             `Quick, unify_correct ;
+  "'a and 'b does not unify",      `Quick, unify_incorrect_circular ;
+  "'a and 'b does not unify",      `Quick, unify_incorrect_self ;
+  "codomain substitution works",   `Quick, apply_env_correct ;
+  "codomain substitution does not work",    `Quick, apply_env_incorrect ;
 ]

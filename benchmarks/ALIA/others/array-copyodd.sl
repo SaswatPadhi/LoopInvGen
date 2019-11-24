@@ -22,9 +22,10 @@
 
 (define-fun post_fun ((a1 (Array Int Int)) (a2 (Array Int Int)) (n Int) (i Int)) Bool
   (or (< i n)
-      (forall ((j Int)) and ((< j n)
-                             (>= j 0)
-                             (implies (= 1 (mod j 2)) (= (select a1 j) (select a2 j)))))
+      (forall ((j Int))
+           (=> (and (<= 0 j) (< j n) (= 1 (mod j 2)))
+               (= (select a1 j)
+                  (select a2 j))))
   )
 )
 

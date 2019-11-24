@@ -32,6 +32,7 @@ let all_supported =
          } ; {
            name = "ALIA" ;
            components_per_level = [|
+             (* FIXME: Determine levels of ArrayComponents for hybrid enumeration *)
              (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.equality) ;
              (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.intervals) ;
              (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.octagons) ;

@@ -23,7 +23,7 @@
 
 (define-fun post_fun ((a (Array Int Int)) (b (Array Int Int)) (c (Array Int Int)) (n Int) (i Int)) Bool
   (or (< i n)
-      (forall ((j Int)) (=> (and (>= j 1) (< j n)) 
+      (forall ((j Int)) (=> (and (>= j 1) (< j n))
                             (>= (select c j) 3)))
   )
 )

@@ -8,7 +8,7 @@ module T = struct
          | Char of char
          | String of string
          | List of t list
-         | Array of Type.t * Type.t * (t * t) list * t
+         | Array of Type.t * Type.t * (t * t) list * t (* FIXME: Use HashTable instead of List *)
          [@@deriving compare,sexp]
 end
 

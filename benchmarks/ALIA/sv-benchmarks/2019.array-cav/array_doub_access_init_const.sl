@@ -19,7 +19,7 @@
 
 (define-fun post_fun ((a (Array Int Int)) (n Int) (i Int)) Bool
   (or (<= i n)
-      (forall ((j Int)) (=> (and (>= j 0) (<= j (* 2 n))) 
+      (forall ((j Int)) (=> (and (>= j 0) (<= j (* 2 n)))
                             (>= 0 (select a j))))
   )
 )
