@@ -8,7 +8,7 @@ module T = struct
          | Char of char
          | String of string
          | List of t list
-         | BitVec of int*string
+         | BitVec of int * BitArray.t
          [@@deriving compare,sexp]
 end
 
