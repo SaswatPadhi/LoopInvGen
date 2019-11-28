@@ -11,12 +11,8 @@ services:
 install: bash .travis/install.sh
 
 env:
-  - OCAML_VERSION=4.07.0           MIN_REQS_ONLY="true"
-  - OCAML_VERSION=4.07.0+flambda   MIN_REQS_ONLY="true"
-  - OCAML_VERSION=4.07.1
-  - OCAML_VERSION=4.07.1+flambda
-  - OCAML_VERSION=4.08.0
-  - OCAML_VERSION=4.08.0+flambda
+  - OCAML_VERSION=4.08.0           MIN_REQS_ONLY="true"
+  - OCAML_VERSION=4.08.0+flambda   MIN_REQS_ONLY="true"
   - OCAML_VERSION=4.08.1
   - OCAML_VERSION=4.08.1+flambda
   - OCAML_VERSION=4.09.0
