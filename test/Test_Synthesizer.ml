@@ -52,6 +52,19 @@ let select_test () =
     constants = []
   } in Alcotest.(check string) "identical" "(select a k)" result.string
 
+let poly_select_test () =
+  let open Synthesizer in
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
+    arg_names = [ "a" ; "k" ];
+    inputs = [ (Array.map ~f:(fun (a,b,c,d) -> Value.Array (a,b,c,d))
+                      [| (Type.INT, Type.STRING, [(Value.Int 3, Value.String "hello")], Value.String "a")
+                        ; (Type.INT, Type.STRING, [(Value.Int 2, Value.String "world")], Value.String "b")
+                        ; (Type.INT, Type.STRING, [(Value.Int 10, Value.String "!")], Value.String "c") |])
+             ; [| Value.Int 3 ; Value.Int 2 ; Value.Int 10 |] ];
+    outputs = [| Value.String "hello" ; Value.String "world" ; Value.String "!" |];
+    constants = []
+  } in Alcotest.(check string) "identical" "(select a k)" result.string
+
 let select_test_dup_key () =
   let open Synthesizer in
   let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
@@ -120,6 +133,7 @@ let all = [
   "select",          `Quick, select_test ;
   "store in empty array",           `Quick, empty_store_test ;
   "store in array containing values", `Quick, store_test ;
+  "select poly key int value string",          `Quick, poly_select_test ;
   "select from array with latest key value pair",           `Quick, select_test_dup_key ;
   "store in array by overriding exisiting value in index k", `Quick, store_test_update ;
 ]
