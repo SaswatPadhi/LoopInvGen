@@ -20,7 +20,7 @@
 
 (define-fun post_fun ((a (Array Int Int)) (acopy (Array Int Int)) (s Int) (i Int)) Bool
   (or (< i s)
-      (forall ((j Int)) (=> (and (>= j 0) (<= j (* 2 s)))
+      (forall ((j Int)) (=> (and (>= j 0) (< j (* 2 s)))
                             (= (select acopy j) (select a j))))
   )
 )

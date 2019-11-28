@@ -47,6 +47,10 @@ let of_atomic_string (s : string) : t =
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
 
+(* We assume that an array serialization provides explicit (k,v) pairs --
+ * either using nested `store` calls, or if-then-else constructs.
+ * The different array formats are described in more details here:
+ * https://docs.google.com/document/d/1zSXs91eeJ1hc7bmcUTzeJtjiCHTNEYZKZpi_436HvbA *)
 let rec parse_array (acc: (t*t) list) (sexp: Sexp.t) : Type.t * Type.t * (t*t) list *t =
 match sexp with
 | List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array"; key_type ; val_type])]); def_val]) -> ((Type.of_sexp key_type),(Type.of_sexp val_type),acc, (of_sexp def_val))

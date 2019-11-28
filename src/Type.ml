@@ -29,4 +29,4 @@ let rec to_string : t -> string = function
   | STRING      -> "String"
   | LIST        -> "List"
   | ARRAY (a,b) -> "(Array" ^ " " ^ (to_string a) ^ " " ^ (to_string b) ^ ")"
-  | TVAR (a)    -> raise (Internal_Exn ("Attempted to serialize a type variable."))
+  | TVAR (k)    -> "TVar "^k (* Fixme: We need a way to differentiate correct vs incorrect serialization of TVar, for now we always serialize it.*)

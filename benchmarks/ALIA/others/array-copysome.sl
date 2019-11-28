@@ -30,9 +30,8 @@
 (define-fun post_fun ((a1 (Array Int Int)) (a2 (Array Int Int)) (n Int) (i Int) (z Int)) Bool
 (or
    (< i n)
-   (forall ((x Int))
-          (or (not (not (= x z))) 
-              (= (select a1 x) (select a2 x))))
+   (forall ((x Int)) (=> (and (>= x 0) (< x n))
+                         (or (not (not (= x z))) (= (select a1 x) (select a2 x)))))
 ))
 
 (inv-constraint inv_fun pre_fun trans_fun post_fun)

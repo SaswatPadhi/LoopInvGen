@@ -23,6 +23,14 @@ module List = struct
   let range_map ?(stride = 1) ?(start = `inclusive) ?(stop = `exclusive)
                 ~(f : int -> 'a) (start_i : int) (stop_i : int) : 'a list =
     List.(map (range ~stride ~start ~stop start_i stop_i) ~f)
+
+  let dedup_and_stable_sort ?(which_to_keep=`Last) ~compare list =
+    match list with
+    | [] -> []
+    | _ ->
+      let equal x x' = compare x x' = 0 in
+      let sorted = stable_sort ~compare list in
+      remove_consecutive_duplicates ~which_to_keep:which_to_keep ~equal sorted
 end
 
 module Array = struct
@@ -79,11 +87,3 @@ let make_user_features feature_strings vars : (string * string) list =
                            let fdef = "(define-fun " ^ fname ^ sign ^ fs ^ ")"
                             in (fdef, fname))
    end
-
-let dedup_and_sort_keep_first ~compare list =
-  match list with
-  | [] -> []
-  | _ ->
-    let equal x x' = compare x x' = 0 in
-    let sorted = List.sort ~compare list in
-    List.remove_consecutive_duplicates ~which_to_keep:`First ~equal sorted

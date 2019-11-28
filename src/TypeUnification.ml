@@ -1,3 +1,8 @@
+(* Adapted from: https://eli.thegreenplace.net/2018/unification/
+ *
+ * FIXME: The algorithm below is simple but not efficient.
+ * See: https://eli.thegreenplace.net/2018/unification#efficiency
+ *)
 open Core_kernel
 open Type
 open Exceptions
@@ -7,7 +12,6 @@ let rec find_typ (typ : t) (env: (string * t) list) =
   match typ with
   | TVAR name -> begin match List.find ~f:(fun (id,value) -> (if String.equal id name then true else false)) env with
                        | Some (_,value) -> value
-                       | None -> raise (Internal_Exn "Problem with substitution")
                        | _ -> raise (Internal_Exn "Problem with substitution")
                  end
   | Type.ARRAY (key,value) -> Type.ARRAY((find_typ key env), (find_typ value env))
@@ -47,8 +51,8 @@ and unification (lhs: t) (rhs: t) (env: (string * t) list) =
 
 let rec unify_types (lhs: t list) (rhs: t list) (env: (string * t) list): (string * t) list =
   match (lhs, rhs) with
-  | (x :: tx, y :: ty) -> (let env = (unification x y env) in 
-                                     (unify_types tx ty env))
+  | (x :: tx, y :: ty) -> (let env = (unification x y env)
+                           in  (unify_types tx ty env))
   |_ -> env
 
 let unify (t1 : t list) (t2 : t list) : (string * t) list option =

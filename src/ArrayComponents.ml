@@ -1,6 +1,9 @@
 open Base
 
 open Expr
+open Utils
+
+let array_key_compare (k1,_) (k2,_) = Value.compare k1 k2
 
 let all = [
   {
@@ -40,8 +43,8 @@ let all = [
                          | _ -> true);
     evaluate = (function [@warning "-8"]
                 [Value.Array (a_key_type, a_val_type, a_elems, a_default_val) ; Value.Array (b_key_type, b_val_type, b_elems, b_default_val)]
-                -> let dedup_a = (Utils.dedup_and_sort_keep_first a_elems ~compare:(fun (k1,_) (k2,_) -> Poly.compare k1 k2))
-                   in  let dedup_b = (Utils.dedup_and_sort_keep_first b_elems ~compare:(fun (k1,_) (k2,_) -> Poly.compare k1 k2))
+                -> let dedup_a = (List.dedup_and_stable_sort a_elems ~which_to_keep:`First ~compare:array_key_compare)
+                   in  let dedup_b = (List.dedup_and_stable_sort b_elems ~which_to_keep:`First ~compare:array_key_compare)
                    in Value.Bool (   (Poly.equal a_key_type b_key_type)
                                   && (Poly.equal a_val_type b_val_type)
                                   && (Poly.equal a_default_val b_default_val)

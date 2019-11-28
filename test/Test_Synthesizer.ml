@@ -52,6 +52,19 @@ let select_test () =
     constants = []
   } in Alcotest.(check string) "identical" "(select a k)" result.string
 
+let select_test_dup_key () =
+  let open Synthesizer in
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
+    arg_names = [ "a" ; "k" ];
+    inputs = [ (Array.map ~f:(fun (a,b,c,d) -> Value.Array (a,b,c,d))
+                     [| (Type.INT, Type.INT, [ (Value.Int 3, Value.Int 10);(Value.Int 3, Value.Int 30); (Value.Int 2, Value.Int 20); (Value.Int 1, Value.Int 10) ], Value.Int 1)
+                     ; (Type.INT, Type.INT, [ (Value.Int 2, Value.Int 20); (Value.Int 1, Value.Int 1024) ], Value.Int 0)
+                     ; (Type.INT, Type.INT, [(Value.Int 0 , Value.Int 0)], Value.Int 30) |])
+             ; [| Value.Int 3 ; Value.Int 2 ; Value.Int 3 |] ];
+    outputs = [| Value.Int 10 ; Value.Int 20 ; Value.Int 30 |];
+    constants = []
+  } in Alcotest.(check string) "identical" "(select a k)" result.string
+
 let empty_store_test () =
 let open Synthesizer in
 let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
@@ -84,11 +97,29 @@ let store_test () =
     constants = []
   } in Alcotest.(check string) "identical" "(store a k v)" result.string
 
+let store_test_update () =
+  let open Synthesizer in
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "ALIA" } {
+    arg_names = [ "a" ; "k" ; "v"];
+    inputs = [ (Array.map ~f:(fun (a,b,c,d) -> Value.Array (a,b,c,d))
+                          [| (Type.INT, Type.INT, [ (Value.Int 3, Value.Int 20);],Value.Int 1)
+                          ; (Type.INT, Type.INT, [ (Value.Int 6, Value.Int 20);],Value.Int 0)
+                          ; (Type.INT, Type.INT, [(Value.Int 1, Value.Int 20);], Value.Int 30) |])
+              ; [| Value.Int 3 ; Value.Int 2 ; Value.Int 3 |]
+              ; [| Value.Int 10 ; Value.Int 40 ; Value.Int 6 |] ];
+    outputs = [| Value.Array((Type.INT, Type.INT, [ (Value.Int 3, Value.Int 10) ;(Value.Int 3, Value.Int 20)], Value.Int 1))
+              ; Value.Array((Type.INT, Type.INT, [ (Value.Int 2, Value.Int 40) ;(Value.Int 6, Value.Int 20)], Value.Int 0))
+              ; Value.Array((Type.INT, Type.INT, [ (Value.Int 3 , Value.Int 6); (Value.Int 1, Value.Int 20)], Value.Int 30))|];
+    constants = []
+  } in Alcotest.(check string) "identical" "(store a k v)" result.string
+
 let all = [
   "(+ x y)",              `Quick, y_PLUS_x ;
   "(>= (+ x z) y)",       `Quick, y_MINUS_z_LE_x ;
   "(not (= (= w x) (= y z)))", `Quick, y_MINUS_x_MINUS_z_LE_x ;
-  "select test",          `Quick, select_test ;
-  "store test",           `Quick, empty_store_test ;
-  "store in array containing values test", `Quick, store_test ;
+  "select",          `Quick, select_test ;
+  "store in empty array",           `Quick, empty_store_test ;
+  "store in array containing values", `Quick, store_test ;
+  "select from array with latest key value pair",           `Quick, select_test_dup_key ;
+  "store in array by overriding exisiting value in index k", `Quick, store_test_update ;
 ]

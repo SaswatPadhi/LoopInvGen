@@ -69,26 +69,22 @@ type synthesized = {
 } [@@deriving sexp]
 
 let unify_component (comp : component) (args : synthesized list) : component option =
-  let typs = List.map args ~f:(fun s -> Value.typeof s.outputs.(0)) in
-  (* Log.debug (lazy ( "Unifying (" ^ (List.to_string_map ~sep:"," ~f:Type.to_string comp.domain)
-                    ^ ") of (" ^ comp.name ^ ") with ("
-                    ^ (List.to_string_map ~sep:"," ~f:(fun a -> (Type.to_string a)) typs)
-                    ^ ")")); *)
-  let env = begin match (unify typs comp.domain) with
-                  | Some res -> res
-                  | None -> raise (Internal_Exn "Cannot unify the given args and domain!!")
-            end
+  let typs = List.map args ~f:(fun s -> Value.typeof s.outputs.(0))
   in
-  let new_codomain = match (apply_env env comp.codomain) with
-                     | Some cod -> cod
-                     | None -> raise (Unification_Exn "Cannot substitute for codomain types")
-  in
-  let new_domain = (List.fold_right comp.domain ~init:[]
-                  ~f:(fun elem accum-> (match (apply_env env elem) with
-                                              | Some dom -> dom
-                                              | None -> raise (Unification_Exn "Cannot substitute for domain types")
-                                        )::accum))
-  in Some {comp with codomain = new_codomain; domain = new_domain}
+  begin
+    match (unify typs comp.domain) with
+    | None -> None
+    | Some env -> begin
+                    match (apply_env env comp.codomain) with
+                     | Some cod -> let new_domain = (List.fold_right comp.domain ~init:[]
+                                      ~f:(fun elem accum-> (match (apply_env env elem) with
+                                                                  | Some dom -> dom
+                                                                  | None -> raise (Unification_Exn "Cannot substitute for domain types")
+                                                            )::accum))
+                                      in Some {comp with codomain = cod; domain = new_domain}
+                     | None -> None
+                  end
+  end
 
 let apply (comp : component) (args : synthesized list) : synthesized option =
   if (not (comp.is_argument_valid (List.map args ~f:(fun arg -> arg.expr)))) then None
