@@ -90,9 +90,10 @@ let parse_sexps (sexps : Sexp.t list) : t =
                     in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
                        then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
                        else variables := new_var :: !variables
+              | List [ (Atom "declare-fun") ; name ; (List []) ; rtype ]
+                -> raise (Parse_Exn "Only nullary function (i.e. variable) declarations supported.")
               | List [ (Atom "declare-fun") ; name ; args ; rtype ]
-                -> if args <> List [] then raise (Parse_Exn "Only nullary function (i.e. variable) declarations supported.") else
-                   let new_var = parse_variable_declaration (List [name ; rtype])
+                -> let new_var = parse_variable_declaration (List [name ; rtype])
                     in if List.mem !variables new_var ~equal:(fun x y -> String.equal (fst x) (fst y))
                        then raise (Parse_Exn ("Multiple declarations of variable " ^ (fst new_var)))
                        else variables := new_var :: !variables

@@ -3,6 +3,7 @@ open Core
 open LoopInvGen
 
 let time_pseudolog x =
+  let open Float in
   if x > 3600.0 then 1
   else if x >= 1000.0 then 2
   else if x >= 300.0 then 3

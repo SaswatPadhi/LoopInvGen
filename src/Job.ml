@@ -20,6 +20,8 @@ type ('a, 'b) _t = {
 
 type t = (Value.t list, Value.t) _t
 
+let are_values_equal = List.equal Value.equal
+
 let compute_feature_value (test : 'a) (feature : 'a feature with_desc) : bool =
   try (fst feature) test with _ -> false
   [@@inline always]
@@ -50,11 +52,11 @@ let create_unlabeled ~f ~args ~post ?(features = []) tests : t =
    in create ~f ~args ~post ~features ~pos_tests ~neg_tests ()
 
 let add_pos_test ~(job : t) (test : Value.t list) : t =
-  if List.exists job.pos_tests ~f:(fun (pt, _) -> pt = test)
+  if List.exists job.pos_tests ~f:(fun (pt, _) -> are_values_equal pt test)
   then raise (Duplicate_Test ("New POS test (" ^ (String.concat ~sep:"," job.farg_names)
                              ^ ") = (" ^ (List.to_string_map ~sep:"," ~f:Value.to_string test)
                              ^ "), already exists in POS set!"))
-  else if List.exists job.neg_tests ~f:(fun (nt, _) -> nt = test)
+  else if List.exists job.neg_tests ~f:(fun (nt, _) -> are_values_equal nt test)
   then raise (Ambiguous_Test ("New POS test (" ^ (String.concat ~sep:"," job.farg_names)
                              ^ ") = (" ^ (List.to_string_map ~sep:"," ~f:Value.to_string test)
                              ^ ") already exists in NEG set!"))
@@ -70,11 +72,11 @@ let add_pos_test ~(job : t) (test : Value.t list) : t =
                                        ^ "), does not belong in POS set!"))
 
 let add_neg_test ~(job : t) (test : Value.t list) : t =
-  if List.exists job.neg_tests ~f:(fun (nt, _) -> nt = test)
+  if List.exists job.neg_tests ~f:(fun (nt, _) -> are_values_equal nt test)
   then raise (Duplicate_Test ("New NEG test (" ^ (String.concat ~sep:"," job.farg_names)
                              ^ ") = (" ^ (List.to_string_map ~sep:"," ~f:Value.to_string test)
                              ^ ") already exists in NEG set!"))
-  else if List.exists job.pos_tests ~f:(fun (pt, _) -> pt = test)
+  else if List.exists job.pos_tests ~f:(fun (pt, _) -> are_values_equal pt test)
   then raise (Ambiguous_Test ("New NEG test (" ^ (String.concat ~sep:"," job.farg_names)
                              ^ ") = (" ^ (List.to_string_map ~sep:"," ~f:Value.to_string test)
                              ^ ") already exists in POS set!"))

@@ -48,7 +48,7 @@ let get_in_channel = function
   | filename -> Stdio.In_channel.create filename
 
 let replace bindings expr =
-  if bindings = [] then expr else
+  if List.is_empty bindings then expr else
   let table = ref (String.Map.empty)
    in List.iter bindings
                 ~f:(function [@warning "-8"]
@@ -76,7 +76,7 @@ let make_user_features feature_strings vars : (string * string) list =
                                         | true -> None
                                         | _ -> Some fs)
    in begin
-     if feature_strings = [] then [] else
+     if List.is_empty feature_strings then [] else
      let decl_var (s,t) = "(" ^ s ^ " " ^ (Type.to_string t) ^ ")" in
      let var_decls = List.to_string_map vars ~sep:" " ~f:decl_var in
      let sign = " (" ^ var_decls ^ ") Bool "

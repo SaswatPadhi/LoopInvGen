@@ -57,8 +57,8 @@ let flush_and_collect (z3 : t) : string =
    ; let lines = ref [] in
      let rec read_line () : unit =
        let l = Option.value (In_channel.input_line z3.stdout) ~default:""
-        in if l = last_line then ()
-           else if l <> "" then (lines := l :: (!lines) ; read_line ())
+        in if String.equal l last_line then ()
+           else if not (String.equal l "") then (lines := l :: (!lines) ; read_line ())
        in read_line () ; lines := List.rev (!lines)
         ; Log.debug (lazy ("    " ^ (String.concat (!lines) ~sep:(Log.indented_sep 4))))
         ; String.concat ~sep:" " (!lines)
@@ -74,9 +74,9 @@ let close_scope (z3 : t) : unit =
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
-  if queries = []
+  if List.is_empty queries
   then begin
-    if not scoped && db <> [] then
+    if not scoped && not (List.is_empty db) then
       begin
         Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
       ; Out_channel.output_lines z3.stdin db
