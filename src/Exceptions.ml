@@ -5,6 +5,7 @@ exception Invalid_Type_Exn of string
 exception False_Pre_Exn of string
 exception Ambiguous_Test of string
 exception Duplicate_Test of string
+exception Unification_Exn of string
 
 (* thrown if there is no boolean function consistent with the given
    positive and negative examples. Possible in two situations:

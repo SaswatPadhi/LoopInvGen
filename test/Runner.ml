@@ -6,4 +6,7 @@ let () =
          ; "Test_VPIE", (Test_VPIE.all ~zpath)
          ; "Test_ZProc", (Test_ZProc.all ~zpath)
          ; "Test_Synthesizer", Test_Synthesizer.all
+         ; "Test_Unification", Test_Unification.all
+         ; "Test_Expr", Test_Expr.all
+         ; "Test_ArrayComponents", Test_ArrayComponents.all
          ])

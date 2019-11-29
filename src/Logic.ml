@@ -29,7 +29,19 @@ let all_supported =
              (BooleanComponents.all @ IntegerComponents.peano) ;
            |] ;
            sample_set_size_multiplier = 8
-         }]
+         } ; {
+           name = "ALIA" ;
+           components_per_level = [|
+             (* FIXME: Determine levels of ArrayComponents for hybrid enumeration *)
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.equality) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.intervals) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.octagons) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.polyhedra) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.polynomials) ;
+             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.peano) ;
+            |] ;
+          sample_set_size_multiplier = 1
+        }]
     ; table
 
 let of_string name = String.Table.find_exn all_supported name

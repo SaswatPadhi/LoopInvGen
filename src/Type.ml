@@ -1,3 +1,4 @@
+open Core
 open Exceptions
 
 type t = INT
@@ -5,19 +6,27 @@ type t = INT
        | CHAR
        | STRING
        | LIST
-       [@@deriving sexp]
+       | TVAR of string
+       | ARRAY of (t * t)
+       [@@deriving compare,sexp]
 
-let of_string : string -> t = function
-  | "Int"    -> INT
-  | "Bool"   -> BOOL
-  | "Char"   -> CHAR
-  | "String" -> STRING
-  | "List"   -> LIST
-  | s -> raise (Parse_Exn ("Could not parse type `" ^ s ^ "`."))
+let rec of_sexp (sexp: Sexp.t) : t =
+  let open Sexp in
+  match sexp with
+    | Atom "Int"    -> INT
+    | Atom "Bool"   -> BOOL
+    | Atom "Char"   -> CHAR
+    | Atom "String" -> STRING
+    | Atom "List"   -> LIST
+    | List [Atom "Array" ; index ; value]
+      -> ARRAY ((of_sexp index) , (of_sexp value))
+    | s -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum s) ^ "`."))
 
-let to_string : t -> string = function
-  | INT    -> "Int"
-  | BOOL   -> "Bool"
-  | CHAR   -> "Char"
-  | STRING -> "String"
-  | LIST   -> "List"
+let rec to_string : t -> string = function
+  | INT         -> "Int"
+  | BOOL        -> "Bool"
+  | CHAR        -> "Char"
+  | STRING      -> "String"
+  | LIST        -> "List"
+  | ARRAY (a,b) -> "(Array" ^ " " ^ (to_string a) ^ " " ^ (to_string b) ^ ")"
+  | TVAR (k)    -> "TVar "^k (* Fixme: We need a way to differentiate correct vs incorrect serialization of TVar, for now we always serialize it.*)
