@@ -29,4 +29,4 @@ pwd ; ls -lah
 
 dune build --verbose
 dune build test/Runner.exe --verbose
-dune build app/App.exe
+dune build app/App.exe --verbose

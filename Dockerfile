@@ -41,9 +41,9 @@ WORKDIR $HOME
 
 
 RUN opam install --yes alcotest.0.8.5 \
-                       core.v0.12.4 \
+                       core.v0.13.0 \
                        dune.1.11.4 \
-                       ppx_let.v0.12.0 \
+                       ppx_let.v0.13.0 \
                        && \
     opam clean --yes && \
     git clone https://github.com/SaswatPadhi/LoopInvGen.git
