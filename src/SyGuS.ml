@@ -30,8 +30,6 @@ type t = {
   synth_variables : var list ;
 }
 
-  
-
 let rec extract_consts : Sexp.t -> Value.t list = function
   | List [] -> []
   | (Atom a) | List [Atom a] -> (try [ Value.of_atomic_string a ] with _ -> [])

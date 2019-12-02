@@ -8,7 +8,8 @@ module T = struct
          | Char of char
          | String of string
          | List of t list
-         | Array of Type.t * Type.t * (t * t) list * t (* FIXME: Use HashTable instead of List *)
+         | Array of Type.t * Type.t * (t * t) list * t
+           (* FIXME: Use HashTable instead of List *)
          [@@deriving compare,sexp]
 end
 
@@ -50,27 +51,32 @@ let of_atomic_string (s : string) : t =
 (* We assume that an array serialization provides explicit (k,v) pairs --
  * either using nested `store` calls, or if-then-else constructs.
  * The different array formats are described in more details here:
- * https://docs.google.com/document/d/1zSXs91eeJ1hc7bmcUTzeJtjiCHTNEYZKZpi_436HvbA *)
-let rec parse_array (acc: (t*t) list) (sexp: Sexp.t) : Type.t * Type.t * (t*t) list *t =
-match sexp with
-| List([Sexp.List([ Atom "as"; Atom "const"; Sexp.List([Atom "Array"; key_type ; val_type])]); def_val]) -> ((Type.of_sexp key_type),(Type.of_sexp val_type),acc, (of_sexp def_val))
-| List([Sexp.Atom "store"; rest_of_array; key; value]) -> (parse_array (acc@[((of_sexp key),(of_sexp value))]) rest_of_array)
-| _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
-
-and parse_ite (acc: (t*t) list) (sexp: Sexp.t): (t*t) list *t =
+ * https://docs.google.com/document/d/1zSXs91eeJ1hc7bmcUTzeJtjiCHTNEYZKZpi_436HvbA
+ *)
+let rec parse_array (acc : (t*t) list) (sexp : Sexp.t) : Type.t * Type.t * (t*t) list * t =
+  let open Sexp in
   match sexp with
-  | List[ Sexp.Atom "ite"; List[ _; _ ; key]; value; rest] -> (parse_ite (acc@[((of_sexp key),(of_sexp value))]) (rest))
+  | List [ List [ Atom "as" ; Atom "const" ; List [Atom "Array" ; key_type ; val_type] ] ; def_val]
+    -> ((Type.of_sexp key_type) , (Type.of_sexp val_type) , acc , (of_sexp def_val))
+  | List [Atom "store" ; rest_of_array ; key ; value]
+    -> parse_array (acc @ [ ((of_sexp key) , (of_sexp value)) ]) rest_of_array
+  | _ -> raise (Parse_Exn ("Failed to parse value `" ^ (Sexp.to_string_hum sexp) ^ "`."))
+
+and parse_ite (acc : (t*t) list) (sexp : Sexp.t) : (t*t) list * t =
+  match sexp with
+  | List[ Sexp.Atom "ite" ; List[ _ ; _ ; key ] ; value ; rest]
+    -> parse_ite (acc @ [ ((of_sexp key) , (of_sexp value)) ]) rest
   | default -> (acc, (of_sexp default))
 
-and parse_named_array  (sexp: Sexp.t) (param: Sexp.t) (val_type : Sexp.t): t =
-  let key_name, key_type = begin
-                            match param with
-                            | List [List [name ; value]] -> (name, (Type.of_sexp value))
-                           end
-  in let parsed_array, default = (parse_ite [] sexp) in
-  Array(key_type, (Type.of_sexp val_type), parsed_array, default)
+and [@warning "-8"] parse_named_array (sexp : Sexp.t)
+                                      (List [List [name ; value]] : Sexp.t)
+                                      (val_type : Sexp.t)
+                                      : t =
+  let key_name, key_type = name, (Type.of_sexp value) in
+  let parsed_array, default = (parse_ite [] sexp)
+   in Array (key_type, (Type.of_sexp val_type), parsed_array, default)
 
-and of_sexp (sexp: Sexp.t) : t =
+and of_sexp (sexp : Sexp.t) : t =
   let open Sexp in
   match sexp with
       | Atom v -> (of_atomic_string v)

@@ -27,10 +27,9 @@ module List = struct
   let dedup_and_stable_sort ?(which_to_keep=`Last) ~compare list =
     match list with
     | [] -> []
-    | _ ->
-      let equal x x' = compare x x' = 0 in
-      let sorted = stable_sort ~compare list in
-      remove_consecutive_duplicates ~which_to_keep:which_to_keep ~equal sorted
+    | _ -> let equal x x' = compare x x' = 0 in
+           let sorted = stable_sort ~compare list
+            in remove_consecutive_duplicates ~which_to_keep ~equal sorted
 end
 
 module Array = struct
@@ -51,7 +50,7 @@ let get_in_channel = function
 let replace bindings expr =
   if bindings = [] then expr else
   let table = ref (String.Map.empty)
-    in List.iter bindings
+   in List.iter bindings
                 ~f:(function [@warning "-8"]
                     | Sexp.List [ (Atom key) ; data ]      (* SMTLIB *)
                     | Sexp.List [ (Atom key) ; _ ; data ]  (* SyGuS *)
@@ -61,7 +60,7 @@ let replace bindings expr =
         | Atom atom -> match String.Map.find !table atom with
                         | None      -> Atom atom
                         | Some data -> data
-        in helper expr
+       in helper expr
 
 let rec remove_lets : Sexp.t -> Sexp.t = function
   | Atom _ as atom -> atom

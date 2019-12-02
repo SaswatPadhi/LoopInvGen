@@ -6,41 +6,30 @@ type t = {
   sample_set_size_multiplier : int
 }
 
+let ( *** ) = fun x y ->
+  Array.(map ~f:(fun (ex,ey) -> ex @ ey) (cartesian_product x y))
+
 let all_supported =
    let table = String.Table.create () ~size:2
    in List.iter ~f:(fun component -> String.Table.set table ~key:component.name ~data:component)
         [{
            name = "LIA" ;
-           components_per_level = [|
-             (BooleanComponents.all @ IntegerComponents.equality) ;
-             (BooleanComponents.all @ IntegerComponents.intervals) ;
-             (BooleanComponents.all @ IntegerComponents.octagons) ;
-             (BooleanComponents.all @ IntegerComponents.polyhedra) ;
-           |] ;
+           components_per_level = BooleanComponents.levels *** IntegerComponents.linear_levels ;
            sample_set_size_multiplier = 1
          } ; {
            name = "NIA" ;
-           components_per_level = [|
-             (BooleanComponents.all @ IntegerComponents.equality) ;
-             (BooleanComponents.all @ IntegerComponents.intervals) ;
-             (BooleanComponents.all @ IntegerComponents.octagons) ;
-             (BooleanComponents.all @ IntegerComponents.polyhedra) ;
-             (BooleanComponents.all @ IntegerComponents.polynomials) ;
-             (BooleanComponents.all @ IntegerComponents.peano) ;
-           |] ;
+           components_per_level = BooleanComponents.levels *** IntegerComponents.non_linear_levels ;
            sample_set_size_multiplier = 8
          } ; {
            name = "ALIA" ;
-           components_per_level = [|
-             (* FIXME: Determine levels of ArrayComponents for hybrid enumeration *)
-             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.equality) ;
-             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.intervals) ;
-             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.octagons) ;
-             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.polyhedra) ;
-             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.polynomials) ;
-             (ArrayComponents.all @ BooleanComponents.all @ IntegerComponents.peano) ;
-            |] ;
-          sample_set_size_multiplier = 1
+           (* FIXME: Determine levels of ArrayComponents for hybrid enumeration *)
+           components_per_level = ArrayComponents.levels *** BooleanComponents.levels *** IntegerComponents.linear_levels ;
+           sample_set_size_multiplier = 1
+         } ; {
+           name = "ANIA" ;
+           (* FIXME: Determine levels of ArrayComponents for hybrid enumeration *)
+           components_per_level = ArrayComponents.levels *** BooleanComponents.levels *** IntegerComponents.non_linear_levels ;
+           sample_set_size_multiplier = 8
         }]
     ; table
 

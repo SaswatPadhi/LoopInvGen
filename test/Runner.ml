@@ -1,6 +1,7 @@
 let () =
   Alcotest.run ~argv:[| "zpath" |] "LoopInvGen"
-    (let zpath = Sys.argv.(1)
+    (* FIXME: Find a way to pass command-line arguments within dune's runtest alias *)
+    (let zpath = if (Array.length Sys.argv) > 1 then Sys.argv.(1) else ""
       in [ "Test_BFL", Test_BFL.all
          ; "Test_PIE", Test_PIE.all
          ; "Test_VPIE", (Test_VPIE.all ~zpath)

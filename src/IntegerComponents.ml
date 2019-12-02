@@ -8,7 +8,7 @@ let equality = [
   {
     name = "int-eq";
     codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                          | _ -> false);
@@ -22,7 +22,7 @@ let intervals = equality @ [
    {
     name = "int-geq";
     codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                          | _ -> false);
@@ -33,7 +33,7 @@ let intervals = equality @ [
   {
     name = "int-leq";
     codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                          | _ -> false);
@@ -44,7 +44,7 @@ let intervals = equality @ [
   {
     name = "int-lt";
     codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                          | _ -> false);
@@ -55,7 +55,7 @@ let intervals = equality @ [
   {
     name = "int-gt";
     codomain = Type.BOOL;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                          | _ -> false);
@@ -108,7 +108,7 @@ let octagons = intervals @ [
 
 let polyhedra = octagons @ [
   {
-    name = "lin-int-mult";
+    name = "int-lin-mult";
     codomain = Type.INT;
     domain = [Type.INT; Type.INT];
     is_argument_valid = (function
@@ -125,7 +125,7 @@ let polyhedra = octagons @ [
 
 let polynomials = polyhedra @ [
   {
-    name = "nonlin-int-mult";
+    name = "int-nonlin-mult";
     codomain = Type.INT;
     domain = [Type.INT; Type.INT];
     is_argument_valid = (function
@@ -141,7 +141,7 @@ let peano = polynomials @ [
   {
     name = "int-div";
     codomain = Type.INT;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> x =/= y
                                    && (x =/= Const (Value.Int 0)) && (x =/= Const (Value.Int 1))
@@ -155,7 +155,7 @@ let peano = polynomials @ [
   {
     name = "int-mod";
     codomain = Type.INT;
-    domain = [Type.INT;Type.INT];
+    domain = [Type.INT; Type.INT];
     is_argument_valid = (function
                          | [x ; y] -> x =/= y
                                    && (x =/= Const (Value.Int 0)) && (x =/= Const (Value.Int 1))
@@ -167,3 +167,6 @@ let peano = polynomials @ [
     global_constraints = (fun [@warning "-8"] [_ ; b] -> ["(not (= 0 " ^ b ^ "))"]);
   }
 ]
+
+let linear_levels = [| equality ; intervals ; octagons ; polyhedra |]
+let non_linear_levels = [| equality ; intervals ; octagons ; polyhedra ; polynomials ; peano |]

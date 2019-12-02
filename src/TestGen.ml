@@ -10,7 +10,7 @@ let rec for_type (t : Type.t) : Value.t Generator.t =
   | Type.BOOL -> bool >>= fun b -> singleton (Value.Bool b)
   | Type.CHAR -> char >>= fun c -> singleton (Value.Char c)
   | Type.STRING -> (Int.gen_incl 0 64)
-                  >>= fun len -> (String.gen_with_length len (Char.gen_print)
+                   >>= fun len -> (String.gen_with_length len (Char.gen_print)
                                   >>= fun s -> singleton (Value.String s))
   | Type.LIST -> raise (Exceptions.Internal_Exn "Generators for List type not implemented!")
   | Type.ARRAY (key,value) -> (Int.gen_incl 0 64)

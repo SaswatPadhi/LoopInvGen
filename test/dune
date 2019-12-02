@@ -1,7 +1,8 @@
 (executable
     (name Runner)
-    (libraries LoopInvGen base alcotest))
+    (libraries alcotest base LoopInvGen))
 
 (alias
     (name runtest)
-    (action (run ./Runner.exe)))
+    (deps Runner.exe)
+    (action (run %{deps})))
