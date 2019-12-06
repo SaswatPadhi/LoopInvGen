@@ -4,13 +4,13 @@ open Exceptions
 
 module T = struct
   type t = INT
-        | BOOL
-        | CHAR
-        | STRING
-        | LIST
-        | TVAR of string
-        | ARRAY of (t * t)
-        [@@deriving compare,sexp]
+         | BOOL
+         | CHAR
+         | STRING
+         | TVAR of string
+         | LIST of t
+         | ARRAY of (t * t)
+         [@@deriving compare,sexp]
 end
 
 include T
@@ -23,7 +23,8 @@ let rec of_sexp (sexp: Sexp.t) : t =
     | Atom "Bool"   -> BOOL
     | Atom "Char"   -> CHAR
     | Atom "String" -> STRING
-    | Atom "List"   -> LIST
+    | List [Atom "List" ; typ]
+      -> LIST (of_sexp typ)
     | List [Atom "Array" ; index ; value]
       -> ARRAY ((of_sexp index) , (of_sexp value))
     | s -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum s) ^ "`."))
@@ -33,11 +34,11 @@ let rec to_string : t -> string = function
   | BOOL        -> "Bool"
   | CHAR        -> "Char"
   | STRING      -> "String"
-  | LIST        -> "List"
-  | ARRAY (a,b) -> "(Array" ^ " " ^ (to_string a) ^ " " ^ (to_string b) ^ ")"
-  | TVAR k      -> k
+  | LIST t      -> "(List " ^ (to_string t) ^ ")"
+  | ARRAY (k,v) -> "(Array " ^ (to_string k) ^ " " ^ (to_string v) ^ ")"
+  | TVAR n      -> n
     (* TODO: We may want to detect cases when a TVAR should never occur in a type,
-              and throw exceptions in those cases *)
+             and throw exceptions in those cases *)
 
 module Unification = struct
   (* Adapted from: https://eli.thegreenplace.net/2018/unification/
@@ -52,6 +53,7 @@ module Unification = struct
         | Some (_,value) -> value
         | _ -> raise (Unification_Exn ("Could not find a binding for " ^ name))
       end
+    | LIST typ          -> LIST (substitute_with_exn env typ)
     | ARRAY (key,value) -> ARRAY ((substitute_with_exn env key),
                                   (substitute_with_exn env value))
     | t -> t
@@ -88,6 +90,8 @@ module Unification = struct
     match lhs, rhs with
     | TVAR x , _ -> of_var ~env x rhs
     | _ , TVAR y -> of_var ~env y lhs
+    | LIST lhs_type, LIST rhs_type
+      -> of_type lhs_type rhs_type ~env
     | ARRAY (lhs_key,lhs_value), ARRAY (rhs_key,rhs_value)
       -> let env = env @ (of_type ~env lhs_key rhs_key)
           in (of_type lhs_value rhs_value ~env)

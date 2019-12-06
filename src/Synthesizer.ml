@@ -9,17 +9,17 @@ module Config = struct
   type t = {
     cost_limit : int ;
     cost_attribute : cost_attr ;
-    cost_function : int -> int -> float ;
     logic : Logic.t ;
     max_expressiveness_level : int ;
+    order : int -> int -> float ;
   }
 
   let default : t = {
-    cost_limit = 25 ;
+    cost_limit = 32 ;
     cost_attribute = Size ;
-    cost_function = (fun g_cost e_cost -> (Int.to_float e_cost) *. (Float.log (Int.to_float g_cost))) ;
     logic = Logic.of_string "LIA" ;
-    max_expressiveness_level = 4 ;
+    max_expressiveness_level = 1024 ;
+    order = (fun g_cost e_cost -> (Int.to_float e_cost) *. (Float.log (Int.to_float g_cost))) ;
   }
 end
 
@@ -149,30 +149,32 @@ let subtract ~(from : Expr.component list) (comps : Expr.component list) =
 
 let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let typed_components t_type =
-    let equal_f cod = match cod , t_type with
-      | Type.ARRAY _ , Type.ARRAY _ -> true
-      | Type.TVAR _, _ -> true
-      | cod, t_type -> Poly.equal cod t_type
-    in
-    Array.append
-    (Array.create ~len:1 [])
-    (Array.mapi (Array.init (Int.min config.max_expressiveness_level (Array.length config.logic.components_per_level))
-                            ~f:(fun i -> config.logic.components_per_level.(i)))
+    let equal_f cod = Type.(match cod , t_type with
+                            | ARRAY _ , ARRAY _ -> true
+                            | LIST _ , LIST _ -> true
+                            | TVAR _, _ -> true
+                            | cod, t_type -> equal cod t_type)
+     in Array.(append
+          (create ~len:1 [])
+          (mapi (init (Base.Int.min config.max_expressiveness_level (length config.logic.components_per_level))
+                      ~f:(fun i -> config.logic.components_per_level.(i)))
                 ~f:(fun level comps
                     -> List.filter ~f:(fun c -> equal_f c.codomain)
                                    (if level < 1 then comps
-                                    else subtract ~from:comps (config.logic.components_per_level.(level - 1))))) in
+                                    else subtract ~from:comps (config.logic.components_per_level.(level - 1))))))
+   in
 
   let int_components = typed_components Type.INT in
   let bool_components = typed_components Type.BOOL in
   let char_components = typed_components Type.CHAR in
   let string_components = typed_components Type.STRING in
-  let list_components = typed_components Type.LIST in
-  let poly_array_components = typed_components (Type.ARRAY ((TVAR "_"), (TVAR "_"))) in
+  let poly_list_components = typed_components Type.(LIST (TVAR "_")) in
+  let poly_array_components = typed_components Type.(ARRAY (TVAR "_", TVAR "_")) in
 
   let empty_candidates () =
-    Array.init ((Array.length config.logic.components_per_level) + 1)
-      ~f:(fun _ -> Array.init config.cost_limit ~f:(fun _ -> DList.create ())) in
+    Array.(init ((length config.logic.components_per_level) + 1)
+                ~f:(fun _ -> init config.cost_limit ~f:(fun _ -> DList.create ())))
+   in
 
   let int_candidates = empty_candidates () in
   let bool_candidates = empty_candidates () in
@@ -182,15 +184,17 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let array_candidates = empty_candidates () in
 
   let typed_candidates ?(no_tvar = false) = function
-    | Type.INT -> int_candidates
-    | Type.BOOL -> bool_candidates
-    | Type.CHAR -> char_candidates
-    | Type.STRING -> string_candidates
-    | Type.LIST -> list_candidates
+    | Type.INT     -> int_candidates
+    | Type.BOOL    -> bool_candidates
+    | Type.CHAR    -> char_candidates
+    | Type.STRING  -> string_candidates
+    | Type.LIST _  -> list_candidates
     | Type.ARRAY _ -> array_candidates
-    | Type.TVAR _ when no_tvar = false -> raise (Internal_Exn "No candidates for TVAR")
+    | Type.TVAR _ when no_tvar = false
+      -> raise (Internal_Exn "No candidates for TVAR")
     | Type.TVAR _ -> let (@) = Array.append
-                      in int_candidates @ bool_candidates @ char_candidates @ string_candidates @ list_candidates @ array_candidates
+                      in int_candidates @ bool_candidates @ char_candidates
+                       @ string_candidates @ list_candidates @ array_candidates
   in
 
   let seen_outputs = ref (Set.empty (module Output)) in
@@ -201,11 +205,10 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
         else (ignore (DList.insert_last candidates_set.(level).(cost) candidate) ; true)
   in
 
-  let constants =
-    (List.dedup_and_sort ~compare:Value.compare
-       ( [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ]
-       @ (List.map ~f:(function Value.Int x -> Value.Int (abs x) | x -> x)
-                   task.constants)))
+  let constants = Value.(
+    List.dedup_and_sort ~compare
+       ( Value.[ Int 0 ; Int 1 ; Bool true ; Bool false ]
+       @ (List.map task.constants ~f:(function Int x -> Int (abs x) | x -> x))))
   in
   let add_constant_candidate value =
     let candidate : Expr.synthesized = {
@@ -248,24 +251,28 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     let applier (args : Expr.synthesized list) =
       stats.enumerated <- stats.enumerated + 1;
       begin
-        match Expr.unify_component component (List.map args ~f:(fun s -> Value.typeof s.outputs.(0))) with
-        | None -> Log.debug (lazy ( "Cannot unify domain (" ^ (List.to_string_map ~sep:"," ~f:Type.to_string component.domain)
-                                  ^ ") of (" ^ component.name ^ ") with ("
-                                  ^ (List.to_string_map ~sep:"," ~f:(fun a -> Expr.to_string (Array.of_list task.arg_names) a.expr) args)
-                                  ^ ")"))
+        Log.debug (lazy ( "Attempting to unify " ^ component.name ^ " : [" ^ (List.to_string_map ~sep:"," ~f:Type.to_string component.domain)
+                        ^ "] -> " ^ (Type.to_string component.codomain)));
+        Log.debug (lazy ("with [" ^ (List.to_string_map args ~sep:" , "
+                                                        ~f:(fun a -> "(" ^ (Expr.to_string (Array.of_list task.arg_names) a.expr)
+                                                                   ^ " : " ^ (Type.to_string (Value.typeof a.outputs.(0))) ^ ")")) ^ "]"));
+        match Expr.unify_component component (List.map args ~f:(fun a -> Value.typeof a.outputs.(0))) with
+        | None -> Log.debug (lazy (" > Unification failure!"))
         | Some unified_component -> begin
-            let cod = match unified_component.codomain with
-                    | Type.ARRAY (_,_) -> Type.ARRAY (Type.TVAR "_" , Type.TVAR "_")
-                    | cod -> cod
+            let cod = Type.(match unified_component.codomain with
+                            | ARRAY _ -> ARRAY (TVAR "_" , TVAR "_")
+                            | LIST _ -> LIST (TVAR "_")
+                            | cod -> cod)
              in if not (Type.equal cod cand_type) then
-                  Log.debug (lazy ("The candidate type " ^ (Type.to_string cand_type) ^ " did not match the codomain " ^ (Type.to_string cod)))
+                  Log.debug (lazy ("  > The candidate type " ^ (Type.to_string cand_type) ^
+                                   " did not match the codomain " ^ (Type.to_string cod)))
                 else begin
                   match Expr.apply unified_component args with
                   | None -> stats.pruned <- stats.pruned + 1
                   | Some result
                     -> let expr_cost = f_cost result.expr
                         in if expr_cost < config.cost_limit
-                           then (if Poly.equal task_codomain unified_component.codomain then check result)
+                           then (if Type.equal task_codomain unified_component.codomain then check result)
                          ; if not (add_candidate candidates expr_level expr_cost result)
                            then stats.pruned <- stats.pruned + 1
                   end
@@ -276,8 +283,8 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let ordered_level_cost =
     let grammar_cost level = (List.length constants) * (List.length config.logic.components_per_level.(level-1))
     in List.sort ~compare:(fun (level1,cost1) (level2,cost2)
-                           -> Float.compare (config.cost_function (grammar_cost level1) cost1)
-                                            (config.cost_function (grammar_cost level2) cost2))
+                           -> Float.compare (config.order (grammar_cost level1) cost1)
+                                            (config.order (grammar_cost level2) cost2))
                  (List.cartesian_product (List.range 1 ~stop:`inclusive (Int.min config.max_expressiveness_level (Array.length config.logic.components_per_level)))
                                          (List.range 2 config.cost_limit))
   in
@@ -292,11 +299,10 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     ~f:(fun (level,cost)
         -> List.(iter (cartesian_product (range ~stop:`inclusive 1 level) (range 2 cost))
              ~f:(fun (l,c) -> if not (Set.mem !seen_level_cost (l,c))
-                              then failwith ( "Internal Error :: Bad guiding function for synthesis. "
-                                            ^ "Exploring (G=" ^ (Int.to_string level)
+                              then failwith ( "Internal Error :: Not a well order! "
+                                            ^ "Attempted to explore (G=" ^ (Int.to_string level)
                                             ^ ",k=" ^ (Int.to_string cost) ^ ") before (G="
-                                            ^ (Int.to_string l) ^ ",k=" ^ (Int.to_string c)
-                                            ^ ")!")))
+                                            ^ (Int.to_string l) ^ ",k=" ^ (Int.to_string c) ^ ")")))
          ; seen_level_cost := (Set.add !seen_level_cost (level, cost))
          ; List.iter (List.range 1 ~stop:`inclusive level)
              ~f:(fun l -> List.iter2_exn
@@ -304,19 +310,19 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
                                  ; (INT, int_candidates)
                                  ; (CHAR, char_candidates)
                                  ; (STRING, string_candidates)
-                                 ; (LIST, list_candidates)
+                                 ; (LIST (TVAR "_"), list_candidates)
                                  ; (ARRAY (TVAR "_", TVAR "_"), array_candidates) ]
                             [ bool_components.(l)
                             ; int_components.(l)
                             ; char_components.(l)
                             ; string_components.(l)
-                            ; list_components.(l)
+                            ; poly_list_components.(l)
                             ; poly_array_components.(l) ]
                             ~f:(fun (cand_type, cands) comps
                                 -> List.iter comps ~f:(expand_component l level cost cands cand_type))))
 
 let solve ?(config = Config.default) (task : task) : result =
-  Log.debug (lazy ("Running enumerative synthesis:"));
+  Log.debug (lazy ("Running enumerative synthesis with logic `" ^ (config.logic.name) ^ "`:"));
   let start_time = Time.now () in
   let stats = { enumerated = 0 ; pruned = 0 ; synth_time_ms = 0.0 } in
   try solve_impl config task stats
