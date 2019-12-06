@@ -8,13 +8,12 @@ type t = {
 
 (* TODO: Think about better strategies for combining grammar levels across multiple theories.
          Given levels L1 = {Ga_1 ⊆ ... Ga_m} and L2 = {Gb_1 ⊆ ... Gb_n}, such that n > m,
-         currently I pad L1 with empty grammars in the beginning such that |L1| = |L2|
-         and then take a pairwise union. *)
+         currently I pad L1 with Ga_m at the end such that |L1| = |L2| and take a pairwise union. *)
 
 let rec ( ++ ) = fun x y ->
   if Array.(length y > length x) then y ++ x
   else Array.(map ~f:(fun (ex,ey) -> ex @ ey)
-                  (zip_exn x (append (create [] ~len:(length x - length y)) y)))
+                  (zip_exn x (append y (create (last y) ~len:(length x - length y)))))
 
 let all_supported =
    let table = String.Table.create () ~size:8

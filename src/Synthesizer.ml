@@ -205,11 +205,10 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
         else (ignore (DList.insert_last candidates_set.(level).(cost) candidate) ; true)
   in
 
-  let constants =
-    (List.dedup_and_sort ~compare:Value.compare
-       ( [ Value.Int 0 ; Value.Int 1 ; Value.Bool true ; Value.Bool false ]
-       @ (List.map ~f:(function Value.Int x -> Value.Int (abs x) | x -> x)
-                   task.constants)))
+  let constants = Value.(
+    List.dedup_and_sort ~compare
+       ( Value.[ Int 0 ; Int 1 ; Bool true ; Bool false ]
+       @ (List.map task.constants ~f:(function Int x -> Int (abs x) | x -> x))))
   in
   let add_constant_candidate value =
     let candidate : Expr.synthesized = {
@@ -252,25 +251,28 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     let applier (args : Expr.synthesized list) =
       stats.enumerated <- stats.enumerated + 1;
       begin
-        match Expr.unify_component component (List.map args ~f:(fun s -> Value.typeof s.outputs.(0))) with
-        | None -> Log.debug (lazy ( "Cannot unify domain (" ^ (List.to_string_map ~sep:"," ~f:Type.to_string component.domain)
-                                  ^ ") of (" ^ component.name ^ ") with ("
-                                  ^ (List.to_string_map ~sep:"," ~f:(fun a -> Expr.to_string (Array.of_list task.arg_names) a.expr) args)
-                                  ^ ")"))
+        Log.debug (lazy ( "Attempting to unify " ^ component.name ^ " : [" ^ (List.to_string_map ~sep:"," ~f:Type.to_string component.domain)
+                        ^ "] -> " ^ (Type.to_string component.codomain)));
+        Log.debug (lazy ("with [" ^ (List.to_string_map args ~sep:" , "
+                                                        ~f:(fun a -> "(" ^ (Expr.to_string (Array.of_list task.arg_names) a.expr)
+                                                                   ^ " : " ^ (Type.to_string (Value.typeof a.outputs.(0))) ^ ")")) ^ "]"));
+        match Expr.unify_component component (List.map args ~f:(fun a -> Value.typeof a.outputs.(0))) with
+        | None -> Log.debug (lazy (" > Unification failure!"))
         | Some unified_component -> begin
-            let cod = match unified_component.codomain with
-                      | Type.ARRAY (_,_) -> Type.ARRAY (Type.TVAR "_" , Type.TVAR "_")
-                      | Type.LIST _ -> Type.LIST (Type.TVAR "_")
-                      | cod -> cod
+            let cod = Type.(match unified_component.codomain with
+                            | ARRAY _ -> ARRAY (TVAR "_" , TVAR "_")
+                            | LIST _ -> LIST (TVAR "_")
+                            | cod -> cod)
              in if not (Type.equal cod cand_type) then
-                  Log.debug (lazy ("The candidate type " ^ (Type.to_string cand_type) ^ " did not match the codomain " ^ (Type.to_string cod)))
+                  Log.debug (lazy ("  > The candidate type " ^ (Type.to_string cand_type) ^
+                                   " did not match the codomain " ^ (Type.to_string cod)))
                 else begin
                   match Expr.apply unified_component args with
                   | None -> stats.pruned <- stats.pruned + 1
                   | Some result
                     -> let expr_cost = f_cost result.expr
                         in if expr_cost < config.cost_limit
-                           then (if Poly.equal task_codomain unified_component.codomain then check result)
+                           then (if Type.equal task_codomain unified_component.codomain then check result)
                          ; if not (add_candidate candidates expr_level expr_cost result)
                            then stats.pruned <- stats.pruned + 1
                   end
@@ -320,13 +322,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
                                 -> List.iter comps ~f:(expand_component l level cost cands cand_type))))
 
 let solve ?(config = Config.default) (task : task) : result =
-  Log.debug (lazy ("Running enumerative synthesis" ^ (config.logic.name) ^ ":"));
-  Log.debug (lazy ( "  > Sizes of provided grammars:"
-                  ^ (Array.to_string_map config.logic.components_per_level
-                                         ~sep:", " ~f:(fun l -> Int.to_string (List.length l)))));
-  if not (Array.is_sorted ~compare:Int.compare
-                          (Array.map config.logic.components_per_level ~f:List.length))
-  then raise (Enumeration_Exn ("Provided grammars are not monotonically increasing in expressiveness"));
+  Log.debug (lazy ("Running enumerative synthesis with logic `" ^ (config.logic.name) ^ "`:"));
   let start_time = Time.now () in
   let stats = { enumerated = 0 ; pruned = 0 ; synth_time_ms = 0.0 } in
   try solve_impl config task stats

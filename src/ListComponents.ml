@@ -6,7 +6,7 @@ let all_qf = [
   {
     name = "length";
     codomain = Type.INT;
-    domain = Type.[LIST (TVAR "a")];
+    domain = Type.[LIST (TVAR "_")];
     is_argument_valid = (function _ -> true);
     evaluate = Value.(fun [@warning "-8"] [List (_,l)] -> Int (List.length l));
     to_string = (fun [@warning "-8"] [a] -> "(len " ^ a ^ ")");
@@ -14,8 +14,8 @@ let all_qf = [
   } ;
   {
     name = "hd";
-    codomain = Type.TVAR "a";
-    domain = Type.[LIST (TVAR "a")];
+    codomain = Type.TVAR "T1";
+    domain = Type.[LIST (TVAR "T1")];
     is_argument_valid = (function _ -> true);
     evaluate = Value.(fun [@warning "-8"] [List (_,l)] -> List.hd_exn l);
     to_string = (fun [@warning "-8"] [a] -> "(hd " ^ a ^ ")");
@@ -23,8 +23,8 @@ let all_qf = [
   } ;
   {
     name = "tl";
-    codomain = Type.(LIST (TVAR "a"));
-    domain = Type.[LIST (TVAR "a")];
+    codomain = Type.(LIST (TVAR "T1"));
+    domain = Type.[LIST (TVAR "T1")];
     is_argument_valid = (function _ -> true);
     evaluate = Value.(fun [@warning "-8"] [List (t,l)] -> List (t, (List.tl_exn l)));
     to_string = (fun [@warning "-8"] [a] -> "(tl " ^ a ^ ")");
@@ -72,7 +72,7 @@ let map_transform_unary (component : component) : component =
                   "Cannot transform a " ^ (Int.to_string (List.length l)) ^ "-ary component " ^ component.name))
 
 let all_transformed_int_unary =
-  all @ (List.filter_map IntegerComponents.polynomials
+  all @ (List.filter_map (BooleanComponents.all @ IntegerComponents.polynomials)
                          ~f:(fun c -> try Some (map_transform_unary c)
                                       with _ -> None))
 
@@ -88,33 +88,32 @@ let map_transform_binary (component : component) : component list =
     -> let nameL = "map-fixL-" ^ component.name in
        let nameR = "map-fixR-" ^ component.name
         in [{
-              name = nameL;
+              name = nameR;
               codomain = Type.LIST component.codomain;
               domain = Type.[LIST d1 ; d2];
               is_argument_valid = (function _ -> true);
               evaluate = Value.(fun [@warning "-8"] [List (_, x) ; y]
-                                -> List (Type.LIST component.codomain,
-                                         (List.map x ~f:(fun e -> component.evaluate [e ; y]))));
-              to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ nameL ^ " " ^ a ^ " " ^ b ^ ")");
-              global_constraints = (fun _ -> [])
+                                -> List (component.codomain, (List.map x ~f:(fun e -> component.evaluate [e ; y]))));
+              to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ nameR ^ " " ^ a ^ " " ^ b ^ ")");
+              global_constraints = component.global_constraints
             } ;
             {
-              name = nameR;
+              name = nameL;
               codomain = Type.LIST component.codomain;
               domain = Type.[d1 ; LIST d2];
               is_argument_valid = (function _ -> true);
               evaluate = Value.(fun [@warning "-8"] [x ; List (_, y)]
-                                -> List (Type.LIST component.codomain,
-                                         (List.map y ~f:(fun e -> component.evaluate [x ; e]))));
-              to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ nameR ^ " " ^ a ^ " " ^ b ^ ")");
-              global_constraints = (fun _ -> [])
+                                -> List (component.codomain, (List.map y ~f:(fun e -> component.evaluate [x ; e]))));
+              to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ nameL ^ " " ^ a ^ " " ^ b ^ ")");
+              global_constraints = component.global_constraints
             }]
   | l -> raise (Exceptions.Transformation_Exn (
-                  "Cannot transform a " ^ (Int.to_string (List.length l)) ^ "-ary component " ^ component.name))
+                  "Cannot transform a " ^ (Int.to_string (List.length l)) ^
+                  "-ary component " ^ component.name))
 
 let all_transformed_int_binary =
   all_transformed_int_unary @
-  List.(concat (filter_map IntegerComponents.polynomials
+  List.(concat (filter_map (BooleanComponents.all @ IntegerComponents.polynomials)
                            ~f:(fun c -> try Some (map_transform_binary c)
                                         with _ -> None)))
 

@@ -4,31 +4,37 @@ open LoopInvGen
 
 open Expr
 
-let mock_store_component = {
-  name = "mock-store";
-  codomain = Type.ARRAY (Type.TVAR "a" , Type.TVAR "b");
-  domain = [Type.ARRAY (Type.TVAR "a", Type.TVAR "b") ; Type.TVAR "a"];
-  is_argument_valid = (fun _ -> true);
-  evaluate = (fun _ -> (Value.Int 0));
-  to_string = (fun _ -> "");
-  global_constraints = (fun _ -> []);
-}
+let find_component list name = List.find_exn list ~f:(fun c -> String.equal c.name name)
 
 let unify_success () =
-  let arg_types = [ Type.ARRAY (Type.STRING,Type.INT) ; Type.STRING ] in
-  let res = match unify_component mock_store_component arg_types with
-    | None -> false
-    | Some unified_comp
-      -> Type.equal unified_comp.codomain (Type.ARRAY (Type.STRING,Type.INT))
-      && (List.equal Type.equal unified_comp.domain [Type.ARRAY (Type.STRING, Type.INT) ; Type.STRING])
+  let select_comp = find_component ArrayComponents.all "select" in
+  let arg_types = Type.[ ARRAY (STRING,INT) ; STRING ] in
+  let res = Type.(match unify_component select_comp arg_types with
+                  | None -> false
+                  | Some unified_comp
+                    -> equal unified_comp.codomain INT
+                    && (List.equal equal unified_comp.domain [ARRAY (STRING, INT) ; STRING]))
    in Alcotest.(check bool) "identical" true res
 
 let unify_failure () =
-  let arg_types = [ Type.ARRAY (Type.STRING,Type.INT) ; Type.INT ] in
-  let res = unify_component mock_store_component arg_types
+  let select_comp = find_component ArrayComponents.all "select" in
+  let arg_types = Type.[ ARRAY (STRING,INT) ; INT ] in
+  let res = unify_component select_comp arg_types
    in Alcotest.(check bool) "identical" true (Option.is_none res)
+
+let transformed () =
+  let list_comps = ListComponents.all_transformed_int_binary in
+  let hd_comp = find_component list_comps "hd" in
+  let map_fixR_ge_comp = find_component list_comps "map-fixR-int-geq" in
+  let res = Type.(match unify_component hd_comp [map_fixR_ge_comp.codomain] with
+                  | None -> false
+                  | Some unified_comp
+                    -> equal unified_comp.codomain BOOL
+                    && (List.equal equal unified_comp.domain [ LIST BOOL ]))
+   in Alcotest.(check bool) "identical" true res
 
 let all = [
   "Successful unification",   `Quick, unify_success ;
   "Unsuccessful unification", `Quick, unify_failure ;
+  "Transformed component",    `Quick, transformed ;
 ]

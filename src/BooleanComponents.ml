@@ -12,7 +12,7 @@ let all = [
                            -> false
                          | [ e ] -> not (is_constant e)
                          | _ -> false);
-    evaluate = (fun [@warning "-8"] Value.[Bool x] -> Value.Bool (not x));
+    evaluate = Value.(fun [@warning "-8"] [Bool x] -> Bool (not x));
     to_string = (fun [@warning "-8"] [a] -> "(not " ^ a ^ ")");
     global_constraints = (fun _ -> [])
   } ;
@@ -23,7 +23,7 @@ let all = [
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x || is_constant y))
                          | _ -> false);
-    evaluate = (fun [@warning "-8"] Value.[Bool x ; Bool y] -> Value.Bool (x && y));
+    evaluate = Value.(fun [@warning "-8"] [Bool x ; Bool y] -> Bool (x && y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(and " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
@@ -34,7 +34,7 @@ let all = [
     is_argument_valid = (function
                          | [x ; y] -> (x =/= y) && (not (is_constant x || is_constant y))
                          | _ -> false);
-    evaluate = (fun [@warning "-8"] Value.[Bool x ; Bool y] -> Value.Bool (x || y));
+    evaluate = Value.(fun [@warning "-8"] [Bool x ; Bool y] -> Bool (x || y));
     to_string = (fun [@warning "-8"] [a ; b] -> "(or " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   }
