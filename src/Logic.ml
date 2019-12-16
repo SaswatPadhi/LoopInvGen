@@ -29,7 +29,18 @@ let all_supported =
              (BooleanComponents.all @ IntegerComponents.peano) ;
            |] ;
            sample_set_size_multiplier = 8
-         }]
+          } ; {
+             name = "QF_BV" ;
+             components_per_level = [|
+             (BitVecComponents.all @ BooleanComponents.all @ IntegerComponents.equality) ;
+             (BitVecComponents.all @ BooleanComponents.all @ IntegerComponents.intervals) ;
+             (BitVecComponents.all @ BooleanComponents.all @ IntegerComponents.octagons) ;
+             (BitVecComponents.all @ BooleanComponents.all @ IntegerComponents.polyhedra) ;
+             (BitVecComponents.all @ BooleanComponents.all @ IntegerComponents.polynomials) ;
+             (BitVecComponents.all @ BooleanComponents.all @ IntegerComponents.peano) ;
+                                    |] ;
+             sample_set_size_multiplier = 8
+           }]
     ; table
 
 let of_string name = String.Table.find_exn all_supported name
