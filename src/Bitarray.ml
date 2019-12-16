@@ -102,7 +102,6 @@ let t_of_sexp sexp =
   t
 ;;
 
-(* Currently only supporting binary to bits *)
 let of_string s = match String.prefix s 2 with
   | "#b" ->
      let bv = create (String.length (String.drop_prefix s 2)) in       
