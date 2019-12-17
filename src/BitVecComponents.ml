@@ -1,13 +1,15 @@
 open Base
 open Exceptions
-open Expr     
-                                    
+open Expr
+
 let all = [
     {
       name = "bv-eq";
       codomain = Type.BOOL;
       domain = [Type.BITVEC _; Type.BITVEC _];
-      is_argument_valid = (fun _ -> true);
+      is_argument_valid = (function
+                           | [a ; b] -> a.length = b.length
+                           | _ -> false);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
                     Value.Bool ((not (Bitarray.bvult v1 v2)) && (not (Bitarray.bvult v2 v1))));
       to_string = (fun [@warning "-8"] [v1;v2] -> "(= " ^ v1 ^ " " ^ v2 ^ ")");
@@ -26,7 +28,9 @@ let all = [
       name = "bvult";
       codomain = Type.BOOL;
       domain = [Type.BITVEC _; Type.BITVEC _];
-      is_argument_valid = (fun _ -> true);
+      is_argument_valid = (function
+                           | [a ; b] -> a.length = b.length
+                           | _ -> false);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
                     Value.Bool (Bitarray.bvult v1 v2));
       to_string = (fun [@warning "-8"] [a ; b] -> "(bvult " ^ a ^ " " ^ b ^ ")");
@@ -36,7 +40,9 @@ let all = [
       name = "bvadd";
       codomain = Type.BITVEC _;
       domain = [Type.BITVEC _; Type.BITVEC _];
-      is_argument_valid = (fun _ -> true);
+      is_argument_valid = (function
+                           | [a ; b] -> a.length = b.length
+                           | _ -> false);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
                     Value.BitVec (Bitarray.add v1 v2));
       to_string = (fun [@warning "-8"] [a ; b] -> "(bvadd " ^ a ^ " " ^ b ^ ")");

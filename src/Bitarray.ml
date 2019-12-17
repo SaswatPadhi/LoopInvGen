@@ -68,6 +68,7 @@ let clear t =
   Array.fill t.data ~pos:0 ~len:(Array.length t.data) Int63_chunk.empty
 ;;
 
+(* Applies f to index 0, then index 1, ...*)
 let fold =
   let rec loop t n ~init ~f =
     if n < t.length then
@@ -78,9 +79,9 @@ let fold =
   fun t ~init ~f -> loop t 0 ~init ~f
 ;;
 
-let foldl2 =
+let fold2 =
   let rec loop t1 t2 n ~init ~f =
-    if n < t1.length && n >= 0 then
+    if n < t1.length then
       loop t1 t2 (n + 1) ~init:(f init (get t1 n) (get t2 n)) ~f
     else
       init
@@ -102,19 +103,26 @@ let t_of_sexp sexp =
   t
 ;;
 
-let of_string s = match String.prefix s 2 with
+(* A bitarray created from the string "#b00011" will be represented by
+   the bitarray with index 0 set to true, index 1 to true, index 2 to
+   false, etc.*)
+let of_string s =
+  let prefix = String.prefix s 2 in
+  let numeral = String.drop_prefix s 2 in
+  let bvsize = String.length numeral in
+  match prefix with
   | "#b" ->
-     let bv = create (String.length (String.drop_prefix s 2)) in       
+     let bv = create bvsize in       
      let rec loop s bv i = if i >= 0
                            then match s with
                                 | '0'::t -> set bv i false; loop t bv (i - 1)
                                 | '1'::t -> set bv i true; loop t bv (i - 1)
                            else
                              bv in
-     loop (String.to_list (String.drop_prefix s 2)) bv ((String.length (String.drop_prefix s 2)) - 1)
+     loop (String.to_list numeral) bv (bvsize - 1)
   | "#x" ->
-     let bv = create ((String.length (String.drop_prefix s 2)) * 4) in
-     let n = ((String.length (String.drop_prefix s 2)) - 1) in
+     let bv = create (bvsize * 4) in
+     let n = (bvsize - 1) in
      let rec loop s bv i = if i <= n
                            then match s with
                                 | '0'::t -> set bv (i * 4) false;
@@ -199,26 +207,28 @@ let of_string s = match String.prefix s 2 with
                                             loop t bv (i + 1)
                            else
                              bv in
-     loop (String.to_list (String.rev (String.drop_prefix s 2))) bv 0
-     
-
+     loop (String.to_list (String.rev numeral)) bv 0
 ;;
 
+(* TODO: If the length of the bitvector is a multiple of 4, represent with hex.*)
 let to_string bv = "#b" ^ (fold bv ~init:"" ~f:(fun acc -> function
-                       | false -> "0" ^ acc
-                       | true -> "1" ^ acc))
+                               | false -> "0" ^ acc
+                               | true -> "1" ^ acc))
 ;;
 
-(* Does not support adding different sizes. *)
 let rec add bv1 bv2 =
   let sum = create bv1.length in
-  let s, _, _ = foldl2 bv1 bv2 ~init:(sum, 0, 0) ~f:(fun (sum, carry, ind) v1 v2 ->
+  let s, _, _ = fold2 bv1 bv2 ~init:(sum, 0, 0) ~f:(fun (sum, carry, ind) v1 v2 ->
                     match v1, v2 with
-                    | true, true -> if phys_equal carry 1 then (set sum ind true; (sum, 1, ind + 1))
+                    | true, true -> if phys_equal carry 1
+                                    then (set sum ind true; (sum, 1, ind + 1))
                                     else (set sum ind false; (sum, 1, ind + 1))
-                    | false, true | true, false -> if phys_equal carry 1 then (set sum ind false; (sum, 1, ind + 1))
-                                                   else (set sum ind true; (sum, 0, ind + 1))
-                    | false, false -> if phys_equal carry 1 then (set sum ind true; (sum, 0, ind + 1))
+                    | false, true
+                      | true, false -> if phys_equal carry 1
+                                       then (set sum ind false; (sum, 1, ind + 1))
+                                       else (set sum ind true; (sum, 0, ind + 1))
+                    | false, false -> if phys_equal carry 1
+                                      then (set sum ind true; (sum, 0, ind + 1))
                                       else (set sum ind false; (sum, 0, ind + 1))) in
   s
 ;;
@@ -247,3 +257,15 @@ let compare bv1 bv2 =
 let bvult bv1 bv2 =
   let c = compare bv1 bv2 in
   if c > 0 then false else true
+;;
+
+let concat bv1 bv2 =
+  let bv3 = create (bv1.length + bv2.length) in
+  let bv1_, _ = fold bv1 ~init:(bv3, bv2.length) ~f:(fun (bv, i) v ->
+                       set bv i v; (bv, i+1)) in
+  let bv12, _ = fold bv2 ~init:(bv1_, 0) ~f:(fun (bv, i) v ->
+                    set bv i v; (bv, i+1)) in
+  bv12
+;;
+
+
