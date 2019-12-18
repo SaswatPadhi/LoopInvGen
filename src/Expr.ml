@@ -1,6 +1,7 @@
 open Base
 
 open Utils
+open Exceptions
 
 type component = {
   evaluate : Value.t list -> Value.t ;
@@ -65,6 +66,15 @@ type synthesized = {
   expr : t ;
   outputs : Value.t array ;
 } [@@deriving sexp]
+
+let unify_component (comp : component) (arg_types : Type.t list) : component option =
+  let open Type.Unification in
+  match of_types arg_types comp.domain with
+  | None -> None
+  | Some env -> match substitute env comp.codomain with
+                | None -> None
+                | Some codomain -> let domain = List.map comp.domain ~f:(substitute_with_exn env)
+                                    in Some { comp with codomain ; domain }
 
 let apply (comp : component) (args : synthesized list) : synthesized option =
   if (not (comp.is_argument_valid (List.map args ~f:(fun arg -> arg.expr)))) then None

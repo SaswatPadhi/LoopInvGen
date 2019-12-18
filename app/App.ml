@@ -38,26 +38,30 @@ let with_synth_PI () =
 
 
 (* a job for inferring a precondition to check when the result of appending
-   two lists is an empty list *)
+   two (integer) lists is an empty list *)
 let append_job =
-  let open Value
-   in Job.create_unlabeled
-        ~f:(fun [@warning "-8"] [ List x ; List y ] -> List (x @ y))
-        ~args:([ ("x", Type.LIST) ; ("y", Type.LIST) ])
-        ~post:(fun inp res ->
-                match [@warning "-8"] inp , res with
-                | [ List _ ; List _ ] , Ok (List z) -> List z = List [])
-        (* We start with these two features and disable feature synthesis *)
-        ~features:[
-          ((fun [@warning "-8"] [ x ; _ ] -> x = List []), "(= x [])") ;
-          ((fun [@warning "-8"] [ _ ; y ] -> y = List []), "(= y [])") ;
-        ]
-        (* Generators for Type.LIST are not yet implemented. *)
-        (List.map [ ([], [])
-                  ; ([Int 1 ; Int 2], [Int 3])
-                  ; ([Int 4], [])
-                  ; ([], [Int 5]) ]
-                  ~f:(fun (l1,l2) -> [ List l1 ; List l2 ]))
+  let open Value in
+  let open Type in
+  Job.create_unlabeled
+    ~f:(fun [@warning "-8"] [ List (INT, x) ; List (INT, y) ]
+        -> List (INT, (x @ y)))
+    ~args:([ ("x", Type.(LIST INT)) ; ("y", Type.(LIST INT)) ])
+    ~post:(fun inp res ->
+            match [@warning "-8"] inp , res with
+            | [ List _ ; List _ ] , Ok (List (INT, res)) -> List.is_empty res)
+    (* We start with these two features and disable feature synthesis *)
+    ~features:[
+      ((fun [@warning "-8"] [ List (INT, list1) ; _ ] -> List.is_empty list1),
+       "(= x [])") ;
+      ((fun [@warning "-8"] [ _ ; List (INT, list2) ] -> List.is_empty list2),
+       "(= y [])") ;
+    ]
+    (* Generators for Type.LIST are not yet implemented. *)
+    (List.map [ ([], [])
+              ; ([Int 1 ; Int 2], [Int 3])
+              ; ([Int 4], [])
+              ; ([], [Int 5]) ]
+              ~f:(fun (l1,l2) -> [ List (INT, l1) ; List (INT, l2) ]))
 
 let no_synth_PI () =
   Stdio.print_endline "PI for { append(l1,l2) = [] } without feature learning:" ;

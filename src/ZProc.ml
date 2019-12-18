@@ -99,27 +99,39 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
-  let vstr = match sexp with
-             | Atom v -> v
-             | List([(Atom "-") ; (Atom v)]) -> "-" ^ v
-             | _ -> raise (Internal_Exn ("Unable to deserialize value: "
-                                        ^ (to_string_hum sexp)))
-  in Value.of_string vstr
+  match sexp with
+  | _ -> Value.of_sexp sexp
+
+let reduced_exps (varexps : Sexp.t list) =
+  let symbol_table = String.Table.create () in
+  let reduced_varexps = (
+    List.filter_map varexps ~f:(fun [@warning "-8"] (List l)
+                                -> let (Atom n, v) = (List.nth_exn l 1) , (List.nth_exn l 4)
+                                    in match v with
+                                       | List [ _ ; Atom "as-array" ; Atom func_name ]
+                                         -> (Hashtbl.set symbol_table func_name n) ; None
+                                       | _ -> Some l))
+  in (reduced_varexps , symbol_table)
 
 let z3_result_to_model (result : string list) : model option =
   let open Sexp in
   try [@warning "-8"]
-    match result with
-    | "unsat" :: _ -> None
-    | [ "sat" ; _ ; result ]
-      -> begin match Sexp.parse result with
-          | Done (List((Atom _) :: varexps), _)
-            -> let open List in
-              Some (map varexps ~f:(
-                function
-                | List(l) -> let (Atom n, v) = (nth_exn l 1) , (nth_exn l 4)
-                              in (n, (z3_sexp_to_value v))))
-        end
+  match result with
+  | "unsat" :: _ -> None
+  | [ "sat" ; _ ; result ]
+    -> begin match Sexp.parse result with
+         | Done (List((Atom _) :: varexps), _)
+           -> let varexprs, symtab = (reduced_exps varexps)
+               in Some (List.map varexprs ~f:(fun l
+                  -> let (Atom n, v) = (List.nth_exn l 1) , (List.nth_exn l 4) in
+                     let binding = Hashtbl.find symtab n
+                      in match binding with
+                         | Some name -> begin
+                             let key_type_repr, val_type, value = List.((nth_exn l 2), (nth_exn l 3), (nth_exn l 4))
+                              in (name, (Value.parse_named_array value key_type_repr val_type))
+                           end
+                         | None -> (n, (z3_sexp_to_value v))))
+       end
   with e -> Log.error (lazy ("Error parsing z3 model: "
                             ^ (String.concat ~sep:"\n" result)
                             ^ "\n\n" ^ (Exn.to_string e)))
