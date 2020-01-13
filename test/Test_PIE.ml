@@ -1,8 +1,9 @@
 open Base
+
 open LoopInvGen
-open LoopInvGen.Utils
 
 open PIE
+open Utils
 
 let abs_job = Job.create_unlabeled
   ~f:(fun [@warning "-8"] [ Value.Int x ] -> Value.Int (if x > 0 then x else -x))

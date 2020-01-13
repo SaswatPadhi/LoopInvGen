@@ -7,7 +7,7 @@ LABEL maintainer="padhi@cs.ucla.edu"
 
 ENV OPAM_VERSION  2.0.5
 ENV OCAML_VERSION 4.09.0+flambda
-ENV Z3_VERSION    z3-4.8.6
+ENV Z3_VERSION    z3-4.8.7
 
 ENV HOME /home/opam
 
@@ -41,7 +41,6 @@ WORKDIR $HOME
 
 
 RUN opam install --yes alcotest.0.8.5 \
-                       async.v0.12.0 \
                        core.v0.12.4 \
                        dune.1.11.4 \
                        ppx_let.v0.12.0 \

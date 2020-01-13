@@ -30,46 +30,26 @@ type t = {
   synth_variables : var list ;
 }
 
-let replace bindings expr =
-  if bindings = [] then expr else
-  let table = ref (String.Map.empty)
-   in List.iter bindings
-                ~f:(function [@warning "-8"]
-                    | List [ (Atom key) ; data ]      (* SMTLIB *)
-                    -> table := String.Map.add_exn !table ~key ~data)
-    ; let rec helper = function
-        | List l -> List (List.map l ~f:helper)
-        | Atom atom -> match String.Map.find !table atom with
-                       | None      -> Atom atom
-                       | Some data -> data
-       in helper expr
-
-let rec remove_lets : Sexp.t -> Sexp.t = function
-  | Atom _ as atom -> atom
-  | List [ (Atom "let") ; List bindings ; body ]
-    -> replace bindings (remove_lets body)
-  | List l -> List (List.map l ~f:remove_lets)
-
 let rec extract_consts : Sexp.t -> Value.t list = function
   | List [] -> []
-  | (Atom a) | List [Atom a] -> (try [ Value.of_string a ] with _ -> [])
+  | (Atom a) | List [Atom a] -> (try [ Value.of_atomic_string a ] with _ -> [])
   | List(_ :: fargs)
     -> let consts = List.fold fargs ~init:[] ~f:(fun consts farg -> (extract_consts farg) @ consts)
         in List.(dedup_and_sort ~compare:Value.compare consts)
 
 let parse_variable_declaration : Sexp.t -> var = function
-  | List [ Atom v ; Atom t ] -> (v, (Type.of_string t))
+  | List [ Atom v ; t ] -> (v, (Type.of_sexp t))
   | sexp -> raise (Parse_Exn ("Invalid variable usage: " ^ (Sexp.to_string_hum sexp)))
 
 let parse_define_fun : Sexp.t list -> func * Value.t list = function
-  | [Atom(name) ; List(args) ; Atom(r_typ) ; expr]
+  | [Atom(name) ; List(args) ; r_typ ; expr]
     -> let args = List.map ~f:parse_variable_declaration args in
        let expr = remove_lets expr in
        let consts = extract_consts expr
         in ({ name = name
             ; body = (Sexp.to_string_hum expr)
             ; args = args
-            ; return = (Type.of_string r_typ)
+            ; return = (Type.of_sexp r_typ)
             ; expressible = true (* TODO: Check if function is expressible in the provided grammar, when we sypport it. *)
             }, consts)
   | sexp_list -> raise (Parse_Exn ("Invalid function definition: "
@@ -82,7 +62,7 @@ let func_definition (f : func) : string =
   ^ ") " ^ (Type.to_string f.return) ^ " " ^ f.body ^ ")"
 
 let var_declaration ((var_name, var_type) : var) : string =
-  "(declare-var " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
+  "(declare-const " ^ var_name ^ " " ^ (Type.to_string var_type) ^ ")"
 
 let parse_sexps (sexps : Sexp.t list) : t =
   let logic : string ref = ref "" in

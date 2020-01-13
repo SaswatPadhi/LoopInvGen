@@ -14,14 +14,9 @@ eval `opam env`
 opam config report
 
 if [ -z "${MIN_REQS_ONLY}" ]; then
-    opam install --yes alcotest         \
-                       async            \
-                       core             \
-                       dune             \
-                       ppx_let
+    opam install --yes --deps-only --with-test ./LoopInvGen.opam
 else
     opam install --yes alcotest.0.8.0   \
-                       async.v0.12.0    \
                        core.v0.12.2     \
                        dune.1.6.0       \
                        ppx_let.v0.12.0
