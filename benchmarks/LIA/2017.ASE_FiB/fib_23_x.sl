@@ -2,22 +2,14 @@
 
 (synth-inv inv_fun ((i Int) (sum Int) (n Int)))
 
-(declare-primed-var i Int)
-(declare-primed-var sum Int)
-(declare-primed-var n Int)
-
 (define-fun pre_fun ((i Int) (sum Int) (n Int)) Bool
-(and (= sum 0) (>= n 0) (= i 0)))
-
+    (and (= sum 0) (>= n 0) (= i 0)))
 (define-fun trans_fun ((i Int) (sum Int) (n Int) (i! Int) (sum! Int) (n! Int)) Bool
-(or 
-(and (< i n) (= i! (+ i 1)) (= sum! (+ sum i)) (= n! n))
-(and (>= i n) (= i! i) (= sum! sum) (= n! n))
-))
-
+    (or (and (< i n) (= i! (+ i 1)) (= sum! (+ sum i)) (= n! n)) (and (>= i n) (= i! i) (= sum! sum) (= n! n))))
 (define-fun post_fun ((i Int) (sum Int) (n Int)) Bool
-(=> (>= i n) (>= sum 0)))
+    (=> (>= i n) (>= sum 0)))
 
 (inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)
+
