@@ -8,7 +8,7 @@ let is_sufficient_invariant ~(zpath : string) ~(sygus : SyGuS.t) (inv : string) 
   let open ZProc
    in process ~zpath (fun z3 ->
      Simulator.setup sygus z3 ;
-     if Option.is_none (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body)
+     if not ( Option.is_none (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body))
      then (if String.equal inv "false" then NO_SOLUTION_PASS else NO_SOLUTION_FAIL)
      else let inv = SyGuS.func_definition {sygus.inv_func with body = inv}
            in ignore (run_queries ~scoped:false z3 [] ~db:[ inv ]) ;
