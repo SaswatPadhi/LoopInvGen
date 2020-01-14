@@ -2,19 +2,14 @@
 
 (synth-inv inv_fun ((i Int) (j Int)))
 
-(declare-primed-var i Int)
-(declare-primed-var j Int)
-
 (define-fun pre_fun ((i Int) (j Int)) Bool
-(and (= i 1)  
-(= j 10)))
-
+    (and (= i 1) (= j 10)))
 (define-fun trans_fun ((i Int) (j Int) (i! Int) (j! Int)) Bool
-(and (and (>= j i) (= i! (+ i 2))) (= j! (- j 1))))
-
+    (and (and (>= j i) (= i! (+ i 2))) (= j! (- j 1))))
 (define-fun post_fun ((i Int) (j Int)) Bool
-(not (and (< j i) (not (= j 6)))))
+    (not (and (< j i) (not (= j 6)))))
 
 (inv-constraint inv_fun pre_fun trans_fun post_fun)
 
 (check-synth)
+

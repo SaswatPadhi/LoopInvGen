@@ -2,23 +2,14 @@
 
 (synth-inv InvF ((i Int) (n Int) (sn Int)))
 
-(declare-primed-var i Int)
-(declare-primed-var n Int)
-(declare-primed-var sn Int)
-
 (define-fun PreF ((i Int) (n Int) (sn Int)) Bool
-  (and (= i 1) (= sn 0) (>= n 0)))
-
+    (and (= i 1) (= sn 0) (>= n 0)))
 (define-fun TransF ((i Int) (n Int) (sn Int) (i! Int) (n! Int) (sn! Int)) Bool
-  (and (<= i n)
-       (ite (= i 4)  (= sn! (- 0 10)) (= sn! (+ sn 2)))
-       (= i! (+ i 1))
-       (= n! n)
-  ))
-
+    (and (<= i n) (ite (= i 4) (= sn! (- 0 10)) (= sn! (+ sn 2))) (= i! (+ i 1)) (= n! n)))
 (define-fun PostF ((i Int) (n Int) (sn Int)) Bool
-  (or (<= i n) (or (= sn (* n 2)) (= sn 0))))
+    (or (<= i n) (or (= sn (* n 2)) (= sn 0))))
 
 (inv-constraint InvF PreF TransF PostF)
 
 (check-synth)
+

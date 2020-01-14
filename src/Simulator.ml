@@ -6,7 +6,6 @@ open Utils
 let setup ?(user_features = []) (s : SyGuS.t) (z3 : ZProc.t) : unit =
   ignore (ZProc.run_queries z3 [] ~scoped:false ~db:((
     ("(set-logic " ^ s.logic ^ ")")
-    :: ("(define-fun-rec pow ((x Int) (y Int)) Int (ite (= y 0) 1 (* x (pow x (- y 1)))))")
     :: (List.map ~f:var_declaration s.variables))
      @ (List.map ~f:func_definition s.functions)
      @ user_features))
