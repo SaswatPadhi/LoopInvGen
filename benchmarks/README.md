@@ -35,5 +35,10 @@
 - _Original Benchmarks:_ n/a
 
 ### (2018) SV-Comp &middot; &middot; &middot; [LIA](LIA/2018.SV-Comp), [NIA](NIA/2018.SV-Comp)
-- _Related Publication:_ Beyer, Dirk. "**Software Verification with Validation of Results.**" _International Conference on Tools and Algorithms for the Construction and Analysis of Systems_. Springer, Berlin, Heidelberg, 2017.
+- _Related Publication:_ Beyer, Dirk. "**Software Verification with Validation of Results (Report on SV-COMP 2017).**" _International Conference on Tools and Algorithms for the Construction and Analysis of Systems_. Springer, 2018.
 - _Original Benchmarks:_ <https://github.com/sosy-lab/sv-benchmarks/releases/tag/svcomp18>
+
+
+### (2019) SV-Comp &middot; &middot; &middot; [ALIA](ALIA/2019.SV-Comp)
+- _Related Publication:_ Beyer, Dirk. "**Automatic Verification of C and Java Programs: SV-COMP 2019.**" _International Conference on Tools and Algorithms for the Construction and Analysis of Systems_. Springer, 2019.
+- _Original Benchmarks:_ <https://github.com/sosy-lab/sv-benchmarks/releases/tag/svcomp19>
