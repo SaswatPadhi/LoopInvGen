@@ -73,6 +73,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
   let pref_name : string ref = ref "" in
   let transf_name : string ref = ref "" in
   let variables : var list ref = ref [] in
+  let extra_variables : var list ref = ref [] in
   let invf_vars : var list ref = ref []
    in List.iter sexps
         ~f:(function
@@ -86,7 +87,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
                 -> (* FIXME: Custom grammar *) Log.error (lazy ("LoopInvGen currently does not allow custom grammars."))
                  ; invf_name := _invf_name ; invf_vars := List.map ~f:parse_variable_declaration _invf_vars
               | List ( (Atom "declare-var") :: sexps )
-                -> raise (Parse_Exn ("LoopInvGen currently does not allow 'declare-var'."))
+                -> extra_variables := (parse_variable_declaration (List sexps)) :: !extra_variables
               | List ( (Atom "define-fun") :: func_sexps )
                 -> let (func, fconsts) = parse_define_fun func_sexps
                     in if List.mem !funcs func ~equal:(fun x y -> String.equal x.name y.name)
@@ -115,22 +116,25 @@ let parse_sexps (sexps : Sexp.t list) : t =
     ; Log.debug (lazy ("Detected Constants: " ^ (List.to_string_map ~sep:", " ~f:Value.to_string !consts)))
     ; if String.equal !logic ""
       then (logic := "LIA" ; Log.debug (lazy ("Using default logic: LIA")))
-    ; { constants = !consts
-      ; functions = List.rev !funcs
-      ; logic = !logic
-      ; post_func = List.find_exn ~f:(fun f -> String.equal f.name !postf_name) !funcs
-      ; pre_func = List.find_exn ~f:(fun f -> String.equal f.name !pref_name) !funcs
-      ; trans_func = List.find_exn ~f:(fun f -> String.equal f.name !transf_name) !funcs
-      ; variables = !variables
-      ; synth_variables = !invf_vars
-      ; inv_func =
-        { args = !invf_vars
-        ; name = !invf_name
-        ; body = ""
-        ; return = Type.BOOL
-        ; expressible = true
-        }
-      }
+    ; let dups = List.filter !extra_variables ~f:(List.mem !variables ~equal:(fun x y -> String.equal (fst x) (fst y)))
+       in if dups <> [] then raise (Parse_Exn ( "Multiple declarations of ["
+                                              ^ (List.to_string_map dups ~sep:", " ~f:fst)
+                                              ^ "]"))
+          else { constants = !consts
+               ; functions = List.rev !funcs
+               ; logic = !logic
+               ; post_func = List.find_exn ~f:(fun f -> String.equal f.name !postf_name) !funcs
+               ; pre_func = List.find_exn ~f:(fun f -> String.equal f.name !pref_name) !funcs
+               ; trans_func = List.find_exn ~f:(fun f -> String.equal f.name !transf_name) !funcs
+               ; variables = !extra_variables @ !variables
+               ; synth_variables = !invf_vars
+               ; inv_func = { args = !invf_vars
+                            ; name = !invf_name
+                            ; body = ""
+                            ; return = Type.BOOL
+                            ; expressible = true
+                            }
+               }
 
 let parse (chan : Stdio.In_channel.t) : t =
   parse_sexps (Sexplib.Sexp.input_sexps chan)
