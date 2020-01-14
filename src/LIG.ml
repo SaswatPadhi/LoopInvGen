@@ -39,7 +39,7 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
   let invf'_call =
     "(invf " ^ (List.to_string_map sygus.inv_func.args ~sep:" "
                   ~f:(fun (s, _) -> s ^ "!")) ^ ")" in
-  let eval_term = (if not (config.model_completion_mode = `UsingZ3) then "true"
+  let eval_term = (if not (Poly.equal config.model_completion_mode `UsingZ3) then "true"
                    else "(and " ^ invf_call ^ " " ^ sygus.trans_func.body ^ ")") in
   let rec helper inv =
     Log.info (lazy ("IND >> Strengthening for inductiveness:"
@@ -64,7 +64,7 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
               ~features: (List.map ~f:(fun (_, name) -> ( (ZProc.build_feature name z3)
                                                         , ("(" ^ name ^ " " ^ all_state_vars ^ ")")))
                                    config.user_features)
-              ~post:(fun _ res -> res = Ok (Value.Bool false)))
+              ~post:(fun _ -> function Ok (Value.Bool false) -> true | _ -> false))
         in ZProc.close_scope z3
          ; Log.debug (lazy ("IND Delta: " ^ pre_inv))
          ; if String.equal pre_inv "true"
@@ -76,7 +76,7 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                    in Log.info (lazy ("PRE >> Checking if the following candidate is weaker than precond:"
                                      ^ (Log.indented_sep 4) ^ new_inv))
                     ; let ce = ZProc.implication_counter_example z3 sygus.pre_func.body new_inv
-                       in if ce = None then helper new_inv else (new_inv, ce))
+                       in if Option.is_none ce then helper new_inv else (new_inv, ce))
    in helper inv
 
 let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t list list)
@@ -111,7 +111,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
           VPIE.learnVPreCond
             ~z3 ~config:config._VPIE ~consts:sygus.constants
             ~post_desc:sygus.post_func.body
-            ~eval_term:(if not (config.model_completion_mode = `UsingZ3)
+            ~eval_term:(if not (Poly.equal config.model_completion_mode `UsingZ3)
                         then "true" else sygus.post_func.body)
           (Job.create ()
               ~pos_tests:states
@@ -121,7 +121,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                       else ("(not (" ^ sygus.post_func.body ^ "))"))
                      ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
                ~args: sygus.synth_variables
-               ~post: (fun _ res -> res = Ok (Value.Bool false)))
+               ~post:(fun _ -> function Ok (Value.Bool false) -> true | _ -> false))
          in stats.lig_time_ms <- stats.lig_time_ms +. vpie_stats.vpi_time_ms
           ; stats.lig_ce <- stats.lig_ce + vpie_stats.vpi_ce
           ; stats._VPIE <- vpie_stats :: stats._VPIE
@@ -137,7 +137,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                            ^ (Log.indented_sep 4) ^ inv))
           ; match satisfyTrans ~config ~sygus ~states ~z3 inv stats with
             | inv, None
-              -> if inv <> "false" then ((ZProc.simplify z3 inv), stats)
+              -> if not (String.equal inv "false") then ((ZProc.simplify z3 inv), stats)
                   else restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
                                                             (gen_pre_state ~use_trans:true sygus z3))
             | _, (Some ce_model)
@@ -152,6 +152,6 @@ let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
        ~random_seed:(Some (Int.to_string (Quickcheck.(random_value ~seed:(`Deterministic config.base_random_seed)
                                                                    (Generator.small_non_negative_int)))))
        (fun z3 -> Simulator.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
-                ; if (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body) <> None
+                ; if not (Option.is_none (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body))
                   then ("false", stats)
                   else learnInvariant_internal ~config ~states sygus config.base_random_seed z3 stats)

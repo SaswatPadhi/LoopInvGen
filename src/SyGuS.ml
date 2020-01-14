@@ -117,9 +117,10 @@ let parse_sexps (sexps : Sexp.t list) : t =
     ; if String.equal !logic ""
       then (logic := "LIA" ; Log.debug (lazy ("Using default logic: LIA")))
     ; let dups = List.filter !extra_variables ~f:(List.mem !variables ~equal:(fun x y -> String.equal (fst x) (fst y)))
-       in if dups <> [] then raise (Parse_Exn ( "Multiple declarations of ["
-                                              ^ (List.to_string_map dups ~sep:", " ~f:fst)
-                                              ^ "]"))
+       in if not (List.is_empty dups)
+          then raise (Parse_Exn ( "Multiple declarations of ["
+                                ^ (List.to_string_map dups ~sep:", " ~f:fst)
+                                ^ "]"))
           else { constants = !consts
                ; functions = List.rev !funcs
                ; logic = !logic

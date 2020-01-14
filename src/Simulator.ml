@@ -25,7 +25,7 @@ let gen_state_from_model (s : SyGuS.t) (m : ZProc.model option)
   | Some m -> create (fun ~size ~random -> Some (
                 List.map s.synth_variables
                          ~f:(fun (v, t) ->
-                               match List.Assoc.find m v ~equal:(=)
+                               match List.Assoc.find m v ~equal:String.equal
                                with Some d -> d
                                   | None -> generate (TestGen.for_type t) ~size ~random)))
 
@@ -62,7 +62,7 @@ let simulate_from (s : SyGuS.t) (z3 : ZProc.t) (head : Value.t list option)
           head :: (match size with
                   | 0 -> []
                   | n -> begin match generate (transition s z3 head) ~size ~random
-                               with Some next when next <> head
+                               with Some next when not (List.equal Value.equal next head)
                                     -> step_internal next (n-1)
                                   | _ -> []
                         end)
