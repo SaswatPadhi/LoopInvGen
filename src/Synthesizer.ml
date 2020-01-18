@@ -170,6 +170,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let string_components = typed_components Type.STRING in
   let poly_list_components = typed_components Type.(LIST (TVAR "_")) in
   let poly_array_components = typed_components Type.(ARRAY (TVAR "_", TVAR "_")) in
+  let bitvec_components = typed_components Type.(BITVEC (TVAR "_")) in
 
   let empty_candidates () =
     Array.(init ((length config.logic.components_per_level) + 1)
@@ -182,6 +183,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let string_candidates = empty_candidates () in
   let list_candidates = empty_candidates () in
   let array_candidates = empty_candidates () in
+  let bitvec_candidates = empty_candidates () in
 
   let typed_candidates ?(no_tvar = false) = function
     | Type.INT     -> int_candidates
@@ -189,12 +191,14 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     | Type.CHAR    -> char_candidates
     | Type.STRING  -> string_candidates
     | Type.LIST _  -> list_candidates
+    | Type.BITVEC _ -> bitvec_candidates
     | Type.ARRAY _ -> array_candidates
     | Type.TVAR _ when no_tvar = false
       -> raise (Internal_Exn "No candidates for TVAR")
     | Type.TVAR _ -> let (@) = Array.append
                       in int_candidates @ bool_candidates @ char_candidates
-                       @ string_candidates @ list_candidates @ array_candidates
+                         @ string_candidates @ list_candidates @ array_candidates
+                         @ bitvec_candidates
   in
 
   let seen_outputs = ref (Set.empty (module Output)) in
@@ -311,13 +315,15 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
                                  ; (CHAR, char_candidates)
                                  ; (STRING, string_candidates)
                                  ; (LIST (TVAR "_"), list_candidates)
-                                 ; (ARRAY (TVAR "_", TVAR "_"), array_candidates) ]
+                                 ; (ARRAY (TVAR "_", TVAR "_"), array_candidates)
+                                 ; (BITVEC (TVAR "_"), bitvec_candidates) ]
                             [ bool_components.(l)
                             ; int_components.(l)
                             ; char_components.(l)
                             ; string_components.(l)
                             ; poly_list_components.(l)
-                            ; poly_array_components.(l) ]
+                            ; poly_array_components.(l)
+                            ; bitvec_components.(l) ]
                             ~f:(fun (cand_type, cands) comps
                                 -> List.iter comps ~f:(expand_component l level cost cands cand_type))))
 

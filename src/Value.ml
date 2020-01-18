@@ -27,7 +27,7 @@ let rec typeof : t -> Type.t = function
   | List (typ, _) -> Type.LIST typ
   | Array (key_type, value_type, _, _)
     -> Type.ARRAY (key_type,value_type)
-  | BitVec bv -> Type.BITVEC (Int.to_string bv.length)
+  | BitVec bv -> Type.BITVEC (Type.TVAR (Int.to_string bv.length))
 
 let rec to_string : t -> string = function
   | Int i    -> Int.to_string i

@@ -17,6 +17,8 @@ module Int63_chunk : sig
   val empty : t
   val get : t -> int -> bool
   val set : t -> int -> bool -> t
+  val gen_incl : Int63.t -> Int63.t -> t Core_kernel.Quickcheck.Generator.t
+
 end = struct
   open Int63
 
@@ -29,6 +31,8 @@ end = struct
   let set t i v =
     if v then bit_or t (shift_left one i)
     else bit_and t (bit_xor minus_one (shift_left one i))
+
+  let gen_incl h l = Int63.gen_incl h l
 end
 
 type t = {
@@ -234,10 +238,12 @@ let rec add bv1 bv2 =
 ;;
 
 let bvnot bv =
-  let bv_new, _ = fold bv ~init:(bv, 0) ~f:(fun (bv, i) v ->
-                      if phys_equal v true then (set bv i false; (bv, i + 1))
-                      else (set bv i true; (bv, i + 1))) in
-  bv_new
+  let bv_new = create bv.length in
+  fold bv ~init:(bv, 0) ~f:(fun (bv, i) v ->
+      if phys_equal v true then (set bv_new i false; (bv, i + 1))
+      else (set bv_new i true; (bv, i + 1)))
+  ;
+    bv_new
     
 ;;
 
@@ -256,7 +262,11 @@ let compare bv1 bv2 =
 
 let bvult bv1 bv2 =
   let c = compare bv1 bv2 in
-  if c > 0 then false else true
+  if c >= 0 then false else true
+;;
+
+let bvule bv1 bv2 =
+  (bvult bv1 bv2) || ((compare bv1 bv2) = 0)
 ;;
 
 let concat bv1 bv2 =
@@ -268,4 +278,16 @@ let concat bv1 bv2 =
   bv12
 ;;
 
+let bvuge bv1 bv2 =
+  (bvult bv2 bv1) || ((compare bv1 bv2) = 0)
+;;
 
+let bvugt bv1 bv2 =
+  bvult bv2 bv1
+;;
+
+let bvsub bv1 bv2 =
+  let const_one = create bv2.length in
+  set const_one 0 true;
+  (add bv1 (add (bvnot bv2) const_one))
+;;
