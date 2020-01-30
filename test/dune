@@ -1,6 +1,6 @@
 (executable
     (name Runner)
-    (libraries alcotest base LoopInvGen))
+    (libraries alcotest base LoopInvGen str))
 
 (alias
     (name runtest)

@@ -152,7 +152,6 @@ let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
     ~db:(("(assert (not (and (=> " ^ a ^ " " ^ b ^ ") (=> " ^ b ^ " " ^ a ^ "))))") :: db)
 
 let simplify (z3 : t) (q : string) : string =
-  let open Sexp in
   let goal =
     match
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
@@ -164,8 +163,8 @@ let simplify (z3 : t) (q : string) : string =
        -> let goals = List.(filter_map (drop (rev goalexpr) 4)
                                        ~f:(function Atom "true" -> None
                                                   | Atom atom -> Some atom
-                                                  | l -> Some (to_string_hum l)))
-           in if List.length goals = 0 then "true"
+                                                  | l -> Some (Sexp.to_string_hum l)))
+           in if List.is_empty goals then "true"
               else (let goalstr = String.concat ~sep:" " goals
                      in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
      | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))
