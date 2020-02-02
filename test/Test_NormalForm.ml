@@ -3,9 +3,8 @@ open Sexp
 
 open LoopInvGen
 open NormalForm
-open Utils.Sexp
-
-let normalize_spaces = Str.(global_replace (regexp "[ \n\r\x0c\t][ \n\r\x0c\t]+") " ")
+open Utils
+open Sexp
 
 let check_same expected result =
   Alcotest.(check string) "same" (normalize_spaces expected) (normalize_spaces result)

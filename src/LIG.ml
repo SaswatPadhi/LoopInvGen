@@ -89,7 +89,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
     Log.error (lazy ("Restarting inference engine ...")) ;
     let new_states = random_value ~size:config.max_steps_on_restart
                                   ~seed:(`Deterministic seed_string)
-                                  (simulate_from sygus z3 head)
+                                  (gen_states_from sygus z3 head)
      in learnInvariant_internal
           ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (states @ new_states))
           ~config:{ config with
@@ -142,7 +142,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                                             (gen_pre_state ~use_trans:true sygus z3))
             | _, (Some ce_model)
               -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
-                                                        (gen_state_from_model sygus (Some ce_model)))
+                                                       (gen_state_from_model sygus (Some ce_model)))
 
 let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
                    ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =
