@@ -43,6 +43,17 @@ module Array = struct
     String.concat_array ~sep (map2_exn l1 l2 ~f)
 end
 
+module Sexp = struct
+  include Sexp
+
+  let force_parse str =
+    match parse str with
+    | Done (sexp , _) -> sexp
+    | _ -> Atom str
+end
+
+let normalize_spaces = Str.(global_replace (regexp "[ \n\r\x0c\t][ \n\r\x0c\t]+") " ")
+
 let get_in_channel = function
   | "-"      -> Stdio.In_channel.stdin
   | filename -> Stdio.In_channel.create filename

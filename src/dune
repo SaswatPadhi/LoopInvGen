@@ -20,6 +20,6 @@
 (library
     (name LoopInvGen)
     (public_name LoopInvGen)
-    (libraries core)
+    (libraries core str)
     (preprocessor_deps (file config.h))
     (preprocess (pps ppx_optcomp ppx_compare ppx_sexp_conv)))

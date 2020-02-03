@@ -95,17 +95,24 @@ let optimize (sygus : t) : t =
                                                    (List.filter_mapi data.caller.args
                                                       ~f:(fun i (v, _) -> if Bitarray.get data.used_args i
                                                                           then Some v else None))))))
-   ; let sygus = { sygus with
-                   synth_variables = List.dedup_and_sort ~compare:Poly.compare
-                                       ((get_used_vars sygus.pre_func.name)
-                                       @ (List.map (get_used_vars sygus.trans_func.name)
-                                                   ~f:(fun (v, t) -> match String.chop_suffix ~suffix:"!" v with
-                                                                     | None -> (v, t)
-                                                                     | Some v' -> (v', t)))
-                                       @ (get_used_vars sygus.post_func.name))
-                 }
+   ; let trans_branches =
+           match NormalForm.to_dnf (Sexp.force_parse sygus.trans_func.body) with
+           | List (Atom "or" :: b) -> List.map b ~f:(fun a -> normalize_spaces (Sexp.to_string_hum a))
+           | a -> [ normalize_spaces (Sexp.to_string_hum a) ]
+      in let sygus = { sygus with
+                       trans_branches ;
+                       synth_variables = List.dedup_and_sort ~compare:Poly.compare
+                                           ( (get_used_vars sygus.pre_func.name)
+                                           @ (List.map (get_used_vars sygus.trans_func.name)
+                                                       ~f:(fun (v, t) -> match String.chop_suffix ~suffix:"!" v with
+                                                                         | None -> (v, t)
+                                                                         | Some v' -> (v', t)))
+                                           @ (get_used_vars sygus.post_func.name)) }
       in Log.debug (lazy ("Reduced synth variables (" ^
                           (Int.to_string (List.length sygus.synth_variables)) ^
                           "): " ^
                           (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
+       ; Log.(debug (lazy ("Transition branches:" ^
+                           (indented_sep 2) ^
+                           (List.to_string_map trans_branches ~sep:(indented_sep 2) ~f:(fun d -> "> " ^ d)))))
        ; sygus

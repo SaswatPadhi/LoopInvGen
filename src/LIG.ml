@@ -83,13 +83,13 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                 (sygus : SyGuS.t) (seed_string : string) (z3 : ZProc.t) stats
                                 : Job.desc * stats =
   let open Quickcheck in
-  let open Simulator in
+  let open StateSampler in
   let restart_with_new_states head =
     stats.lig_ce <- stats.lig_ce + 1 ;
     Log.error (lazy ("Restarting inference engine ...")) ;
     let new_states = random_value ~size:config.max_steps_on_restart
                                   ~seed:(`Deterministic seed_string)
-                                  (simulate_from sygus z3 head)
+                                  (gen_states_from sygus z3 head)
      in learnInvariant_internal
           ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (states @ new_states))
           ~config:{ config with
@@ -142,7 +142,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                                             (gen_pre_state ~use_trans:true sygus z3))
             | _, (Some ce_model)
               -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
-                                                        (gen_state_from_model sygus (Some ce_model)))
+                                                       (gen_state_from_model sygus (Some ce_model)))
 
 let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
                    ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =
@@ -151,7 +151,7 @@ let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
   in process ~zpath
        ~random_seed:(Some (Int.to_string (Quickcheck.(random_value ~seed:(`Deterministic config.base_random_seed)
                                                                    (Generator.small_non_negative_int)))))
-       (fun z3 -> Simulator.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
+       (fun z3 -> StateSampler.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
                 ; if not (Option.is_none (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body))
                   then ("false", stats)
                   else learnInvariant_internal ~config ~states sygus config.base_random_seed z3 stats)

@@ -23,6 +23,7 @@ type t = {
   post_func : func ;
   pre_func : func ;
   trans_func : func ;
+  trans_branches : string list ;
 
   constants : Value.t list ;
   functions : func list ;
@@ -127,6 +128,7 @@ let parse_sexps (sexps : Sexp.t list) : t =
                ; post_func = List.find_exn ~f:(fun f -> String.equal f.name !postf_name) !funcs
                ; pre_func = List.find_exn ~f:(fun f -> String.equal f.name !pref_name) !funcs
                ; trans_func = List.find_exn ~f:(fun f -> String.equal f.name !transf_name) !funcs
+               ; trans_branches = []
                ; variables = !extra_variables @ !variables
                ; synth_variables = !invf_vars
                ; inv_func = { args = !invf_vars
