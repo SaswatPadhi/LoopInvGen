@@ -2,10 +2,9 @@ open Core
 open Sexp
 
 let flatten ~op ~default args =
-  let branches =
-    List.concat_map args ~f:(function List (Atom o :: b)
-                                      when String.equal o op -> b
-                                    | b -> [b])
+  let branches = List.concat_map args ~f:(function List (Atom o :: b)
+                                                   when String.equal o op -> b
+                                                 | b -> [b])
    in match branches with
       | [] -> Atom default
       | [b] -> b
@@ -62,7 +61,8 @@ let dnf_rule nnf = match nnf with
                      map ~f:(fun (l,e) -> flatten_and (e :: l))
                          (fold rest_ors
                                ~init:(cartesian_product [and_branches] first_or)
-                               ~f:(fun acc -> cartesian_product (map acc ~f:(fun (l,e) -> e :: l)))))
+                               ~f:(fun acc -> let merged = map acc ~f:(fun (l,e) -> e :: l)
+                                               in cartesian_product merged)))
                     in flatten_or branches
             end
   | _ -> nnf

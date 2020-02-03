@@ -83,7 +83,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                 (sygus : SyGuS.t) (seed_string : string) (z3 : ZProc.t) stats
                                 : Job.desc * stats =
   let open Quickcheck in
-  let open Simulator in
+  let open StateSampler in
   let restart_with_new_states head =
     stats.lig_ce <- stats.lig_ce + 1 ;
     Log.error (lazy ("Restarting inference engine ...")) ;
@@ -151,7 +151,7 @@ let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
   in process ~zpath
        ~random_seed:(Some (Int.to_string (Quickcheck.(random_value ~seed:(`Deterministic config.base_random_seed)
                                                                    (Generator.small_non_negative_int)))))
-       (fun z3 -> Simulator.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
+       (fun z3 -> StateSampler.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
                 ; if not (Option.is_none (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body))
                   then ("false", stats)
                   else learnInvariant_internal ~config ~states sygus config.base_random_seed z3 stats)

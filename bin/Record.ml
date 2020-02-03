@@ -20,7 +20,7 @@ let command =
         Log.enable ~msg:"RECORD" log_path ;
         let sygus = SyGuS.read_from sygus_path
          in begin if states_count < 1 then ()
-                  else Simulator.record_states sygus ~zpath:z3_path ~size:states_count
+                  else StateSampler.record_states sygus ~zpath:z3_path ~size:states_count
                          ~state_chan:Stdio.Out_channel.stdout
                          ~seed:(match random_seed with
                                 | None -> `Nondeterministic

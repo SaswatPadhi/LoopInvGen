@@ -19,7 +19,7 @@ let filter_state ?(trans = true) (model : ZProc.model) : ZProc.model =
   else List.filter model ~f:(fun (n, _) -> not (String.is_suffix n ~suffix:"!"))
 
 let gen_state_from_model (s : SyGuS.t) (m : ZProc.model option)
-                   : Value.t list option Quickcheck.Generator.t =
+                         : Value.t list option Quickcheck.Generator.t =
   let open Quickcheck.Generator in
   match m with None -> singleton None
   | Some m -> create (fun ~size ~random -> Some (
@@ -39,24 +39,25 @@ let gen_pre_state ?(use_trans = false) (s : SyGuS.t) (z3 : ZProc.t)
 
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : Value.t list)
                : Value.t list option Quickcheck.Generator.t list =
-  let db = [ "(assert (and "
-             ^ (List.to_string_map2 ~sep:" " vals s.synth_variables
-                                    ~f:(fun d (v, _) -> "(= " ^ v ^ " "
-                                                      ^ (Value.to_string d) ^ ")"))
-             ^ "))"
-           ; "(assert (not (and "
-             ^ (List.to_string_map2 ~sep:" " vals s.synth_variables
-                                    ~f:(fun d (v, _) -> "(= " ^ v ^ "! "
-                                                      ^ (Value.to_string d) ^ ")"))
-             ^ ")))"]
-  in List.map s.trans_branches
-           ~f:(fun b -> gen_state_from_model s (
-    try begin match ZProc.sat_model_for_asserts z3 ~eval_term:s.trans_func.body
-                                                ~db:(("(assert " ^ b ^ ")") :: db)
-               with None -> None
-                  | Some model -> Some (filter_state ~trans:true model)
-        end
-    with _ -> None))
+  let db = List.[
+    "(assert (and " ^
+    (to_string_map2 ~sep:" " vals s.synth_variables
+                    ~f:(fun d (v, _) -> "(= " ^ v ^ " "
+                                      ^ (Value.to_string d) ^ ")")) ^
+    "))" ;
+    "(assert (not (and " ^
+    (to_string_map2 ~sep:" " vals s.synth_variables
+                    ~f:(fun d (v, _) -> "(= " ^ v ^ "! "
+                                      ^ (Value.to_string d) ^ ")")) ^
+    ")))"
+  ] in List.map s.trans_branches
+                ~f:(fun b -> gen_state_from_model s (
+         try begin match ZProc.sat_model_for_asserts z3 ~eval_term:s.trans_func.body
+                                                     ~db:(("(assert " ^ b ^ ")") :: db)
+                   with None -> None
+                      | Some model -> Some (filter_state ~trans:true model)
+             end
+         with _ -> None))
 
 let gen_states_from (s : SyGuS.t) (z3 : ZProc.t) (head : Value.t list option)
                     : Value.t list list Quickcheck.Generator.t =
@@ -66,12 +67,13 @@ let gen_states_from (s : SyGuS.t) (z3 : ZProc.t) (head : Value.t list option)
       let step head ~size ~random =
         let rec step_internal size head =
           Log.info (lazy (" > " ^ (List.to_string_map ~sep:", " ~f:Value.to_string head))) ;
-          head :: (match size with
-                  | 0 -> []
-                  | n -> List.concat_map (transition s z3 head)
-                                         ~f:(fun g -> match (generate g ~size ~random) with
-                                                      | None -> []
-                                                      | Some next -> step_internal (n-1) next))
+          head :: (
+            match size with
+            | 0 -> []
+            | n -> let nexts = List.filter_map (transition s z3 head) ~f:(generate ~size ~random)
+                    in if List.is_empty nexts then [] else
+                       let avg_size = (n-1) / (List.length nexts)
+                        in List.concat_map nexts ~f:(step_internal avg_size))
         in step_internal size head
       in Log.info (lazy ("New execution (" ^ (List.to_string_map s.synth_variables ~sep:", " ~f:fst) ^ "):"))
        ; create (step head)
