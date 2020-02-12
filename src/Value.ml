@@ -2,8 +2,6 @@ open Base
 
 open Exceptions
 
-module Bitarray = Bitarray   
-
 module T = struct
   type t = Int of int
          | Bool of bool
@@ -27,7 +25,7 @@ let rec typeof : t -> Type.t = function
   | List (typ, _) -> Type.LIST typ
   | Array (key_type, value_type, _, _)
     -> Type.ARRAY (key_type,value_type)
-  | BitVec bv -> Type.BITVEC (Type.TVAR (Int.to_string bv.length))
+  | BitVec bv -> Type.BITVEC bv.length
 
 let rec to_string : t -> string = function
   | Int i    -> Int.to_string i
@@ -45,15 +43,15 @@ let of_atomic_string (s : string) : t =
   try
     Int (Int.of_string s)
   with Failure _ -> try
-      Bool (Bool.of_string s)
+    Bool (Bool.of_string s)
   with Invalid_argument _ -> try
-      Char (Char.of_string (String.(chop_suffix_exn ~suffix:"\'"
-                                      (chop_prefix_exn ~prefix:"\'" s))))
+    Char (Char.of_string (String.(chop_suffix_exn ~suffix:"\'"
+                                    (chop_prefix_exn ~prefix:"\'" s))))
   with Invalid_argument _ -> try
-                             BitVec (Bitarray.of_string s)
+    BitVec (Bitarray.of_string s)
   with Invalid_argument _ -> try
-      String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
-  with Invalid_argument _ ->                              
+    String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
+  with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
 
 

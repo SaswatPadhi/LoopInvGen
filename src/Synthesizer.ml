@@ -170,7 +170,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let string_components = typed_components Type.STRING in
   let poly_list_components = typed_components Type.(LIST (TVAR "_")) in
   let poly_array_components = typed_components Type.(ARRAY (TVAR "_", TVAR "_")) in
-  let bitvec_components = typed_components Type.(BITVEC (TVAR "_")) in
+  let bitvec_components = typed_components Type.(BITVEC (-2)) in
 
   let empty_candidates () =
     Array.(init ((length config.logic.components_per_level) + 1)
@@ -316,7 +316,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
                                  ; (STRING, string_candidates)
                                  ; (LIST (TVAR "_"), list_candidates)
                                  ; (ARRAY (TVAR "_", TVAR "_"), array_candidates)
-                                 ; (BITVEC (TVAR "_"), bitvec_candidates) ]
+                                 ; (BITVEC (-2), bitvec_candidates) ]
                             [ bool_components.(l)
                             ; int_components.(l)
                             ; char_components.(l)

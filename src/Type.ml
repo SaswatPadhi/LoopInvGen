@@ -10,7 +10,7 @@ module T = struct
          | TVAR of string
          | LIST of t
          | ARRAY of (t * t)
-         | BITVEC of t
+         | BITVEC of int
          [@@deriving compare,sexp]
 end
 
@@ -29,7 +29,7 @@ let rec of_sexp (sexp: Sexp.t) : t =
     | List [Atom "Array" ; index ; value]
       -> ARRAY ((of_sexp index) , (of_sexp value))
     | List [Atom "_"; Atom "BitVec"; Atom n]
-      -> BITVEC (TVAR n)
+      -> BITVEC (Int.of_string n)
     | s -> raise (Parse_Exn ("Could not parse type `" ^ (Sexp.to_string_hum s) ^ "`."))
 
 let rec to_string : t -> string = function
@@ -39,7 +39,7 @@ let rec to_string : t -> string = function
   | STRING      -> "String"
   | LIST t      -> "(List " ^ (to_string t) ^ ")"
   | ARRAY (k,v) -> "(Array " ^ (to_string k) ^ " " ^ (to_string v) ^ ")"
-  | BITVEC (TVAR n)    -> "(_ BitVec " ^ n ^ ")"
+  | BITVEC n    -> "(_ BitVec " ^ (Int.to_string n) ^ ")"
   | TVAR n      -> n
     (* TODO: We may want to detect cases when a TVAR should never occur in a type,
              and throw exceptions in those cases *)
@@ -60,7 +60,9 @@ module Unification = struct
     | LIST typ          -> LIST (substitute_with_exn env typ)
     | ARRAY (key,value) -> ARRAY ((substitute_with_exn env key),
                                   (substitute_with_exn env value))
-    | BITVEC len        -> BITVEC (substitute_with_exn env len)
+    | BITVEC len        -> (match List.find ~f:(fun (id,_) -> String.equal id (Int.to_string len)) env with
+                                   | Some (_, value) -> value
+                                   | _ -> raise (Unification_Exn ("Could not find a binding for " ^ (to_string (BITVEC len)))))
     | t -> t
 
   let substitute (env : (string * t) list) (t : t) : t option =
@@ -100,7 +102,7 @@ module Unification = struct
     | ARRAY (lhs_key,lhs_value), ARRAY (rhs_key,rhs_value)
       -> let env = env @ (of_type ~env lhs_key rhs_key)
           in (of_type lhs_value rhs_value ~env)
-    | BITVEC (TVAR llen), BITVEC (TVAR rlen) -> (rlen, (TVAR llen)) :: env
+    | BITVEC llen, BITVEC rlen -> ((Int.to_string rlen), BITVEC llen) :: env
     | lhs , rhs -> if equal lhs rhs then env
                    else raise (Unification_Exn "Circular dependency!")
 

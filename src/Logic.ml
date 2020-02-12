@@ -37,8 +37,8 @@ let all_supported =
                    components_per_level = ArrayComponents.levels ++ BooleanComponents.levels ++ IntegerComponents.non_linear_levels ;
                    sample_set_size_multiplier = 8
                  } ; {
-                     name = "QF_BV";
-                     components_per_level = BitVecComponents.levels ++ BooleanComponents.levels;
+                     name = "BV";
+                     components_per_level = BooleanComponents.levels ++ BitVecComponents.levels;
                      sample_set_size_multiplier = 1
                 } ; {
                    name = "ALL" ;

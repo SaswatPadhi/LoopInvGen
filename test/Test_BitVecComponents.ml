@@ -106,13 +106,13 @@ let bv_pp f p = match p with
 let bitvec_testable = Alcotest.testable bv_pp (fun x y -> Value.equal (Value.Bool true) (bveq_eval [x; y]))
 
 let gen () =                                     
-  let bvgen1 = TestGen.for_type (Type.BITVEC (Type.TVAR "32")) in
-  let bvgen2 = TestGen.for_type (Type.BITVEC (Type.TVAR "32")) in
+  let bvgen1 = TestGen.for_type (Type.BITVEC 32) in
+  let bvgen2 = TestGen.for_type (Type.BITVEC 32) in
   Alcotest.(check (neg bitvec_testable)) "identical"
     (Core.Quickcheck.Generator.generate bvgen1 ~size:1 ~random:(Splittable_random.State.of_int 1))
     (Core.Quickcheck.Generator.generate bvgen2 ~size:1 ~random:(Splittable_random.State.of_int 2))
-  
-  
+
+
 let all = [
     "equal hex and binary", `Quick, equal_hex_bin ;
     "bvadd", `Quick, bvadd ;

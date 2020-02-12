@@ -17,10 +17,13 @@ let rec for_type (t : Type.t) : Value.t Generator.t =
                                               >>= fun (arr, def) -> singleton (Value.Array (key, value, arr, def)))
   (* Any BitVector with size greater than 63 bits will have bits number 64 = 0,
      65 = 1, ... *)
-  | Type.BITVEC (TVAR n) -> let bv = Bitarray.create (Int.of_string n) in
-                            let open Bitarray in
-                            (Int63_chunk.gen_incl Int63.min_value Int63.max_value) >>= fun i ->
-                            singleton (Value.BitVec {data = (Array.map bv.data ~f:(fun x -> i));
-                                                     length = (Int.of_string n)})
+  | Type.BITVEC n -> let bv = Bitarray.create n in
+                     let randarray = Bitarray.fold bv ~init:((singleton bv), 0)
+                                       ~f:(fun (sbv, i) _ ->
+                                         (sbv >>= fun bitarr -> bool >>= fun b ->
+                                                                Bitarray.set bitarr i b; singleton bitarr), i+1) in
+                     (match randarray with
+                      | sbv, i -> sbv >>= fun bv -> singleton (Value.BitVec bv))
+
   | Type.LIST _ | Type.TVAR _
     -> raise (Exceptions.Internal_Exn "Generator not implemented!")

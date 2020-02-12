@@ -6,7 +6,7 @@ let all = [
     {
       name = "bv-eq";
       codomain = Type.BOOL;
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
@@ -16,8 +16,8 @@ let all = [
     } ;
     {
       name = "bvnot";
-      codomain = Type.BITVEC (Type.TVAR "T1");
-      domain = [Type.BITVEC (Type.TVAR "T1")];
+      codomain = Type.BITVEC (-1);
+      domain = [Type.BITVEC (-1)];
       is_argument_valid = (function
                              | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v] -> Value.BitVec (Bitarray.bvnot v));
@@ -27,7 +27,7 @@ let all = [
     {
       name = "bvult";
       codomain = Type.BOOL;
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
@@ -37,8 +37,8 @@ let all = [
     } ;
     {
       name = "bvadd";
-      codomain = Type.BITVEC (Type.TVAR "T1");
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      codomain = Type.BITVEC (-1);
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
@@ -49,7 +49,7 @@ let all = [
     {
       name = "bvuge";
       codomain = Type.BOOL;
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
@@ -60,7 +60,7 @@ let all = [
     {
       name = "bvugt";
       codomain = Type.BOOL;
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
@@ -71,7 +71,7 @@ let all = [
     {
       name = "bvule";
       codomain = Type.BOOL;
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
@@ -81,8 +81,8 @@ let all = [
     } ;
     {
       name = "bvsub";
-      codomain = Type.BITVEC (Type.TVAR "T1");
-      domain = [Type.BITVEC (Type.TVAR "T1"); Type.BITVEC (Type.TVAR "T1")];
+      codomain = Type.BITVEC (-1);
+      domain = [Type.BITVEC (-1); Type.BITVEC (-1)];
       is_argument_valid = (function
                            | _ -> true);
       evaluate = (function [@warning "-8"] [Value.BitVec v1; Value.BitVec v2] ->
