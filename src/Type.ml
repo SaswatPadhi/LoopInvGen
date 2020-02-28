@@ -50,44 +50,60 @@ module Unification = struct
   * TODO: The algorithm below is simple but not efficient.
   * See: https://eli.thegreenplace.net/2018/unification#efficiency
   *)
+  type id =
+    | STR of string
+    | NUM of int
 
-  let rec substitute_with_exn (env : (string * t) list) = function
+  let rec substitute_with_exn (env : (id * t) list) = function
     | TVAR name -> begin
-        match List.find ~f:(fun (id,_) -> String.equal id name) env with
+        match List.find ~f:(fun (id,_) -> match id with
+                                          | STR idstr -> String.equal idstr name
+                                          | _ -> false) env with
         | Some (_,value) -> value
         | _ -> raise (Unification_Exn ("Could not find a binding for " ^ name))
       end
     | LIST typ          -> LIST (substitute_with_exn env typ)
     | ARRAY (key,value) -> ARRAY ((substitute_with_exn env key),
                                   (substitute_with_exn env value))
-    | BITVEC len        -> (match List.find ~f:(fun (id,_) -> String.equal id (Int.to_string len)) env with
-                                   | Some (_, value) -> value
-                                   | _ -> raise (Unification_Exn ("Could not find a binding for " ^ (to_string (BITVEC len)))))
+    | BITVEC len        -> (match List.find ~f:(fun (id,_) -> (match id with
+                                                               | NUM idnum -> Int.equal idnum len
+                                                               | _ -> false)) env with
+                            | Some (_, value) -> value
+                            | _ -> raise (Unification_Exn ("Could not find a binding for " ^ (to_string (BITVEC len)))))
     | t -> t
 
-  let substitute (env : (string * t) list) (t : t) : t option =
+  let substitute (env : (id * t) list) (t : t) : t option =
     try Some (substitute_with_exn env t) with _ -> None
 
   let rec resolve_var ?(env = []) = function
-    | lhs, TVAR rhs -> if String.equal lhs rhs
-                       then raise (Unification_Exn "Circular dependency!")
-                       else begin
-                         match List.find env ~f:(fun (e,_) -> String.equal e rhs) with
-                         | None -> (lhs, TVAR rhs)
-                         | Some (_, (TVAR x)) -> resolve_var ~env (lhs, (TVAR x))
-                         | Some (_, rhs) -> (lhs, rhs)
-                       end
+    | STR lhs, TVAR rhs -> if String.equal lhs rhs
+                           then raise (Unification_Exn "Circular dependency!")
+                           else begin
+                               match List.find env ~f:(fun (e,_) -> match e with
+                                                                    | STR idstr -> String.equal idstr rhs
+                                                                    | _ -> false) with
+                               | None -> (STR lhs, TVAR rhs)
+                               | Some (_, (TVAR x)) -> resolve_var ~env (STR lhs, (TVAR x))
+                               | Some (_, rhs) -> (STR lhs, rhs)
+                             end
     | pair -> pair
 
-  let rec of_var ?(env = []) (var : string) (rhs : t) =
-    match List.Assoc.find env ~equal:String.equal var with
+  let rec of_var ?(env = []) (var : id) (rhs : t) =
+    match List.Assoc.find env ~equal:(fun idquery idenv -> (match (idenv, idquery) with
+                                                | (STR id1), (STR id2) -> String.equal id1 id2
+                                                | (NUM id1), (NUM id2) -> Int.equal id1 id2
+                                                | _ -> false)) var with
     | None -> begin
         match rhs with
         | TVAR var_rhs -> begin
-            match List.Assoc.find env ~equal:String.equal var_rhs with
+            match List.Assoc.find env ~equal:(fun _ idvar -> match idvar with
+                                                           | STR idstr -> String.equal idstr var_rhs
+                                                           | _ -> false) (STR var_rhs) with
             | None -> List.fold ((var,rhs) :: env) ~init:[]
                                 ~f:(fun acc elem -> (resolve_var elem ~env:(((var,rhs) :: env)) :: acc))
-            | Some value -> of_type ~env (TVAR var) value
+            | Some value -> (match var with
+                            | STR varstr -> of_type ~env (TVAR varstr) value
+                            | _ -> raise (Unification_Exn ("Type variable was as integer but should be a string")))
           end
         | _ -> List.fold ((var,rhs) :: env) ~init:[]
                          ~f:(fun acc elem -> (resolve_var elem ~env:(((var,rhs)::env)) :: acc))
@@ -95,22 +111,22 @@ module Unification = struct
     | Some value -> of_type ~env value rhs
   and of_type ?(env = []) (lhs : t) (rhs : t) =
     match lhs, rhs with
-    | TVAR x , _ -> of_var ~env x rhs
-    | _ , TVAR y -> of_var ~env y lhs
+    | TVAR x , _ -> of_var ~env (STR x) rhs
+    | _ , TVAR y -> of_var ~env (STR y) lhs
     | LIST lhs_type, LIST rhs_type
       -> of_type lhs_type rhs_type ~env
     | ARRAY (lhs_key,lhs_value), ARRAY (rhs_key,rhs_value)
       -> let env = env @ (of_type ~env lhs_key rhs_key)
           in (of_type lhs_value rhs_value ~env)
-    | BITVEC llen, BITVEC rlen -> ((Int.to_string rlen), BITVEC llen) :: env
+    | BITVEC llen, BITVEC rlen -> of_var ~env (NUM llen) rhs (* (NUM rlen, BITVEC llen) :: env *)
     | lhs , rhs -> if equal lhs rhs then env
                    else raise (Unification_Exn "Circular dependency!")
 
-  let rec of_types_exn ?(env = []) (lhs : t list) (rhs : t list) : (string * t) list =
+  let rec of_types_exn ?(env = []) (lhs : t list) (rhs : t list) : (id * t) list =
     match lhs , rhs with
     | (x :: tx, y :: ty) -> of_types_exn ~env:(of_type ~env x y) tx ty
     | _ -> env
 
-  let of_types ?(env = []) (t1 : t list) (t2 : t list) : (string * t) list option =
+  let of_types ?(env = []) (t1 : t list) (t2 : t list) : (id * t) list option =
       try Some (of_types_exn t1 t2) with _ -> None
 end

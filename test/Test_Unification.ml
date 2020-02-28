@@ -6,7 +6,10 @@ open Exceptions
 open Type
 
 let are_bindings_equal =
-  List.equal (Tuple.T2.equal ~eq1:String.equal ~eq2:equal)
+  List.equal (Tuple.T2.equal ~eq1:(fun var1 var2 -> match var1, var2 with
+                                                    | Unification.STR var1str, Unification.STR var2str -> String.equal var1str var2str
+                                                    | Unification.NUM var1num, Unification.NUM var2num -> Int.equal var1num var2num
+                                                    | _ -> false) ~eq2:equal)
 
 let monomorphic () =
   let domain1 = [ INT ; STRING ] in
@@ -20,7 +23,7 @@ let without_dependencies () =
   let domain1 = [ ARRAY (TVAR "a", TVAR "b") ; INT ; STRING ] in
   let domain2 = [ ARRAY (INT,BOOL) ; INT ; STRING ] in
   let bindings = Unification.of_types_exn domain1 domain2 in
-  let bindings_correct = [("a", INT); ("b", BOOL)] in
+  let bindings_correct = [(Unification.STR "a", INT); (Unification.STR "b", BOOL)] in
   let res = are_bindings_equal bindings bindings_correct
    in Alcotest.(check bool) "identical" true res
 
@@ -28,7 +31,7 @@ let with_dependencies () =
   let domain1 = [ ARRAY (TVAR "a", TVAR "b") ; LIST(TVAR "a") ] in
   let domain2 = [ ARRAY (STRING,INT) ; LIST STRING ] in
   let bindings = Unification.of_types_exn domain1 domain2 in
-  let correct_bindings = [("a", STRING) ; ("b", INT)] in
+  let correct_bindings = [(Unification.STR "a", STRING) ; (Unification.STR "b", INT)] in
   let res = are_bindings_equal bindings correct_bindings
    in Alcotest.(check bool) "identical" true res
 
@@ -45,7 +48,7 @@ let direct_circular () =
    in Alcotest.check_raises "cannot unify" (Unification_Exn "Circular dependency!") test
 
 let substitution () =
-  let env = [("a",STRING) ; ("b",INT)] in
+  let env = [(Unification.STR "a",STRING) ; (Unification.STR "b",INT)] in
   let codomain = ARRAY(TVAR "b" , TVAR "a") in
   let resolved_codomain = ARRAY(INT,STRING) in
   let res = match Unification.substitute env codomain with
@@ -54,7 +57,7 @@ let substitution () =
    in Alcotest.(check bool) "correct application of env" true res
 
 let incomplete_substitution () =
-  let env = [("a",INT)] in
+  let env = [(Unification.STR "a",INT)] in
   let codomain = ARRAY(TVAR "a" , TVAR "b") in
   let resolved_codomain = ARRAY (INT ,INT) in
   let res = match Unification.substitute env codomain with
