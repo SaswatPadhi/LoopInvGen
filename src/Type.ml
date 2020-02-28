@@ -65,9 +65,9 @@ module Unification = struct
     | LIST typ          -> LIST (substitute_with_exn env typ)
     | ARRAY (key,value) -> ARRAY ((substitute_with_exn env key),
                                   (substitute_with_exn env value))
-    | BITVEC len        -> (match List.find ~f:(fun (id,_) -> (match id with
-                                                               | NUM idnum -> Int.equal idnum len
-                                                               | _ -> false)) env with
+    | BITVEC len        -> (match List.find env ~f:(fun (id,_) -> (match id with
+                                                                   | NUM idnum -> Int.equal idnum len
+                                                                   | _ -> false)) with
                             | Some (_, value) -> value
                             | _ -> raise (Unification_Exn ("Could not find a binding for " ^ (to_string (BITVEC len)))))
     | t -> t
@@ -118,7 +118,10 @@ module Unification = struct
     | ARRAY (lhs_key,lhs_value), ARRAY (rhs_key,rhs_value)
       -> let env = env @ (of_type ~env lhs_key rhs_key)
           in (of_type lhs_value rhs_value ~env)
-    | BITVEC llen, BITVEC rlen -> of_var ~env (NUM llen) rhs (* (NUM rlen, BITVEC llen) :: env *)
+    | BITVEC llen, BITVEC rlen -> (match llen, rlen with
+                                   | _ when Int.(<) llen 0 -> of_var ~env (NUM llen) rhs
+                                   | _ when Int.(<) rlen 0 -> of_var ~env (NUM rlen) lhs
+                                   | _ -> env)
     | lhs , rhs -> if equal lhs rhs then env
                    else raise (Unification_Exn "Circular dependency!")
 
