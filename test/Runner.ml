@@ -10,4 +10,5 @@ let () =
          ; "Test_Unification", Test_Unification.all
          ; "Test_Expr", Test_Expr.all
          ; "Test_ArrayComponents", Test_ArrayComponents.all
+         ; "Test_BitVecComponents", Test_BitVecComponents.all
          ])

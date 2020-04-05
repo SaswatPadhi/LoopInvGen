@@ -180,6 +180,28 @@ let all_mapR_ge_l_0 () =
     constants = []
   } in Alcotest.(check string) "identical" "(all (map-fixR-int-geq l 0))" result.string
 
+let bvadd_a_b () =
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "BV" } {
+    arg_names = ["a"; "b"];
+    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x)) a)
+    [ [| "#b00"; "#b01" ; "#b10" ; "#b11" |] ;
+      [| "#b01"; "#b10" ; "#b11" ; "#b00"|]];
+    outputs = Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x))
+    [| "#b01"; "#b11"; "#b01" ; "#b11" |];
+    constants = []
+  } in Alcotest.(check string) "identical" "(bvadd a b)" result.string
+
+let bvult_a_b () =
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "BV" } {
+    arg_names = ["a"; "b"];
+    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x)) a)
+    [ [| "#b00"; "#b01" ; "#b10" ; "#b11"|] ;
+      [| "#b01"; "#b10" ; "#b11" ; "#b00"|]];
+    outputs = Array.map ~f:(fun b -> Value.Bool b)
+    [|true; true; true; false|];
+    constants = []
+  } in Alcotest.(check string) "identical" "(bvult a b)" result.string
+
 let all = [
   "(+ x y)",                         `Quick, plus_x_y ;
   "(>= (+ x z) y)",                  `Quick, ge_plus_x_z_y ;
@@ -191,4 +213,6 @@ let all = [
   "(store a k v) ; with duplicates", `Quick, store_a_k_v__with_duplicates ;
   "(>= y (len x))",                  `Quick, ge_y_len_x ;
   "(all (map-fixR-int-geq l 0))",    `Quick, all_mapR_ge_l_0 ;
+  "(bvadd a b)",                     `Quick, bvadd_a_b ;
+  "(bvult a b)",                     `Quick, bvult_a_b ;
 ]

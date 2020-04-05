@@ -65,6 +65,23 @@ let incomplete_substitution () =
             | None -> false
    in Alcotest.(check bool) "incorrect application of env" false res
 
+let bitvec () =
+  let domain1 = [BITVEC (-2); BITVEC (-1) ; BITVEC (-2)] in
+  let domain2 = [BITVEC (32); BITVEC (32) ; BITVEC (32)] in
+  let bindings = Unification.of_types_exn domain1 domain2 in
+  let bindings_correct = [(Unification.NUM (-2), BITVEC (32)) ; (Unification.NUM (-1), BITVEC (32))] in
+  let res = are_bindings_equal bindings bindings_correct
+  in Alcotest.(check bool) "identical" true res
+
+let bitvec_sub () =
+  let env = [(Unification.NUM (-1), BITVEC (32))] in
+  let codomain = BITVEC (-1) in
+  let resolved_codomain =  BITVEC (32) in
+  let res = match Unification.substitute env codomain with
+    | Some res -> equal res resolved_codomain
+    | None -> false in
+  Alcotest.(check bool) "incorrect application of env" true res
+
 let all = [
   "Unif. of monomorphic types",   `Quick, monomorphic ;
   "Unif. without dependencies",   `Quick, without_dependencies ;
@@ -73,4 +90,6 @@ let all = [
   "Indirect circular dependency", `Quick, indirect_circular ;
   "Substitution",                 `Quick, substitution ;
   "Incomplete substitution",      `Quick, incomplete_substitution ;
+  "Bitvec",                       `Quick, bitvec ;
+  "Bitvec substitution",          `Quick, bitvec_sub ;
 ]
