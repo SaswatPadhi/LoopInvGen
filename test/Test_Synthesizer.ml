@@ -202,6 +202,17 @@ let bvult_a_b () =
     constants = []
   } in Alcotest.(check string) "identical" "(bvult a b)" result.string
 
+let bvnot_bvsub_a_b () =
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "BV" } {
+    arg_names = ["a"; "b"];
+    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x)) a)
+    [ [| "#b0000"; "#b0010" ; "#b1000" ; "#b1100"|] ;
+      [| "#b0100"; "#b1000" ; "#b1100" ; "#b0000"|]];
+    outputs = Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x))
+    [|"#b0011"; "#b0101"; "#b0011"; "#b0011"|];
+    constants = []
+  } in Alcotest.(check string) "identical" "(bvnot (bvsub a b))" result.string
+
 let all = [
   "(+ x y)",                         `Quick, plus_x_y ;
   "(>= (+ x z) y)",                  `Quick, ge_plus_x_z_y ;
@@ -215,4 +226,5 @@ let all = [
   "(all (map-fixR-int-geq l 0))",    `Quick, all_mapR_ge_l_0 ;
   "(bvadd a b)",                     `Quick, bvadd_a_b ;
   "(bvult a b)",                     `Quick, bvult_a_b ;
+  "(bvnot (bvsub a b))",             `Quick, bvnot_bvsub_a_b ;
 ]
