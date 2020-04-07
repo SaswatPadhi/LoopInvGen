@@ -54,7 +54,6 @@ let of_atomic_string (s : string) : t =
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
 
-
 (* We assume that an array serialization provides explicit (k,v) pairs --
  * either using nested `store` calls, or if-then-else constructs.
  * The different array formats are described in more details here:

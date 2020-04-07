@@ -15,8 +15,6 @@ let rec for_type (t : Type.t) : Value.t Generator.t =
   | Type.ARRAY (key,value) -> (Int.gen_incl 0 64)
                               >>= fun len -> ((tuple2 (List.gen_with_length len (tuple2 (for_type key) (for_type value))) (for_type value))
                                               >>= fun (arr, def) -> singleton (Value.Array (key, value, arr, def)))
-  (* Any BitVector with size greater than 63 bits will have bits number 64 = 0,
-     65 = 1, ... *)
   | Type.BITVEC n -> let bv = Bitarray.create n in
                      let randarray = Bitarray.fold bv ~init:((singleton bv), 0)
                                        ~f:(fun (sbv, i) _ ->

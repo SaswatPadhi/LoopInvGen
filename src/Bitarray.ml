@@ -17,7 +17,6 @@ module Int63_chunk : sig
   val empty : t
   val get : t -> int -> bool
   val set : t -> int -> bool -> t
-  val gen_incl : Int63.t -> Int63.t -> t Core_kernel.Quickcheck.Generator.t
 
 end = struct
   open Int63
@@ -31,8 +30,6 @@ end = struct
   let set t i v =
     if v then bit_or t (shift_left one i)
     else bit_and t (bit_xor minus_one (shift_left one i))
-
-  let gen_incl h l = Int63.gen_incl h l
 end
 
 type t = {
