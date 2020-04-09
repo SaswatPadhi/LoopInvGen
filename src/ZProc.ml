@@ -75,14 +75,13 @@ let close_scope (z3 : t) : unit =
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
   if List.is_empty queries
-  then begin
-    if not scoped && not (List.is_empty db) then
-      begin
-        Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
-      ; Out_channel.output_lines z3.stdin db
-      end ; []
-    end
-  else begin
+  then (
+    if not scoped && not (List.is_empty db)
+    then (
+      Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4))) ;
+      Out_channel.output_lines z3.stdin db
+    ) ; []
+  ) else (
     let results = ref []
      in (if scoped then create_scope z3 else ())
       ; Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
@@ -95,7 +94,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
           results := (flush_and_collect z3) :: (!results))
       ; (if scoped then close_scope z3 else ())
       ; List.rev (!results)
-  end
+  )
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
@@ -137,18 +136,18 @@ let z3_result_to_model (result : string list) : model option =
                             ^ "\n\n" ^ (Exn.to_string e)))
           ; raise e
 
-let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
+let get_sat_model ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =
   z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  sat_model_for_asserts z3 ~eval_term
+  get_sat_model z3 ~eval_term
                         ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)
 
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  sat_model_for_asserts z3 ~eval_term
+  get_sat_model z3 ~eval_term
     ~db:(("(assert (not (and (=> " ^ a ^ " " ^ b ^ ") (=> " ^ b ^ " " ^ a ^ "))))") :: db)
 
 let simplify (z3 : t) (q : string) : string =

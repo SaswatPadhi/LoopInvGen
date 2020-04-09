@@ -66,8 +66,12 @@ if [ -n "$MAKE_Z3_AT" ] ; then
   rm -rf "$Z3_BUILD_DIR"
   mkdir -p "$Z3_BUILD_DIR"
 
-  python3 scripts/mk_make.py --staticbin --staticlib \
-                             --build "$Z3_BUILD_DIR"
+  if [ -n "$MAKE_STAREXEC" ] ; then
+    python3 scripts/mk_make.py --staticbin --staticlib \
+                               --build "$Z3_BUILD_DIR"
+  else
+    python3 scripts/mk_make.py --build "$Z3_BUILD_DIR"
+  fi
 
   cd "$Z3_BUILD_DIR"
   make -j "$JOBS"

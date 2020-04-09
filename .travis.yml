@@ -17,5 +17,7 @@ env:
   - OCAML_VERSION=4.08.1+flambda
   - OCAML_VERSION=4.09.0
   - OCAML_VERSION=4.09.0+flambda
+  - OCAML_VERSION=4.10.0
+  - OCAML_VERSION=4.10.0+flambda
 
 script: bash .travis/script.sh

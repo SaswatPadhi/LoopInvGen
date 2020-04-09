@@ -5,8 +5,8 @@ FROM ubuntu:18.04
 LABEL maintainer="padhi@cs.ucla.edu"
 
 
-ENV OPAM_VERSION  2.0.5
-ENV OCAML_VERSION 4.09.0+flambda
+ENV OPAM_VERSION  2.0.6
+ENV OCAML_VERSION 4.10.0+flambda
 ENV Z3_VERSION    Nightly
 
 ENV HOME /home/opam
@@ -18,7 +18,7 @@ RUN apt-get update && \
     apt-get install -yq aspcud \
                         binutils \
                         cmake curl \
-                        g++ git \
+                        g++-8 git \
                         libgmp-dev libgomp1 libomp5 libomp-dev libx11-dev \
                         m4 make \
                         patch python3 python3-distutils \
@@ -26,8 +26,13 @@ RUN apt-get update && \
                         time tzdata \
                         unzip \
                         && \
+    apt-get purge -y gcc g++ && \
     apt-get autoremove -y --purge
 
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 10 && \
+    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-8 10 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 10 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-8 10
 
 RUN adduser --disabled-password --home $HOME --shell /bin/bash --gecos '' opam && \
     echo 'opam ALL=(ALL) NOPASSWD:ALL' >>/etc/sudoers && \
@@ -40,10 +45,9 @@ USER opam
 WORKDIR $HOME
 
 
-RUN opam install --yes alcotest.0.8.5 \
+RUN opam install --yes alcotest.1.1.0 \
                        core.v0.13.0 \
-                       dune.2.1.2 \
-                       ppx_let.v0.13.0 \
+                       dune.2.4.0 \
                        && \
     opam clean --yes && \
     git clone https://github.com/SaswatPadhi/LoopInvGen.git
@@ -53,6 +57,7 @@ WORKDIR $HOME/LoopInvGen
 
 
 ENV LC_CTYPE=C.UTF-8
+
 RUN curl -LO https://github.com/Z3Prover/z3/archive/$Z3_VERSION.zip && \
     unzip $Z3_VERSION.zip && \
     opam config exec -- ./scripts/build_all.sh --with-logging --build-z3 z3-$Z3_VERSION && \

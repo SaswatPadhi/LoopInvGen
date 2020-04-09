@@ -33,9 +33,10 @@ let gen_pre_state ?(use_trans = false) (s : SyGuS.t) (z3 : ZProc.t)
                   : Value.t list option Quickcheck.Generator.t =
   Log.info (lazy "Generating an initial state:");
   gen_state_from_model s
-    (ZProc.sat_model_for_asserts z3 ~eval_term:s.trans_func.body
-          ~db:[ "(assert (and " ^ s.pre_func.body ^ " "
-              ^ (if use_trans then s.trans_func.body else "true") ^ "))" ])
+    (ZProc.get_sat_model
+       z3 ~eval_term:s.trans_func.body
+       ~db:[ "(assert (and " ^ s.pre_func.body ^ " "
+           ^ (if use_trans then s.trans_func.body else "true") ^ "))" ])
 
 let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : Value.t list)
                : Value.t list option Quickcheck.Generator.t list =
@@ -44,29 +45,28 @@ let transition (s : SyGuS.t) (z3 : ZProc.t) (vals : Value.t list)
     (to_string_map2 ~sep:" " vals s.synth_variables
                     ~f:(fun d (v, _) -> "(= " ^ v ^ " "
                                       ^ (Value.to_string d) ^ ")")) ^
-    "))" ;
-    "(assert (not (and " ^
-    (to_string_map2 ~sep:" " vals s.synth_variables
-                    ~f:(fun d (v, _) -> "(= " ^ v ^ "! "
-                                      ^ (Value.to_string d) ^ ")")) ^
-    ")))"
+    "))"
   ] in List.map s.trans_branches
-                ~f:(fun b -> gen_state_from_model s (
-         try begin match ZProc.sat_model_for_asserts z3 ~eval_term:s.trans_func.body
-                                                     ~db:(("(assert " ^ b ^ ")") :: db)
-                   with None -> None
-                      | Some model -> Some (filter_state ~trans:true model)
-             end
-         with _ -> None))
+                ~f:(fun b ->
+                      gen_state_from_model s (
+                        try begin
+                          match ZProc.get_sat_model z3 ~eval_term:b
+                                                    ~db:(("(assert " ^ b ^ ")") :: db)
+                          with None -> None
+                             | Some model -> Some (filter_state ~trans:true model)
+                        end
+                        with _ -> None))
 
 let gen_states_from (s : SyGuS.t) (z3 : ZProc.t) (head : Value.t list option)
                     : Value.t list list Quickcheck.Generator.t =
   let open Quickcheck.Generator in
-  match head with None -> singleton []
+  match head with
+  | None -> singleton []
   | Some head ->
       let step head ~size ~random =
         let rec step_internal size head =
-          Log.info (lazy (" > " ^ (List.to_string_map ~sep:", " ~f:Value.to_string head))) ;
+          Log.info (lazy (" > " ^ (List.to_string_map2 head s.synth_variables
+                                                       ~sep:", " ~f:(fun v (n,_) -> n ^ "=" ^ (Value.to_string v))))) ;
           head :: (
             match size with
             | 0 -> []
@@ -92,16 +92,23 @@ let record_states ~size ~seed ~state_chan ~(zpath : string) (s : SyGuS.t) : unit
            ; flush state_chan
            ; ignore (ZProc.run_queries
                        z3 ~scoped:false
-                       [ "(not (and "
+                       [ "(assert (not (and "
                        ^ (List.to_string_map2
                             s.synth_variables head ~sep:" "
                             ~f:(fun (name, _) value -> ("(= " ^ name ^ " " ^ (Value.to_string value) ^ ")")))
-                       ^ "))" ])
+                       ^ ")))" ])
            ; (List.length states)
   in ZProc.process ~zpath
-       ~random_seed:(Some (string_of_int (Quickcheck.(
-                       random_value ~seed (Generator.small_non_negative_int)))))
+       ~random_seed:(Some (string_of_int (Quickcheck.(random_value ~seed (Generator.small_non_negative_int)))))
        (fun z3 -> setup s z3 ;
+                  ignore (
+                    ZProc.run_queries
+                      z3 ~scoped:false
+                         [ "(assert (not (and "
+                         ^ (List.to_string_map
+                              s.synth_variables ~sep:" "
+                              ~f:(fun (name, _) -> "(= " ^ name ^ " " ^ name ^ "!)"))
+                         ^ ")))" ]) ;
                   let rec helper avoid size =
                     let open Quickcheck in
                     let sz = size / 2 in
