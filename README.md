@@ -121,7 +121,7 @@ For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam swit
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.1.1.0 core.v0.13.0 dune.2.4.0
+$ opam install alcotest.1.1.0 core.v0.13.0 dune.2.5.1
 ```
 
 #### 4. Get the [Z3 project][z3].

@@ -79,7 +79,7 @@ Flags:
     [--verify, -v]
 
 Parameters:
-    [--expressiveness-level,  -L <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--expressiveness-level,  -e <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
     [--max-states-per-fork,   -s <count>]           ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
     [--infer-timeout,         -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
 
@@ -105,7 +105,7 @@ for opt in "$@"; do
     "--clean-intermediates")   set -- "$@" "-c" ;;
     "--verify")                set -- "$@" "-v" ;;
 
-    "--expressiveness-level")  set -- "$@" "-L" ;;
+    "--expressiveness-level")  set -- "$@" "-e" ;;
     "--max-states-per-fork")   set -- "$@" "-s" ;;
     "--infer-timeout")         set -- "$@" "-t" ;;
 
@@ -128,12 +128,12 @@ for opt in "$@"; do
 done
 
 OPTIND=1
-while getopts ':P:R:I:V:cvf:F:l:L:p:s:S:t:z:' OPTION ; do
+while getopts ':cve:s:t:f:F:i:l:S:z:P:R:I:V:' OPTION ; do
   case "$OPTION" in
     "c" ) DO_CLEAN="yes" ;;
     "v" ) DO_VERIFY="yes" ;;
 
-    "L" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
+    "e" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
             || usage "The expressiveness level (= $OPTARG) must be between 1 and 6 (both inclusive)."
           EXPRESSIVENESS_LEVEL="$OPTARG"
           ;;

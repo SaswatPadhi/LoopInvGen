@@ -25,6 +25,7 @@ RUN apt-get update && \
                         sudo \
                         time tzdata \
                         unzip \
+                        vim \
                         && \
     apt-get purge -y gcc g++ && \
     apt-get autoremove -y --purge
@@ -47,7 +48,7 @@ WORKDIR $HOME
 
 RUN opam install --yes alcotest.1.1.0 \
                        core.v0.13.0 \
-                       dune.2.4.0 \
+                       dune.2.5.1 \
                        && \
     opam clean --yes && \
     git clone https://github.com/SaswatPadhi/LoopInvGen.git

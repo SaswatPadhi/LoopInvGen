@@ -23,8 +23,7 @@ build: [
 
 depends: [
   "ocaml"         {>= "4.08"}
-  "dune"          {>= "1.6" & build}
+  "dune"          {>= "1.11" & build}
   "alcotest"      {>= "0.8" & with-test}
   "core"          {>= "v0.13" & <= "v0.14"}
-  "ppx_let"       {>= "v0.13" & <= "v0.14"}
 ]
