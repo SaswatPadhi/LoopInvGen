@@ -38,13 +38,13 @@ type stats = {
 let conflictingTests (job : Job.t) : 'a conflict list =
   let make_f_vecs = List.map ~f:(fun (t, fvec) -> (t, Lazy.force fvec)) in
   let make_groups tests =
-    List.group tests ~break:(fun (_, fv1) (_, fv2) -> fv1 <> fv2)
+    List.group tests ~break:(fun (_, fv1) (_, fv2) -> not (List.equal Bool.equal fv1 fv2))
   in let (p_groups, n_groups) = (make_groups (make_f_vecs job.pos_tests),
                                  make_groups (make_f_vecs job.neg_tests))
   in List.(filter_map
        p_groups
        ~f:(fun [@warning "-8"] (((_, pfv) :: _) as ptests) ->
-             match find n_groups ~f:(fun ((_, nfv) :: _) -> nfv = pfv) with
+             match find n_groups ~f:(fun ((_, nfv) :: _) -> List.equal Bool.equal nfv pfv) with
              | None -> None
              | Some ntests -> Some { pos = map ~f:fst ptests
                                    ; neg = map ~f:fst ntests
@@ -65,7 +65,7 @@ let synthFeature ?(consts = []) ~(job : Job.t) ~(config : Synthesizer.Config.t)
   } in stats._Synthesizer <- result.stats :: stats._Synthesizer
      ; stats.pi_time_ms <- stats.pi_time_ms +. result.stats.synth_time_ms
      ; ((fun values -> try Value.equal (result.func values) (Value.Bool true) with _ -> false),
-        (if result.constraints = [] then result.string
+        (if List.is_empty result.constraints then result.string
          else "(and " ^ result.string ^ (String.concat ~sep:" " result.constraints) ^ ")"))
 
 let resolveAConflict ?(config = Config.default) ?(consts = []) ~(job : Job.t)
@@ -95,7 +95,7 @@ let resolveAConflict ?(config = Config.default) ?(consts = []) ~(job : Job.t)
 let rec resolveSomeConflicts ?(config = Config.default) ?(consts = []) ~(job : Job.t)
                              (conflict_groups : Value.t list conflict list) stats
                              : Value.t list Job.feature Job.with_desc option =
-  if conflict_groups = [] then None
+  if List.is_empty conflict_groups then None
   else try Some (resolveAConflict (List.hd_exn conflict_groups) ~config ~consts ~job stats)
        with e -> Log.error (lazy ((Exn.to_string e) ^ (Printexc.get_backtrace ())))
                ; resolveSomeConflicts (List.tl_exn conflict_groups) ~config ~consts ~job stats
@@ -103,7 +103,7 @@ let rec resolveSomeConflicts ?(config = Config.default) ?(consts = []) ~(job : J
 let rec augmentFeatures ?(config = Config.default) ?(consts = []) (job : Job.t)
                         stats : Job.t =
   let conflict_groups = conflictingTests job
-   in if conflict_groups = [] then job
+   in if List.is_empty conflict_groups then job
       else if config.disable_synth
            then (Log.error (lazy ("CONFLICT RESOLUTION FAILED")) ; raise NoSuchFunction)
       else match resolveSomeConflicts conflict_groups ~job ~config ~consts stats with

@@ -115,20 +115,20 @@ except, may be, these: `aspcud libgmp-dev libomp-dev m4`.
 
 See <https://opam.ocaml.org/doc/Install.html> for detailed instructions.
 
-#### 2. Install `ocaml` >= 4.07.0.
+#### 2. Install `ocaml` >= 4.08.0.
 We recommend using an OCaml compiler with [`flambda`][flambda] optimizations enabled.
-For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.09.0+flambda`.
+For example, with [opam](https://opam.ocaml.org/) 2.0+, you could run `opam switch create 4.10.0+flambda`.
 
 #### 3. `opam install` the dependencies.
 ```bash
-$ opam install alcotest.0.8.5 async.v0.12.0 core.v0.12.4 dune.1.11.4 ppx_let.v0.12.0
+$ opam install alcotest.1.1.0 core.v0.13.0 dune.2.5.1
 ```
 
 #### 4. Get the [Z3 project][z3].
-We have tested LoopInvGen with the latest stable version of Z3 (4.8.5).
+We have tested LoopInvGen with the latest stable version of Z3 (4.8.7).
 You could either:
 - `git checkout https://github.com/Z3Prover/z3.git` for the bleeding-edge version, or
-- `wget https://github.com/Z3Prover/z3/archive/z3-4.8.5.zip && unzip z3-4.8.5.zip` for the stable version
+- `wget https://github.com/Z3Prover/z3/archive/z3-4.8.7.zip && unzip z3-4.8.7.zip` for the stable version
 
 #### 5. `git clone` this project, and build everything.
 ```bash

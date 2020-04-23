@@ -42,8 +42,8 @@ let make_call_table (sygus : t) : func_info String.Table.t =
       in List.iter sygus.functions ~f:(fun func -> String.Table.set table ~key:func.name ~data:(init_info func))
        ; List.iter sygus.functions ~f:(fun func ->
            let parsed_expr = Parsexp.Single.parse_string_exn func.body in
-           let ops =  extract_operators parsed_expr in
-           let callees = List.filter ops ~f:(fun op -> String.Table.find table op <> None)
+           let ops = extract_operators parsed_expr in
+           let callees = List.filter ops ~f:(fun op -> not (Option.is_none (String.Table.find table op)))
             in String.Table.update table func.name
                                    ~f:(fun [@warning "-8"] (Some data) -> {data with callees ; parsed_expr}))
        ; String.Table.update table sygus.post_func.name
@@ -95,17 +95,24 @@ let optimize (sygus : t) : t =
                                                    (List.filter_mapi data.caller.args
                                                       ~f:(fun i (v, _) -> if Bitarray.get data.used_args i
                                                                           then Some v else None))))))
-   ; let sygus = { sygus with
-                   synth_variables = List.dedup_and_sort ~compare:Poly.compare
-                                       ((get_used_vars sygus.pre_func.name)
-                                       @ (List.map (get_used_vars sygus.trans_func.name)
-                                                   ~f:(fun (v, t) -> match String.chop_suffix ~suffix:"!" v with
-                                                                     | None -> (v, t)
-                                                                     | Some v' -> (v', t)))
-                                       @ (get_used_vars sygus.post_func.name))
-                 }
+   ; let trans_branches =
+           match NormalForm.to_dnf (Sexp.force_parse sygus.trans_func.body) with
+           | List (Atom "or" :: b) -> List.map b ~f:(fun a -> normalize_spaces (Sexp.to_string_hum a))
+           | a -> [ normalize_spaces (Sexp.to_string_hum a) ]
+      in let sygus = { sygus with
+                       trans_branches ;
+                       synth_variables = List.dedup_and_sort ~compare:Poly.compare
+                                           ( (get_used_vars sygus.pre_func.name)
+                                           @ (List.map (get_used_vars sygus.trans_func.name)
+                                                       ~f:(fun (v, t) -> match String.chop_suffix ~suffix:"!" v with
+                                                                         | None -> (v, t)
+                                                                         | Some v' -> (v', t)))
+                                           @ (get_used_vars sygus.post_func.name)) }
       in Log.debug (lazy ("Reduced synth variables (" ^
                           (Int.to_string (List.length sygus.synth_variables)) ^
                           "): " ^
                           (List.to_string_map sygus.synth_variables ~sep:"; " ~f:fst)))
+       ; Log.(debug (lazy ("Transition branches:" ^
+                           (indented_sep 2) ^
+                           (List.to_string_map trans_branches ~sep:(indented_sep 2) ~f:(fun d -> "> " ^ d)))))
        ; sygus

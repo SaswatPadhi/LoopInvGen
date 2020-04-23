@@ -57,8 +57,8 @@ let flush_and_collect (z3 : t) : string =
    ; let lines = ref [] in
      let rec read_line () : unit =
        let l = Option.value (In_channel.input_line z3.stdout) ~default:""
-        in if l = last_line then ()
-           else if l <> "" then (lines := l :: (!lines) ; read_line ())
+        in if String.equal l last_line then ()
+           else if not (String.equal l "") then (lines := l :: (!lines) ; read_line ())
        in read_line () ; lines := List.rev (!lines)
         ; Log.debug (lazy ("    " ^ (String.concat (!lines) ~sep:(Log.indented_sep 4))))
         ; String.concat ~sep:" " (!lines)
@@ -74,15 +74,14 @@ let close_scope (z3 : t) : unit =
 
 let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
                 : string list =
-  if queries = []
-  then begin
-    if not scoped && db <> [] then
-      begin
-        Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4)))
-      ; Out_channel.output_lines z3.stdin db
-      end ; []
-    end
-  else begin
+  if List.is_empty queries
+  then (
+    if not scoped && not (List.is_empty db)
+    then (
+      Log.debug (lazy (String.concat ("New z3 call:" :: db) ~sep:(Log.indented_sep 4))) ;
+      Out_channel.output_lines z3.stdin db
+    ) ; []
+  ) else (
     let results = ref []
      in (if scoped then create_scope z3 else ())
       ; Log.debug (lazy (String.concat ("New z3 call:" :: (db @ queries))
@@ -95,7 +94,7 @@ let run_queries ?(scoped = true) (z3 : t) ?(db = []) (queries : string list)
           results := (flush_and_collect z3) :: (!results))
       ; (if scoped then close_scope z3 else ())
       ; List.rev (!results)
-  end
+  )
 
 let z3_sexp_to_value (sexp : Sexp.t) : Value.t =
   let open Sexp in
@@ -137,22 +136,21 @@ let z3_result_to_model (result : string list) : model option =
                             ^ "\n\n" ^ (Exn.to_string e)))
           ; raise e
 
-let sat_model_for_asserts ?(eval_term = "true") ?(db = []) (z3 : t)
+let get_sat_model ?(eval_term = "true") ?(db = []) (z3 : t)
                           : model option =
   z3_result_to_model (run_queries z3 (query_for_model ~eval_term ()) ~db)
 
 let implication_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  sat_model_for_asserts z3 ~eval_term
+  get_sat_model z3 ~eval_term
                         ~db:(("(assert (not (=> " ^ a ^ " " ^ b ^")))") :: db)
 
 let equivalence_counter_example ?(eval_term = "true") ?(db = []) (z3 : t)
                                 (a : string) (b : string) : model option =
-  sat_model_for_asserts z3 ~eval_term
+  get_sat_model z3 ~eval_term
     ~db:(("(assert (not (and (=> " ^ a ^ " " ^ b ^ ") (=> " ^ b ^ " " ^ a ^ "))))") :: db)
 
 let simplify (z3 : t) (q : string) : string =
-  let open Sexp in
   let goal =
     match
       run_queries z3 ~db:["(assert " ^ q ^ ")"]
@@ -164,8 +162,8 @@ let simplify (z3 : t) (q : string) : string =
        -> let goals = List.(filter_map (drop (rev goalexpr) 4)
                                        ~f:(function Atom "true" -> None
                                                   | Atom atom -> Some atom
-                                                  | l -> Some (to_string_hum l)))
-           in if List.length goals = 0 then "true"
+                                                  | l -> Some (Sexp.to_string_hum l)))
+           in if List.is_empty goals then "true"
               else (let goalstr = String.concat ~sep:" " goals
                      in if List.length goals < 2 then goalstr else "(and " ^ goalstr ^ ")")
      | _ -> raise (Internal_Exn ("Unexpected z3 goals: " ^ goal))

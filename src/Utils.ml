@@ -43,23 +43,34 @@ module Array = struct
     String.concat_array ~sep (map2_exn l1 l2 ~f)
 end
 
+module Sexp = struct
+  include Sexp
+
+  let force_parse str =
+    match parse str with
+    | Done (sexp , _) -> sexp
+    | _ -> Atom str
+end
+
+let normalize_spaces = Str.(global_replace (regexp "[ \n\r\x0c\t][ \n\r\x0c\t]+") " ")
+
 let get_in_channel = function
   | "-"      -> Stdio.In_channel.stdin
   | filename -> Stdio.In_channel.create filename
 
 let replace bindings expr =
-  if bindings = [] then expr else
+  if List.is_empty bindings then expr else
+  let open Sexp in
   let table = ref (String.Map.empty)
    in List.iter bindings
                 ~f:(function [@warning "-8"]
-                    | Sexp.List [ (Atom key) ; data ]      (* SMTLIB *)
-                    | Sexp.List [ (Atom key) ; _ ; data ]  (* SyGuS *)
-                    -> table := String.Map.add_exn !table ~key ~data)
+                    | List [ (Atom key) ; data ]
+                      -> table := String.Map.add_exn !table ~key ~data)
     ; let rec helper = function
-        | Sexp.List l -> Sexp.List (List.map l ~f:helper)
+        | List l -> List (List.map l ~f:helper)
         | Atom atom -> match String.Map.find !table atom with
-                        | None      -> Atom atom
-                        | Some data -> data
+                       | None      -> Atom atom
+                       | Some data -> data
        in helper expr
 
 let rec remove_lets : Sexp.t -> Sexp.t = function
@@ -76,7 +87,7 @@ let make_user_features feature_strings vars : (string * string) list =
                                         | true -> None
                                         | _ -> Some fs)
    in begin
-     if feature_strings = [] then [] else
+     if List.is_empty feature_strings then [] else
      let decl_var (s,t) = "(" ^ s ^ " " ^ (Type.to_string t) ^ ")" in
      let var_decls = List.to_string_map vars ~sep:" " ~f:decl_var in
      let sign = " (" ^ var_decls ^ ") Bool "

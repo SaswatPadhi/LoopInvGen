@@ -32,37 +32,37 @@ fi
 trap 'jobs -p | xargs kill -TERM &> /dev/null' INT
 trap "kill -KILL -`ps -o ppid= $$` &> /dev/null" QUIT TERM
 
-INTERMEDIATES_DIR="$SELF_DIR/_log"
 SYGUS_EXT=".sl"
-Z3_PATH="$SELF_DIR/_dep/z3"
 
-INFER_TIMEOUT=86400
-MIN_INFER_TIMEOUT=5
+DO_CLEAN="no"
+DO_VERIFY="no"
 
-RECORD_TIMEOUT=0.5s
-RECORD_FORKS=4
-RECORD_STATES_PER_FORK=512
-MIN_RECORD_STATES_PER_FORK=63
-
-EXPRESSIVENESS_LEVEL=6
-
-PROCESS_ARGS=""
-RECORD_ARGS=""
-INFER_ARGS=""
-VERIFY_ARGS=""
-
+INTERMEDIATES_DIR="$SELF_DIR/_log"
 declare -A DO_LOG
 DO_LOG[process]=""
 DO_LOG[record]=""
 DO_LOG[infer]=""
 DO_LOG[verify]=""
+STATS_ARG=""
+Z3_PATH="$SELF_DIR/_dep/z3"
+
+EXPRESSIVENESS_LEVEL=6
+INFER_TIMEOUT=86400
+MIN_INFER_TIMEOUT=5
+MIN_RECORD_STATES_PER_FORK=63
+RECORD_TIMEOUT=0.5s
+RECORD_FORKS=4
+RECORD_STATES_PER_FORK=512
 
 INVGAME_FEATURES_ARG=""
 FEATURES_ARG=""
-STATS_ARG=""
+EXTRA_POS_STATES_PATH=""
+EXTRA_NEG_STATES_ARG=""
 
-DO_CLEAN="no"
-DO_VERIFY="no"
+PROCESS_ARGS=""
+RECORD_ARGS=""
+INFER_ARGS=""
+VERIFY_ARGS=""
 
 show_status() {
   printf "%s%16s" "$1" >&2
@@ -78,18 +78,22 @@ Flags:
     [--clean-intermediates, -c]
     [--verify, -v]
 
-Parameters:
-    [--expressiveness-level,  -L <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
-    [--max-states-per-fork,   -s <count>]           ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
-    [--infer-timeout,         -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
-
 Configuration:
-    [--features-path,         -F <path>]            ()
-    [--invgame-features-path, -f <path>]            ()
     [--intermediates-dir,     -i <path>]            (_log)
     [--log,                   -l <src>[,<src>...]]  ()\t\tsrc <- {process|record|infer|verify}
     [--stats-file,            -S <path>]            ()
     [--z3-exe-path,           -z <path>]            (_dep/z3)
+
+Parameters:
+    [--expressiveness-level,  -e <int>]             ($EXPRESSIVENESS_LEVEL)\t\t{1 = Eq .. 4 = Polyhedra .. 6 = Peano}
+    [--max-states-per-fork,   -s <count>]           ($RECORD_STATES_PER_FORK)\t{> $MIN_RECORD_STATES_PER_FORK}
+    [--infer-timeout,         -t <seconds>]         ($INFER_TIMEOUT)\t\t{> $MIN_INFER_TIMEOUT}
+
+Optional Inputs:
+    [--features-path,         -F <path>]            ()
+    [--invgame-features-path, -f <path>]            ()
+    [--extra-pos-states-path, -p <path>]            ()
+    [--extra-neg-states-path, -n <path>]            ()
 
 Arguments to Internal Programs (@ `dirname $RECORD`):
     [--Process-args,          -P \"<args>\"]          see \``basename "$PROCESS"` -h\` for details
@@ -105,16 +109,19 @@ for opt in "$@"; do
     "--clean-intermediates")   set -- "$@" "-c" ;;
     "--verify")                set -- "$@" "-v" ;;
 
-    "--expressiveness-level")  set -- "$@" "-L" ;;
+    "--intermediates-path")    set -- "$@" "-i" ;;
+    "--log")                   set -- "$@" "-l" ;;
+    "--stats-file")            set -- "$@" "-S" ;;
+    "--z3-exe-path")           set -- "$@" "-z" ;;
+
+    "--expressiveness-level")  set -- "$@" "-e" ;;
     "--max-states-per-fork")   set -- "$@" "-s" ;;
     "--infer-timeout")         set -- "$@" "-t" ;;
 
     "--features-path")         set -- "$@" "-F" ;;
     "--invgame-features-path") set -- "$@" "-f" ;;
-    "--intermediates-path")    set -- "$@" "-i" ;;
-    "--log")                   set -- "$@" "-l" ;;
-    "--stats-file")            set -- "$@" "-S" ;;
-    "--z3-exe-path")           set -- "$@" "-z" ;;
+    "--extra-pos-states-path") set -- "$@" "-p" ;;
+    "--extra-neg-states-path") set -- "$@" "-n" ;;
 
     "--Process-args")          set -- "$@" "-P" ;;
     "--Record-args")           set -- "$@" "-R" ;;
@@ -128,12 +135,29 @@ for opt in "$@"; do
 done
 
 OPTIND=1
-while getopts ':P:R:I:V:cvf:F:l:L:p:s:S:t:z:' OPTION ; do
+while getopts ':cvi:l:S:z:e:s:t:f:F:P:R:I:V:' OPTION ; do
   case "$OPTION" in
     "c" ) DO_CLEAN="yes" ;;
     "v" ) DO_VERIFY="yes" ;;
 
-    "L" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
+    "i" ) INTERMEDIATES_DIR="$OPTARG"
+          ;;
+    "l" ) for LOG_SRC in `echo "$OPTARG" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
+            case "$LOG_SRC" in
+              process | record | infer | verify ) DO_LOG[$LOG_SRC]="yes" ;;
+              * ) usage "Unknown source [$LOG_SRC] for logging."
+            esac
+          done
+          ;;
+    "S" ) [ -d "$OPTARG" ] && usage "Stats file [$OPTARG] is a directory!"
+          [ -f "$OPTARG" ] && rm -rf $OPTARG
+          STATS_ARG="-report-path $OPTARG"
+          ;;
+    "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
+          Z3_PATH="$OPTARG"
+          ;;
+
+    "e" ) [ "$OPTARG" -ge "1" ] && [ "$OPTARG" -le "6" ] \
             || usage "The expressiveness level (= $OPTARG) must be between 1 and 6 (both inclusive)."
           EXPRESSIVENESS_LEVEL="$OPTARG"
           ;;
@@ -152,21 +176,11 @@ while getopts ':P:R:I:V:cvf:F:l:L:p:s:S:t:z:' OPTION ; do
     "F" ) [ -f "$OPTARG" ] || usage "Features file [$OPTARG] not found."
           FEATURES_ARG="$OPTARG"
           ;;
-    "i" ) INTERMEDIATES_DIR="$OPTARG"
+    "p" ) [ -f "$OPTARG" ] || usage "Extra positive states file [$OPTARG] not found."
+          EXTRA_POS_STATES_PATH="$OPTARG"
           ;;
-    "l" ) for LOG_SRC in `echo "$OPTARG" | tr ',' '\n' | sort -u | tr '\n' ' '` ; do
-            case "$LOG_SRC" in
-              process | record | infer | verify ) DO_LOG[$LOG_SRC]="yes" ;;
-              * ) usage "Unknown source [$LOG_SRC] for logging."
-            esac
-          done
-          ;;
-    "S" ) [ -d "$OPTARG" ] && usage "Stats file [$OPTARG] is a directory!"
-          [ -f "$OPTARG" ] && rm -rf $OPTARG
-          STATS_ARG="-report-path $OPTARG"
-          ;;
-    "z" ) [ -f "$OPTARG" ] || usage "Z3 [$OPTARG] not found."
-          Z3_PATH="$OPTARG"
+    "n" ) [ -f "$OPTARG" ] || usage "Extra negative states file [$OPTARG] not found."
+          EXTRA_NEG_STATES_ARG="-neg-states-path $OPTARG"
           ;;
 
     "P" ) PROCESS_ARGS="$OPTARG" ;;
@@ -247,15 +261,15 @@ else
   done
   wait
 
-  grep -hsv "^[[:space:]]*$" "$TESTCASE_REC_STATES"* | sort -u > "$TESTCASE_ALL_STATES"
+  grep -hsv "^[[:space:]]*$" "$TESTCASE_REC_STATES"* "$EXTRA_POS_STATES_PATH" | sort -u > "$TESTCASE_ALL_STATES"
   [ -z "${DO_LOG[record]}" ] || cat "$TESTCASE_REC_LOG"* >> "$TESTCASE_ALL_LOG" 2> /dev/null || true
 
   show_status "(inferring)"
 
   timeout --foreground $INFER_TIMEOUT \
-          $INFER -s "$TESTCASE_ALL_STATES" -max-expressiveness-level "$EXPRESSIVENESS_LEVEL" \
-                 -features-path $TESTCASE_FEATURES $STATS_ARG ${DO_LOG[infer]} $INFER_ARGS   \
-                 "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
+          $INFER -s "$TESTCASE_ALL_STATES" -max-expressiveness-level "$EXPRESSIVENESS_LEVEL"         \
+                 -features-path $TESTCASE_FEATURES $STATS_ARG $EXTRA_NEG_STATES_ARG ${DO_LOG[infer]} \
+                 $INFER_ARGS "$TESTCASE_PROCESSED" > "$TESTCASE_INVARIANT"
   INFER_RESULT_CODE=$?
 fi
 

@@ -66,8 +66,12 @@ if [ -n "$MAKE_Z3_AT" ] ; then
   rm -rf "$Z3_BUILD_DIR"
   mkdir -p "$Z3_BUILD_DIR"
 
-  python3 scripts/mk_make.py --staticbin --staticlib \
-                             --build "$Z3_BUILD_DIR"
+  if [ -n "$MAKE_STAREXEC" ] ; then
+    python3 scripts/mk_make.py --staticbin --staticlib \
+                               --build "$Z3_BUILD_DIR"
+  else
+    python3 scripts/mk_make.py --build "$Z3_BUILD_DIR"
+  fi
 
   cd "$Z3_BUILD_DIR"
   make -j "$JOBS"
@@ -96,7 +100,9 @@ rm -rf _starexec && mkdir -p _starexec/bin/_bin
 
 cp -rL _dep _starexec/bin
 cp -L _build/install/default/bin/* _starexec/bin/_bin
-rm -rf _starexec/bin/_bin/lig-verify _starexec/bin/_bin/lig-score
+rm -rf _starexec/bin/_bin/lig-verify \
+       _starexec/bin/_bin/lig-score  \
+       _starexec/bin/_bin/lig-tools-*
 
 STAREXEC_GPLEARN_CONFIG_FILE="_starexec/bin/starexec_run_gplearn"
 STAREXEC_DEFAULT_CONFIG_FILE="_starexec/bin/starexec_run_default"

@@ -194,7 +194,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     | Type.LIST _  -> list_candidates
     | Type.BITVEC _ -> bitvec_candidates
     | Type.ARRAY _ -> array_candidates
-    | Type.TVAR _ when no_tvar = false
+    | Type.TVAR _ when not no_tvar
       -> raise (Internal_Exn "No candidates for TVAR")
     | Type.TVAR _ -> let (@) = Array.append
                       in int_candidates @ bool_candidates @ char_candidates

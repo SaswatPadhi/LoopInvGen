@@ -17,9 +17,8 @@ if [ -z "${MIN_REQS_ONLY}" ]; then
     opam install --yes --deps-only --with-test ./LoopInvGen.opam
 else
     opam install --yes alcotest.0.8.0   \
-                       core.v0.12.2     \
-                       dune.1.6.0       \
-                       ppx_let.v0.12.0
+                       core.v0.13.0     \
+                       dune.1.11.0
 fi
 
 opam list
@@ -29,4 +28,4 @@ pwd ; ls -lah
 
 dune build --verbose
 dune build test/Runner.exe --verbose
-dune build app/App.exe
+dune build app/App.exe --verbose
