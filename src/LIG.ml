@@ -32,7 +32,7 @@ type stats = {
 } [@@deriving sexp]
 
 let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
-                 ~(states : Value.t list list) (inv : Job.desc) stats
+                 ~(states : Value.t list list) ~(neg_states : Value.t list list) (inv : Job.desc) stats
                  : Job.desc * ZProc.model option =
   let invf_call =
     "(invf " ^ (List.to_string_map sygus.inv_func.args ~sep:" " ~f:fst) ^ ")" in
@@ -58,6 +58,7 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
            ~config:config._VPIE ~consts:sygus.constants ~post_desc:invf'_call
            (Job.create ()
               ~pos_tests:states
+              ~neg_tests:neg_states
               ~f:(ZProc.constraint_sat_function ("(not " ^ invf'_call ^ ")")
                     ~z3 ~arg_names:(List.map sygus.synth_variables ~f:fst))
               ~args:sygus.synth_variables
@@ -79,7 +80,8 @@ let satisfyTrans ?(config = Config.default) ~(sygus : SyGuS.t) ~(z3 : ZProc.t)
                        in if Option.is_none ce then helper new_inv else (new_inv, ce))
    in helper inv
 
-let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t list list)
+let rec learnInvariant_internal ?(config = Config.default)
+                                ~(states : Value.t list list) ~(neg_states : Value.t list list)
                                 (sygus : SyGuS.t) (seed_string : string) (z3 : ZProc.t) stats
                                 : Job.desc * stats =
   let open Quickcheck in
@@ -92,6 +94,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                                   (gen_states_from sygus z3 head)
      in learnInvariant_internal
           ~states:List.(dedup_and_sort ~compare:(compare Value.compare) (states @ new_states))
+          ~neg_states
           ~config:{ config with
                     _VPIE = { config._VPIE with
                               _PIE = { config._VPIE._PIE with
@@ -115,6 +118,7 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
                         then "true" else sygus.post_func.body)
           (Job.create ()
               ~pos_tests:states
+              ~neg_tests:neg_states
                ~f:(ZProc.constraint_sat_function
                      (if String.is_prefix sygus.post_func.body ~prefix:"("
                       then ("(not " ^ sygus.post_func.body ^ ")")
@@ -129,22 +133,21 @@ let rec learnInvariant_internal ?(config = Config.default) ~(states : Value.t li
           ; ((ZProc.implication_counter_example z3 sygus.pre_func.body inv), inv)
       end
   ) with Some ce, _
-         -> restart_with_new_states
-               (random_value ~seed:(`Deterministic seed_string)
-                             (gen_state_from_model sygus (Some ce)))
+         -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
+                                                  (gen_state_from_model sygus (Some ce)))
        | None, inv
          -> Log.info (lazy ("Starting with the following initial invariant:"
                            ^ (Log.indented_sep 4) ^ inv))
-          ; match satisfyTrans ~config ~sygus ~states ~z3 inv stats with
+          ; match satisfyTrans ~config ~sygus ~states ~neg_states ~z3 inv stats with
             | inv, None
               -> if not (String.equal inv "false") then ((ZProc.simplify z3 inv), stats)
                   else restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
-                                                            (gen_pre_state ~use_trans:true sygus z3))
+                                                             (gen_pre_state ~use_trans:true sygus z3))
             | _, (Some ce_model)
               -> restart_with_new_states (random_value ~seed:(`Deterministic seed_string)
                                                        (gen_state_from_model sygus (Some ce_model)))
 
-let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
+let learnInvariant ?(config = Config.default) ~(states : Value.t list list) ~(neg_states : Value.t list list)
                    ~(zpath : string) (sygus : SyGuS.t) : Job.desc * stats =
   let open ZProc in
   let stats = { _VPIE = [] ; lig_time_ms = 0.0 ; lig_ce = 0 }
@@ -154,4 +157,4 @@ let learnInvariant ?(config = Config.default) ~(states : Value.t list list)
        (fun z3 -> StateSampler.setup sygus z3 ~user_features:(List.map ~f:fst config.user_features)
                 ; if not (Option.is_none (implication_counter_example z3 sygus.pre_func.body sygus.post_func.body))
                   then ("false", stats)
-                  else learnInvariant_internal ~config ~states sygus config.base_random_seed z3 stats)
+                  else learnInvariant_internal ~config ~states ~neg_states sygus config.base_random_seed z3 stats)

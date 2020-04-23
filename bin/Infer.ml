@@ -55,6 +55,11 @@ let config_flags =
     }
   ]
 
+let read_and_permute_states states_chan =
+  List.(permute ~random_state:(Random.State.make [| 79 ; 97 |])
+                (map (Stdio.In_channel.input_lines states_chan)
+                    ~f:(fun l -> map (String.split ~on:'\t' l) ~f:Value.of_string)))
+
 let command =
   let open Command.Let_syntax in
   Command.basic
@@ -64,10 +69,12 @@ let command =
                                     ~doc:"FILENAME path to the file containing sampled program states"
       and z3_path            = flag "z3-path" (required string)
                                      ~doc:"FILENAME path to the z3 executable"
-      and report_path        = flag "report-path" (optional string)
-                                    ~doc:"FILENAME report statistics (time and counterexamples) to the specified path"
       and log_path           = flag "log-path" (optional string)
                                     ~doc:"FILENAME enable logging and output to the specified path"
+      and neg_states_path    = flag "neg-states-path" (optional string)
+                                    ~doc:"FILENAME path to the file containing sampled negative states"
+      and report_path        = flag "report-path" (optional string)
+                                    ~doc:"FILENAME report statistics (time and counterexamples) to the specified path"
       and user_features_path = flag "features-path" (optional string)
                                     ~doc:"FILENAME initial features to preseed the learner with"
       and config             = config_flags
@@ -75,11 +82,15 @@ let command =
       in fun () -> begin
         Log.enable ~msg:"INFER" log_path ;
         let states_chan = Utils.get_in_channel states_path in
-        let states = List.(permute
-          ~random_state:(Random.State.make [| 79 ; 97 |])
-          (map (Stdio.In_channel.input_lines states_chan)
-              ~f:(fun l -> map (String.split ~on:'\t' l) ~f:Value.of_string)))
-        in Stdio.In_channel.close states_chan
+        let states = read_and_permute_states states_chan
+        and neg_states = match neg_states_path with
+                         | None -> []
+                         | Some neg_states_path
+                           -> let neg_states_chan = Stdio.In_channel.create neg_states_path in
+                              let neg_states = read_and_permute_states neg_states_chan
+                               in Stdio.In_channel.close neg_states_chan
+                                ; neg_states
+         in Stdio.In_channel.close states_chan
           ; Log.debug (lazy ("Loaded " ^ (Int.to_string (List.length states)) ^ " states."))
           ; let sygus = SyGuS.read_from sygus_path in
             let logic = Logic.of_string sygus.logic in
@@ -101,7 +112,7 @@ let command =
               }
               ; user_features = Utils.make_user_features user_input sygus.synth_variables
             }
-            in let inv, stats = LIG.learnInvariant ~config ~zpath:z3_path ~states sygus
+            in let inv, stats = LIG.learnInvariant ~config ~zpath:z3_path ~states ~neg_states sygus
             in Out_channel.output_string
                  Stdio.stdout
                  SyGuS.(func_definition { sygus.inv_func with body = (translate_smtlib_expr inv) })

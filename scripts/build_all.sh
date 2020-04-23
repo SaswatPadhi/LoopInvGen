@@ -100,7 +100,9 @@ rm -rf _starexec && mkdir -p _starexec/bin/_bin
 
 cp -rL _dep _starexec/bin
 cp -L _build/install/default/bin/* _starexec/bin/_bin
-rm -rf _starexec/bin/_bin/lig-verify _starexec/bin/_bin/lig-score
+rm -rf _starexec/bin/_bin/lig-verify \
+       _starexec/bin/_bin/lig-score  \
+       _starexec/bin/_bin/lig-tools-*
 
 STAREXEC_GPLEARN_CONFIG_FILE="_starexec/bin/starexec_run_gplearn"
 STAREXEC_DEFAULT_CONFIG_FILE="_starexec/bin/starexec_run_default"
