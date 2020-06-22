@@ -7,7 +7,7 @@ module T = struct
          | Bool of bool
          | Char of char
          | String of string
-         | BitVec of Bitarray.t
+         | BitVec of BitarrayExt.t
          | List of Type.t * t list
          | Array of Type.t * Type.t * (t * t) list * t
            (* FIXME: Use HashTable instead of List *)
@@ -33,7 +33,7 @@ let rec to_string : t -> string = function
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
-  | BitVec bv -> Bitarray.to_string bv
+  | BitVec bv -> BitarrayExt.to_string bv
   | Array (key_type, val_type, value, default_v)
     -> let default_string = "((as const (Array " ^ (Type.to_string key_type) ^ " " ^ (Type.to_string val_type) ^ ")) " ^ (to_string default_v) ^ ")"
         in List.fold_left ~init:default_string value
@@ -48,7 +48,7 @@ let of_atomic_string (s : string) : t =
     Char (Char.of_string (String.(chop_suffix_exn ~suffix:"\'"
                                     (chop_prefix_exn ~prefix:"\'" s))))
   with Invalid_argument _ -> try
-    BitVec (Bitarray.of_string s)
+    BitVec (BitarrayExt.of_string s)
   with Invalid_argument _ -> try
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
   with Invalid_argument _ ->
