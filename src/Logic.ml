@@ -37,6 +37,10 @@ let all_supported =
                    components_per_level = ArrayComponents.levels ++ BooleanComponents.levels ++ IntegerComponents.non_linear_levels ;
                    sample_set_size_multiplier = 8
                  } ; {
+                     name = "BV";
+                     components_per_level = BooleanComponents.levels ++ BitVecComponents.levels;
+                     sample_set_size_multiplier = 1
+                } ; {
                    name = "ALL" ;
                    (* FIXME: The verification side for lists, especially with transformed components,
                              doesn't work as of now -- we need to emit valid SMTLIB expressions for them *)
