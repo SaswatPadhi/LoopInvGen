@@ -183,10 +183,10 @@ let all_mapR_ge_l_0 () =
 let bvadd_a_b () =
   let result = solve ~config:{ Config.default with logic = Logic.of_string "BV" } {
     arg_names = ["a"; "b"];
-    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x)) a)
+    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (BitarrayExt.of_string x)) a)
     [ [| "#b00"; "#b01" ; "#b10" ; "#b11" |] ;
       [| "#b01"; "#b10" ; "#b11" ; "#b00"|]];
-    outputs = Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x))
+    outputs = Array.map ~f:(fun x -> Value.BitVec (BitarrayExt.of_string x))
     [| "#b01"; "#b11"; "#b01" ; "#b11" |];
     constants = []
   } in Alcotest.(check string) "identical" "(bvadd a b)" result.string
@@ -194,7 +194,7 @@ let bvadd_a_b () =
 let bvult_a_b () =
   let result = solve ~config:{ Config.default with logic = Logic.of_string "BV" } {
     arg_names = ["a"; "b"];
-    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x)) a)
+    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (BitarrayExt.of_string x)) a)
     [ [| "#b00"; "#b01" ; "#b10" ; "#b11"|] ;
       [| "#b01"; "#b10" ; "#b11" ; "#b00"|]];
     outputs = Array.map ~f:(fun b -> Value.Bool b)
@@ -205,10 +205,10 @@ let bvult_a_b () =
 let bvnot_bvsub_a_b () =
   let result = solve ~config:{ Config.default with logic = Logic.of_string "BV" } {
     arg_names = ["a"; "b"];
-    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x)) a)
+    inputs = List.map ~f:(fun a -> Array.map ~f:(fun x -> Value.BitVec (BitarrayExt.of_string x)) a)
     [ [| "#b0000"; "#b0010" ; "#b1000" ; "#b1100"|] ;
       [| "#b0100"; "#b1000" ; "#b1100" ; "#b0000"|]];
-    outputs = Array.map ~f:(fun x -> Value.BitVec (Bitarray.of_string x))
+    outputs = Array.map ~f:(fun x -> Value.BitVec (BitarrayExt.of_string x))
     [|"#b0011"; "#b0101"; "#b0011"; "#b0011"|];
     constants = []
   } in Alcotest.(check string) "identical" "(bvnot (bvsub a b))" result.string
