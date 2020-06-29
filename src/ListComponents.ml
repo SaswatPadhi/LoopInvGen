@@ -29,7 +29,26 @@ let all_qf = [
     evaluate = Value.(fun [@warning "-8"] [List (t,l)] -> List (t, (List.tl_exn l)));
     to_string = (fun [@warning "-8"] [a] -> "(tl " ^ a ^ ")");
     global_constraints = (fun _ -> [])
-  }
+  };
+  {
+    name = "rev";
+    codomain = Type.(LIST (TVAR "T1"));
+    domain = Type.[LIST (TVAR "T1")];
+    is_argument_valid = (function _ -> true);
+    evaluate = Value.(fun [@warning "-8"] [List (t,l)] -> List (t, (List.rev l)));
+    to_string = (fun [@warning "-8"] [a] -> "(rev " ^ a ^ ")");
+    global_constraints = (fun _ -> [])
+  };
+  
+  {
+    name = "equal";
+    codomain = Type.BOOL;
+    domain = Type.[LIST (TVAR "T1"); LIST (TVAR "T1") ];
+    is_argument_valid = (function _ -> true);
+    evaluate = Value.(fun [@warning "-8"] [List (t, l1) ; List (_, l2)] -> Bool (List.equal Value.equal l1 l2));  
+    to_string = (fun [@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")");
+    global_constraints = (fun _ -> [])
+  } ;
 ]
 
 let all = all_qf @ [
