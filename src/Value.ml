@@ -7,6 +7,7 @@ module T = struct
          | Bool of bool
          | Char of char
          | String of string
+         | Real of float
          | List of Type.t * t list
          | Array of Type.t * Type.t * (t * t) list * t
            (* FIXME: Use HashTable instead of List *)
@@ -21,6 +22,7 @@ let rec typeof : t -> Type.t = function
   | Bool _        -> Type.BOOL
   | Char _        -> Type.CHAR
   | String _      -> Type.STRING
+  | Real _        -> Type.REAL
   | List (typ, _) -> Type.LIST typ
   | Array (key_type, value_type, _, _)
     -> Type.ARRAY (key_type,value_type)
@@ -30,6 +32,7 @@ let rec to_string : t -> string = function
   | Bool b   -> Bool.to_string b
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
+  | Real r   -> Float.(if r < 0. then "(" ^ (to_string r) ^ ")" else to_string r)
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
   | Array (key_type, val_type, value, default_v)
     -> let default_string = "((as const (Array " ^ (Type.to_string key_type) ^ " " ^ (Type.to_string val_type) ^ ")) " ^ (to_string default_v) ^ ")"
