@@ -14,12 +14,12 @@ let translation = [
     codomain = Type.REAL;
     domain = Type.[REAL; REAL];
     is_argument_valid = Value.(function
-                       | [x ; y] -> (x =/= Constant (Real 0.)) && (y =/= Constant (Real 0.))
+                       | [x ; y] -> (x =/= Const (Real 0.)) && (y =/= Const (Real 0.))
                                  && (match [x ; y] with
-                                     | [x ; Application (comp, [_ ; y])]
+                                     | [x ; FCall (comp, [_ ; y])]
                                        when String.equal comp.name "real-sub"
                                        -> x =/= y
-                                     | [Application (comp, [_ ; x]) ; y]
+                                     | [FCall (comp, [_ ; x]) ; y]
                                        when String.equal comp.name "real-sub"
                                        -> x =/= y
                                      | _ -> true)
@@ -33,15 +33,15 @@ let translation = [
     domain = Type.[REAL; REAL];
     is_argument_valid = Value.(function
                        | [x ; y] -> (x =/= y)
-                                 && (x =/= Constant (Real 0.)) && (y =/= Constant (Real 0.))
+                                 && (x =/= Const (Real 0.)) && (y =/= Const (Real 0.))
                                  && (match [x ; y] with
-                                     | [(Application (comp, [x ; y])) ; z]
+                                     | [(FCall (comp, [x ; y])) ; z]
                                        when String.equal comp.name "real-add"
                                        -> x =/= z && y =/= z
-                                     | [(Application (comp, [x ; _])) ; y]
+                                     | [(FCall (comp, [x ; _])) ; y]
                                        when String.equal comp.name "real-sub"
                                        -> x =/= y
-                                     | [x ; (Application (comp, [y ; _]))]
+                                     | [x ; (FCall (comp, [y ; _]))]
                                        when String.(equal comp.name "real-sub" || equal comp.name "real-add")
                                        -> x =/= y
                                      | _ -> true)
@@ -58,8 +58,8 @@ let scaling = [
     domain = Type.[REAL; REAL];
     is_argument_valid = Value.(function
                        | [x ; y]
-                         -> (x =/= Constant (Real 0.)) && (x =/= Constant (Real 1.)) && (x =/= Constant (Real (-1.)))
-                         && (y =/= Constant (Real 0.)) && (y =/= Constant (Real 1.)) && (x =/= Constant (Real (-1.)))
+                         -> (x =/= Const (Real 0.)) && (x =/= Const (Real 1.)) && (x =/= Const (Real (-1.)))
+                         && (y =/= Const (Real 0.)) && (y =/= Const (Real 1.)) && (x =/= Const (Real (-1.)))
                        | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) *. (value_of v2)));
     to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "*" ^ b ^ ")")
@@ -70,8 +70,8 @@ let scaling = [
     domain = Type.[REAL; REAL];
     is_argument_valid = Value.(function
                        | [x ; y] -> x =/= y
-                                 && (x =/= Constant (Real 0.)) && (x =/= Constant (Real 1.)) && (x =/= Constant (Real (-1.)))
-                                 && (y =/= Constant (Real 0.)) && (y =/= Constant (Real 1.)) && (y =/= Constant (Real (-1.)))
+                                 && (x =/= Const (Real 0.)) && (x =/= Const (Real 1.)) && (x =/= Const (Real (-1.)))
+                                 && (y =/= Const (Real 0.)) && (y =/= Const (Real 1.)) && (y =/= Const (Real (-1.)))
                        | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) /. (value_of v2)));
     to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "/" ^ b ^ ")")
