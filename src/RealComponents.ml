@@ -14,14 +14,14 @@ let translation = [
     codomain = Type.REAL;
     domain = Type.[REAL; REAL];
     is_argument_valid = Value.(function
-                                     | [x ; FCall (comp, [_ ; y])]
-                                       when String.equal comp.name "real-sub"
-                                       -> x =/= y && (x =/= Const (Real 0.))
-                                     | [FCall (comp, [_ ; x]) ; y]
-                                       when String.equal comp.name "real-sub"
-                                       -> x =/= y && (y =/= Const (Real 0.))
-                                    | [x ; y] -> (x =/= Const (Real 0.)) && (y =/= Const (Real 0.))
-                                    | _ -> false);
+                        | [x ; FCall (comp, [_ ; y])]
+                          when String.equal comp.name "real-sub"
+                          -> x =/= y && (x =/= Const (Real 0.))
+                        | [FCall (comp, [_ ; x]) ; y]
+                          when String.equal comp.name "real-sub"
+                          -> x =/= y && (y =/= Const (Real 0.))
+                        | [x ; y] -> (x =/= Const (Real 0.)) && (y =/= Const (Real 0.))
+                        | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) +. (value_of v2)));
     to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "+" ^ b ^ ")")
   } ;
