@@ -13,7 +13,7 @@ let translation = [
     name = "real-add";
     codomain = Type.REAL;
     domain = Type.[REAL; REAL];
-    can_apply = Value.(function
+    is_argument_valid = Value.(function
                        | [x ; y] -> (x =/= Constant (Real 0.)) && (y =/= Constant (Real 0.))
                                  && (match [x ; y] with
                                      | [x ; Application (comp, [_ ; y])]
@@ -31,7 +31,7 @@ let translation = [
     name = "real-sub";
     codomain = Type.REAL;
     domain = Type.[REAL; REAL];
-    can_apply = Value.(function
+    is_argument_valid = Value.(function
                        | [x ; y] -> (x =/= y)
                                  && (x =/= Constant (Real 0.)) && (y =/= Constant (Real 0.))
                                  && (match [x ; y] with
@@ -56,7 +56,7 @@ let scaling = [
     name = "real-mult";
     codomain = Type.REAL;
     domain = Type.[REAL; REAL];
-    can_apply = Value.(function
+    is_argument_valid = Value.(function
                        | [x ; y]
                          -> (x =/= Constant (Real 0.)) && (x =/= Constant (Real 1.)) && (x =/= Constant (Real (-1.)))
                          && (y =/= Constant (Real 0.)) && (y =/= Constant (Real 1.)) && (x =/= Constant (Real (-1.)))
@@ -68,7 +68,7 @@ let scaling = [
     name = "real-div";
     codomain = Type.REAL;
     domain = Type.[REAL; REAL];
-    can_apply = Value.(function
+    is_argument_valid = Value.(function
                        | [x ; y] -> x =/= y
                                  && (x =/= Constant (Real 0.)) && (x =/= Constant (Real 1.)) && (x =/= Constant (Real (-1.)))
                                  && (y =/= Constant (Real 0.)) && (y =/= Constant (Real 1.)) && (y =/= Constant (Real (-1.)))
@@ -83,7 +83,7 @@ let conditionals = [
     name = "real-eq";
     codomain = Type.BOOL;
     domain = Type.[REAL; REAL];
-    can_apply = (function
+    is_argument_valid = (function
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.Approx.(equal (value_of v1) (value_of v2)));
@@ -93,7 +93,7 @@ let conditionals = [
     name = "real-geq";
     codomain = Type.BOOL;
     domain = Type.[REAL; REAL];
-    can_apply = (function
+    is_argument_valid = (function
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.Approx.(compare (value_of v1) (value_of v2) >= 0));
@@ -103,7 +103,7 @@ let conditionals = [
     name = "real-leq";
     codomain = Type.BOOL;
     domain = Type.[REAL; REAL];
-    can_apply = (function
+    is_argument_valid = (function
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.Approx.(compare (value_of v1) (value_of v2) <= 0));
@@ -113,7 +113,7 @@ let conditionals = [
     name = "real-ite";
     codomain = Type.REAL;
     domain = Type.[BOOL; REAL; REAL];
-    can_apply = (function
+    is_argument_valid = (function
                  | [x ; y ; z] -> (not (is_constant x)) && (y =/= z)
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [Bool x ; v1 ; v2]
