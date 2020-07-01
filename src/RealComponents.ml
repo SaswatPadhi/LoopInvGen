@@ -86,7 +86,7 @@ let conditionals = [
     is_argument_valid = (function
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
-    evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.Approx.(equal (value_of v1) (value_of v2)));
+    evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.(equal (value_of v1) (value_of v2)));
     to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "=" ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
@@ -97,7 +97,7 @@ let conditionals = [
     is_argument_valid = (function
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
-    evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.Approx.(compare (value_of v1) (value_of v2) >= 0));
+    evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.((value_of v1) >= (value_of v2)));
     to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ ">=" ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
@@ -108,7 +108,7 @@ let conditionals = [
     is_argument_valid = (function
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
-    evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.Approx.(compare (value_of v1) (value_of v2) <= 0));
+    evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.((value_of v1) <= (value_of v2)));
     to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "<=" ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
@@ -128,6 +128,6 @@ let conditionals = [
 
 
 
-let levels = Array.accumulate_lists [| translation ; scaling ; conditionals |]
+let levels = [| translation ; scaling ; conditionals |]
 
-let no_bool_levels = Array.accumulate_lists [| translation ; scaling |]
+let no_bool_levels = [| translation ; scaling |]
