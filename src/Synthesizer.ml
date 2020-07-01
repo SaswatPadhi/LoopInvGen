@@ -168,6 +168,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let bool_components = typed_components Type.BOOL in
   let char_components = typed_components Type.CHAR in
   let string_components = typed_components Type.STRING in
+  let real_components = typed_components Type.REAL in
   let poly_list_components = typed_components Type.(LIST (TVAR "_")) in
   let poly_array_components = typed_components Type.(ARRAY (TVAR "_", TVAR "_")) in
 
@@ -180,6 +181,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
   let bool_candidates = empty_candidates () in
   let char_candidates = empty_candidates () in
   let string_candidates = empty_candidates () in
+  let real_candidates = empty_candidates () in
   let list_candidates = empty_candidates () in
   let array_candidates = empty_candidates () in
 
@@ -188,6 +190,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
     | Type.BOOL    -> bool_candidates
     | Type.CHAR    -> char_candidates
     | Type.STRING  -> string_candidates
+    | Type.REAL    -> real_candidates
     | Type.LIST _  -> list_candidates
     | Type.ARRAY _ -> array_candidates
     | Type.TVAR _ when not no_tvar
@@ -310,12 +313,14 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
                                  ; (INT, int_candidates)
                                  ; (CHAR, char_candidates)
                                  ; (STRING, string_candidates)
+                                 ; (REAL, real_candidates)
                                  ; (LIST (TVAR "_"), list_candidates)
                                  ; (ARRAY (TVAR "_", TVAR "_"), array_candidates) ]
                             [ bool_components.(l)
                             ; int_components.(l)
                             ; char_components.(l)
                             ; string_components.(l)
+                            ; real_components.(l)
                             ; poly_list_components.(l)
                             ; poly_array_components.(l) ]
                             ~f:(fun (cand_type, cands) comps
