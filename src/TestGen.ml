@@ -12,11 +12,12 @@ let rec for_type (t : Type.t) : Value.t Generator.t =
   | Type.STRING -> (Int.gen_incl 0 64)
                    >>= fun len -> (String.gen_with_length len (Char.gen_print)
                                   >>= fun s -> singleton (Value.String s))
+  | Type.REAL -> (Float.gen_incl (-4096.) 4096. ) >>= fun i -> singleton (Value.Real i)
   | Type.ARRAY (key,value) -> (Int.gen_incl 0 64)
                               >>= fun len -> ((tuple2 (List.gen_with_length len (tuple2 (for_type key) (for_type value))) (for_type value))
                                               >>= fun (arr, def) -> singleton (Value.Array (key, value, arr, def)))
   | Type.LIST (t) 
-    -> (Int.gen_incl 0 64) 
+    -> (Int.gen_incl 0 14) 
         >>= fun len -> (List.gen_with_length len (for_type t))
                         >>= fun (l) -> singleton (Value.List (t, l))
   | Type.TVAR _
