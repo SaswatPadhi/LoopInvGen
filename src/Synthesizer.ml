@@ -210,7 +210,7 @@ let solve_impl (config : Config.t) (task : task) (stats : stats) =
 
   let constants = Value.(
     List.dedup_and_sort ~compare
-       ( Value.[ Int 0 ; Int 1 ; Bool true ; Bool false ]
+       ( Value.[ Int 0 ; Int 1 ; Bool true ; Bool false ; Real 0.0 ; Real 1.0 ; Real 2.0 ]
        @ (List.map task.constants ~f:(function Int x -> Int (abs x) | x -> x))))
   in
   let add_constant_candidate value =
