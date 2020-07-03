@@ -44,9 +44,6 @@ let real_abs_job = Job.create_unlabeled
           | [ Value.Real x ], Ok (Value.Real y) -> Float.(equal (-1. *. x) y))
   (* We start with no initial features *)
   ~features:[]
-  (* We have a random generator for Type.INT.
-   * We generate 64 random Value.Int elements
-   * and then wrap them in singleton lists (single arguments to abs). *)
   (List.map ~f:(fun i -> [ i ])
             Quickcheck.(random_value
               (Generator.list_with_length 64
@@ -68,9 +65,6 @@ let real_prod_job = Job.create_unlabeled
           | [ Value.Real x ], Ok (Value.Real y) -> Float.( Float.(y > x)))
   (* We start with no initial features *)
   ~features:[]
-  (* We have a random generator for Type.INT.
-   * We generate 64 random Value.Int elements
-   * and then wrap them in singleton lists (single arguments to abs). *)
   (List.map ~f:(fun i -> [ i ])
             Quickcheck.(random_value
               (Generator.list_with_length 64
