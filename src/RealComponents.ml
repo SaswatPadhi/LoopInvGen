@@ -23,7 +23,7 @@ let translation = [
                         | [x ; y] -> (x =/= Const (Real 0.)) && (y =/= Const (Real 0.))
                         | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) +. (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "+" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(+ " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
@@ -44,7 +44,7 @@ let translation = [
                           && (x =/= Const (Real 0.)) && (y =/= Const (Real 0.))
                         | _ -> false);                
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) -. (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "-" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(- " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   }
 ]
@@ -60,7 +60,7 @@ let scaling = [
                          && (y =/= Const (Real 0.)) && (y =/= Const (Real 1.)) && (x =/= Const (Real (-1.)))
                        | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) *. (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "*" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(* " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
@@ -73,7 +73,7 @@ let scaling = [
                                  && (y =/= Const (Real 0.)) && (y =/= Const (Real 1.)) && (y =/= Const (Real (-1.)))
                        | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Real ((value_of v1) /. (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "/" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(/ " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun [@warning "-8"] [_ ; b] -> ["(not (= 0 " ^ b ^ "))"]);
   }
 ]
@@ -87,7 +87,7 @@ let conditionals = [
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.(equal (value_of v1) (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "=" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
@@ -98,7 +98,7 @@ let conditionals = [
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.((value_of v1) >= (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ ">=" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(>= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
@@ -109,7 +109,7 @@ let conditionals = [
                  | [x ; y] -> (x =/= y) && (not (is_constant x && is_constant y))
                  | _ -> false);
     evaluate = Value.(fun [@warning "-8"] [v1 ; v2] -> Bool Float.((value_of v1) <= (value_of v2)));
-    to_string = (fun [@warning "-8"] [a ; b] -> "(" ^ a ^ "<=" ^ b ^ ")");
+    to_string = (fun [@warning "-8"] [a ; b] -> "(<= " ^ a ^ " " ^ b ^ ")");
     global_constraints = (fun _ -> [])
   } ;
   {
