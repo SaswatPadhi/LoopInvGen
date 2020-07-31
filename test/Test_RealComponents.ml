@@ -7,18 +7,18 @@ let add_eval = (List.find_exn RealComponents.translation
 let sub_eval = (List.find_exn RealComponents.translation
                                 ~f:(fun comp -> String.equal comp.name "real-sub")).evaluate
 
-let mult_eval = (List.find_exn ArrayComponents.scaling
+let mult_eval = (List.find_exn RealComponents.scaling
                                  ~f:(fun comp -> String.equal comp.name "real-mult")).evaluate
-let div_eval = (List.find_exn ArrayComponents.scaling
+let div_eval = (List.find_exn RealComponents.scaling
                                 ~f:(fun comp -> String.equal comp.name "real-div")).evaluate
 
-let eq_eval = (List.find_exn ArrayComponents.conditionals
+let eq_eval = (List.find_exn RealComponents.conditionals
                                 ~f:(fun comp -> String.equal comp.name "real-eq")).evaluate
-let geq_eval = (List.find_exn ArrayComponents.conditionals
+let geq_eval = (List.find_exn RealComponents.conditionals
                                 ~f:(fun comp -> String.equal comp.name "real-geq")).evaluate
-let leq_eval = (List.find_exn ArrayComponents.conditionals
+let leq_eval = (List.find_exn RealComponents.conditionals
                                 ~f:(fun comp -> String.equal comp.name "real-leq")).evaluate
-let ite_eval = (List.find_exn ArrayComponents.conditionals
+let ite_eval = (List.find_exn RealComponents.conditionals
                                 ~f:(fun comp -> String.equal comp.name "real-ite")).evaluate
 
 let add () =
@@ -30,13 +30,13 @@ let add () =
 let sub () =
   let rl = [Value.Real 7.52 ; Value.Real 3.54] in 
   let sub_ret = sub_eval rl in
-  let res = Value.equal add_ret (Value.Real 3.98)
+  let res = Value.equal sub_ret (Value.Real 3.98)
    in Alcotest.(check bool) "identical" true res
 
 let mult () =
   let rl = [Value.Real 3.54 ; Value.Real 7.52] in 
   let mult_ret = mult_eval rl in
-  let res = Value.equal add_ret (Value.Real 26.8208)
+  let res = Value.equal mult_ret (Value.Real 26.8208)
    in Alcotest.(check bool) "identical" true res
 
 let div () = 
