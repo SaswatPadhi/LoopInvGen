@@ -2,6 +2,10 @@ open Base
 
 open LoopInvGen
 
+let value_of : Value.t -> float =
+  function [@warning "-8"]
+  | Real x -> x
+
 let add_eval = (List.find_exn RealComponents.translation
                                 ~f:(fun comp -> String.equal comp.name "real-add")).evaluate
 let sub_eval = (List.find_exn RealComponents.translation
@@ -24,19 +28,19 @@ let ite_eval = (List.find_exn RealComponents.conditionals
 let add () =
   let rl = [Value.Real 3.54 ; Value.Real 7.52] in 
   let add_ret = add_eval rl in
-  let res = Value.equal add_ret (Value.Real 11.06)
+  let res = Value.equal (Value.Int 0) (Value.Int (Core_kernel.Float.robustly_compare (value_of add_ret) 11.06))
    in Alcotest.(check bool) "identical" true res
 
 let sub () =
   let rl = [Value.Real 7.52 ; Value.Real 3.54] in 
   let sub_ret = sub_eval rl in
-  let res = Value.equal sub_ret (Value.Real 3.98)
+  let res = Value.equal (Value.Int 0) (Value.Int (Core_kernel.Float.robustly_compare (value_of sub_ret) 3.98))
    in Alcotest.(check bool) "identical" true res
 
 let mult () =
   let rl = [Value.Real 3.54 ; Value.Real 7.52] in 
   let mult_ret = mult_eval rl in
-  let res = Value.equal mult_ret (Value.Real 26.8208)
+  let res = Value.equal (Value.Int 0) (Value.Int (Core_kernel.Float.robustly_compare (value_of mult_ret) 26.6208))
    in Alcotest.(check bool) "identical" true res
 
 let div () = 
@@ -80,4 +84,5 @@ let all = [
   "geq",              `Quick, geq ;
   "leq",              `Quick, leq ;
   "ite",              `Quick, ite ;
+
 ]
