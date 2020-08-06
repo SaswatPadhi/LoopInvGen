@@ -28,19 +28,19 @@ let ite_eval = (List.find_exn RealComponents.conditionals
 let add () =
   let rl = [Value.Real 3.54 ; Value.Real 7.52] in 
   let add_ret = add_eval rl in
-  let res = Value.equal (Value.Int 0) (Value.Int (Core_kernel.Float.robustly_compare (value_of add_ret) 11.06))
+  let res = equal 0 (Core_kernel.Float.robustly_compare (value_of add_ret) 11.06)
    in Alcotest.(check bool) "identical" true res
 
 let sub () =
   let rl = [Value.Real 7.52 ; Value.Real 3.54] in 
   let sub_ret = sub_eval rl in
-  let res = Value.equal (Value.Int 0) (Value.Int (Core_kernel.Float.robustly_compare (value_of sub_ret) 3.98))
+  let res = equal 0 (Core_kernel.Float.robustly_compare (value_of sub_ret) 3.98)
    in Alcotest.(check bool) "identical" true res
 
 let mult () =
   let rl = [Value.Real 3.54 ; Value.Real 7.52] in 
   let mult_ret = mult_eval rl in
-  let res = Value.equal (Value.Int 0) (Value.Int (Core_kernel.Float.robustly_compare (value_of mult_ret) 26.6208))
+  let res = equal 0 (Core_kernel.Float.robustly_compare (value_of mult_ret) 26.6208)
    in Alcotest.(check bool) "identical" true res
 
 let div () = 
