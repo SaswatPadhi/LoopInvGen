@@ -1,6 +1,9 @@
 open Base
 
+
 open Exceptions
+
+
 
 module T = struct
   type t = Int of int
@@ -17,6 +20,7 @@ end
 include T
 include Comparable.Make (T)
 
+
 let rec typeof : t -> Type.t = function
   | Int _         -> Type.INT
   | Bool _        -> Type.BOOL
@@ -32,7 +36,7 @@ let rec to_string : t -> string = function
   | Bool b   -> Bool.to_string b
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
-  | Real r   -> Float.(if r < 0. then "(" ^ (to_string r) ^ ")" else to_string r)
+  | Real r -> Float.to_string r
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
   | Array (key_type, val_type, value, default_v)
     -> let default_string = "((as const (Array " ^ (Type.to_string key_type) ^ " " ^ (Type.to_string val_type) ^ ")) " ^ (to_string default_v) ^ ")"
@@ -49,8 +53,18 @@ let of_atomic_string (s : string) : t =
                                     (chop_prefix_exn ~prefix:"\'" s))))
   with Invalid_argument _ -> try
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
+  with Invalid_argument _ -> try
+    Real (Float.of_string s)
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
+
+
+  let value_of_real_atomic_string (s : string) : float =
+  try
+    (Float.of_string s)
+  with Invalid_argument _ ->
+    raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
+
 
 (* We assume that an array serialization provides explicit (k,v) pairs --
  * either using nested `store` calls, or if-then-else constructs.
@@ -82,9 +96,15 @@ and [@warning "-8"] parse_named_array (sexp : Sexp.t)
 
 and of_sexp (sexp : Sexp.t) : t =
   let open Sexp in
+   Log.debug (lazy ("sexp: " ^ (Sexp.to_string sexp)));
   match sexp with
       | Atom v -> (of_atomic_string v)
       | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))
+      | List([(Atom "-") ; s]) -> begin match (of_sexp s) with
+                                  | Real r -> Real (-1.0 *. r)
+                                  | _ -> raise (Internal_Exn ("Real type not passed: "
+                                ^ (to_string_hum sexp))) end
+      | List([(Atom "/") ; (Atom num) ; (Atom denom)]) -> Real ((Float.of_string num) /. (Float.of_string denom))
       | List([List([ Atom "as"; Atom "const"; _ ]); _]) | List([Atom "store";_;_;_]) ->
                                       (let key_type, val_type, arr,def_val = (parse_array [] sexp) in
                                                 Array ((key_type) , (val_type) ,arr, def_val))
@@ -93,6 +113,8 @@ and of_sexp (sexp : Sexp.t) : t =
                                       Array ((key_type) , (val_type) ,arr, def_val))
       | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                 ^ (to_string_hum sexp)))
+
+
 
 let of_string (s : string) : t =
   (of_sexp (Core.Sexp.of_string s))
