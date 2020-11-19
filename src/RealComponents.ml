@@ -128,6 +128,6 @@ let conditionals = [
 
 
 
-let levels = [| translation ; scaling ; conditionals |]
+let levels = [| translation ; conditionals |]
 
 let no_bool_levels = [| translation ; scaling |]
