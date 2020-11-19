@@ -43,6 +43,10 @@ let all_supported =
                    components_per_level = ArrayComponents.levels ++ BooleanComponents.levels
                                        ++ IntegerComponents.non_linear_levels ++ ListComponents.levels ++ RealComponents.levels ;
                    sample_set_size_multiplier = 8
+                }; {
+                  name = "LRA" ;
+                  components_per_level = RealComponents.levels ++ BooleanComponents.levels ;
+                  sample_set_size_multiplier = 8
                 }]
     ; table
 
