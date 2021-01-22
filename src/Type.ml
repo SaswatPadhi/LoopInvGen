@@ -7,6 +7,7 @@ module T = struct
          | BOOL
          | CHAR
          | STRING
+         | REAL
          | TVAR of string
          | LIST of t
          | ARRAY of (t * t)
@@ -23,6 +24,7 @@ let rec of_sexp (sexp: Sexp.t) : t =
     | Atom "Bool"   -> BOOL
     | Atom "Char"   -> CHAR
     | Atom "String" -> STRING
+    | Atom "Real"   -> REAL
     | List [Atom "List" ; typ]
       -> LIST (of_sexp typ)
     | List [Atom "Array" ; index ; value]
@@ -34,6 +36,7 @@ let rec to_string : t -> string = function
   | BOOL        -> "Bool"
   | CHAR        -> "Char"
   | STRING      -> "String"
+  | REAL        -> "Real"
   | LIST t      -> "(List " ^ (to_string t) ^ ")"
   | ARRAY (k,v) -> "(Array " ^ (to_string k) ^ " " ^ (to_string v) ^ ")"
   | TVAR n      -> n

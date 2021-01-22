@@ -7,6 +7,7 @@ module T = struct
          | Bool of bool
          | Char of char
          | String of string
+         | Real of float
          | List of Type.t * t list
          | Array of Type.t * Type.t * (t * t) list * t
            (* FIXME: Use HashTable instead of List *)
@@ -21,6 +22,7 @@ let rec typeof : t -> Type.t = function
   | Bool _        -> Type.BOOL
   | Char _        -> Type.CHAR
   | String _      -> Type.STRING
+  | Real _        -> Type.REAL
   | List (typ, _) -> Type.LIST typ
   | Array (key_type, value_type, _, _)
     -> Type.ARRAY (key_type,value_type)
@@ -30,6 +32,7 @@ let rec to_string : t -> string = function
   | Bool b   -> Bool.to_string b
   | Char c   -> "\'" ^ (Char.to_string c) ^ "\'"
   | String s -> "\"" ^ s ^ "\""
+  | Real r -> Float.to_string r
   | List _   -> raise (Internal_Exn "List type (de/)serialization not implemented!")
   | Array (key_type, val_type, value, default_v)
     -> let default_string = "((as const (Array " ^ (Type.to_string key_type) ^ " " ^ (Type.to_string val_type) ^ ")) " ^ (to_string default_v) ^ ")"
@@ -46,6 +49,8 @@ let of_atomic_string (s : string) : t =
                                     (chop_prefix_exn ~prefix:"\'" s))))
   with Invalid_argument _ -> try
     String String.(chop_suffix_exn ~suffix:"\"" (chop_prefix_exn ~prefix:"\"" s))
+  with Invalid_argument _ -> try
+    Real (Float.of_string s)
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
 
@@ -82,6 +87,11 @@ and of_sexp (sexp : Sexp.t) : t =
   match sexp with
       | Atom v -> (of_atomic_string v)
       | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))
+      | List([(Atom "-") ; s]) -> begin match (of_sexp s) with
+                                  | Real r -> Real (-1.0 *. r)
+                                  | _ -> raise (Internal_Exn ("Real type not passed: "
+                                ^ (to_string_hum sexp))) end
+      | List([(Atom "/") ; (Atom num) ; (Atom denom)]) -> Real ((Float.of_string num) /. (Float.of_string denom))
       | List([List([ Atom "as"; Atom "const"; _ ]); _]) | List([Atom "store";_;_;_]) ->
                                       (let key_type, val_type, arr,def_val = (parse_array [] sexp) in
                                                 Array ((key_type) , (val_type) ,arr, def_val))
