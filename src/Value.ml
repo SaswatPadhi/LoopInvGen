@@ -96,7 +96,6 @@ and [@warning "-8"] parse_named_array (sexp : Sexp.t)
 
 and of_sexp (sexp : Sexp.t) : t =
   let open Sexp in
-   Log.debug (lazy ("sexp: " ^ (Sexp.to_string sexp)));
   match sexp with
       | Atom v -> (of_atomic_string v)
       | List([(Atom "-") ; (Atom v)]) -> (of_atomic_string ("-" ^ v))
