@@ -24,7 +24,7 @@ let rec of_sexp (sexp: Sexp.t) : t =
     | Atom "Bool"   -> BOOL
     | Atom "Char"   -> CHAR
     | Atom "String" -> STRING
-    | Atom "Real" -> REAL
+    | Atom "Real"   -> REAL
     | List [Atom "List" ; typ]
       -> LIST (of_sexp typ)
     | List [Atom "Array" ; index ; value]
