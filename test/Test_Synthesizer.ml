@@ -180,9 +180,34 @@ let all_mapR_ge_l_0 () =
     constants = []
   } in Alcotest.(check string) "identical" "(all (map-fixR-int-geq l 0))" result.string
 
+let real_add () =
+  let open Synthesizer in
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "LRA" } {
+    arg_names = [ "x" ; "y" ; "z" ];
+    inputs = List.map ~f:(Array.map ~f:(fun r -> Value.Real r))
+                [ [| 1.7 ; 2. ; 3. ; 4.1 ; 5.; 6.|];
+                [| 1. ; 0.5; 1.; 0.25 ; (-0.2); 1. |]; 
+                [| 2.7 ; 2.5; 3.; 4.35 ; 4.8; 8.1 |] ];
+    outputs = Array.map ~f:(fun b -> Value.Bool b)
+                        [| true; true; false; true; true; false |];
+    constants = []
+  } in Alcotest.(check string) "identical" "(= (+ x y) z)" result.string
+
+let real_div () =
+  let open Synthesizer in
+  let result = solve ~config:{ Config.default with logic = Logic.of_string "LRA" } {
+    arg_names = [ "x" ; "y" ];
+    inputs = List.map ~f:(Array.map ~f:(fun r -> Value.Real r))
+                [ [| 3. ; 7. ; -1.5 ; -4.5 ; -3.2 ; 8.1 |]; 
+                [| 6.0 ; 15.6 ; -3.0 ; -9.0 ; -6.0 ; 16.2 |] ];
+    outputs = Array.map ~f:(fun b -> Value.Bool b)
+                        [| true ; false ; true ; true ; false ; true |];
+    constants = []
+  } in Alcotest.(check string) "identical" "(= (/ y 2.) x)" result.string
+
 let all = [
   "(+ x y)",                         `Quick, plus_x_y ;
-  "(>= (+ x z) y)",                  `Quick, ge_plus_x_z_y ;
+  "(>= (+ x z) y)",                  `Quick, ge_plus_x_z_y ; 
   "(not (= (= w x) (= y z)))",       `Quick, not_or_eq_w_x_eq_y_z ;
   "(select a k)",                    `Quick, select_a_k ;
   "(store a k v) ; empty",           `Quick, store_a_k_v__empty ;
@@ -191,4 +216,6 @@ let all = [
   "(store a k v) ; with duplicates", `Quick, store_a_k_v__with_duplicates ;
   "(>= y (len x))",                  `Quick, ge_y_len_x ;
   "(all (map-fixR-int-geq l 0))",    `Quick, all_mapR_ge_l_0 ;
+  "(= (+ x y) z)",                   `Quick, real_add ;
+  "(= (/ y 2.) x)",                  `Quick, real_div ;
 ]
