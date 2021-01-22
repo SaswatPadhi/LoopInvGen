@@ -1,9 +1,6 @@
 open Base
 
-
 open Exceptions
-
-
 
 module T = struct
   type t = Int of int
@@ -19,7 +16,6 @@ end
 
 include T
 include Comparable.Make (T)
-
 
 let rec typeof : t -> Type.t = function
   | Int _         -> Type.INT
@@ -57,14 +53,6 @@ let of_atomic_string (s : string) : t =
     Real (Float.of_string s)
   with Invalid_argument _ ->
     raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
-
-
-  let value_of_real_atomic_string (s : string) : float =
-  try
-    (Float.of_string s)
-  with Invalid_argument _ ->
-    raise (Parse_Exn ("Failed to parse value `" ^ s ^ "`."))
-
 
 (* We assume that an array serialization provides explicit (k,v) pairs --
  * either using nested `store` calls, or if-then-else constructs.
@@ -112,8 +100,6 @@ and of_sexp (sexp : Sexp.t) : t =
                                       Array ((key_type) , (val_type) ,arr, def_val))
       | _ -> raise (Internal_Exn ("Unable to deserialize value: "
                                 ^ (to_string_hum sexp)))
-
-
 
 let of_string (s : string) : t =
   (of_sexp (Core.Sexp.of_string s))

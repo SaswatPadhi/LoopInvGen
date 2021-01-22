@@ -22,8 +22,6 @@ let geq_eval = (List.find_exn RealComponents.conditionals
                                 ~f:(fun comp -> String.equal comp.name "real-geq")).evaluate
 let leq_eval = (List.find_exn RealComponents.conditionals
                                 ~f:(fun comp -> String.equal comp.name "real-leq")).evaluate
-let ite_eval = (List.find_exn RealComponents.conditionals
-                                ~f:(fun comp -> String.equal comp.name "real-ite")).evaluate
 
 let add () =
   let rl = [Value.Real 3.54 ; Value.Real 7.52] in 
@@ -146,20 +144,6 @@ let leq_not () =
   let res = Value.equal leq_ret (Value.Bool false)
    in Alcotest.(check bool) "identical" true res
 
-let ite () =
-  let rl = [Value.Bool false ; Value.Real 3.54 ; Value.Real 7.52] in 
-  let ite_ret = ite_eval rl in
-  let res = Value.equal ite_ret (Value.Real 7.52)
-   in Alcotest.(check bool) "identical" true res
-
-let ite_true () =
-  let rl = [Value.Bool true ; Value.Real 3.54 ; Value.Real 7.52] in 
-  let ite_ret = ite_eval rl in
-  let res = Value.equal ite_ret (Value.Real 3.54)
-   in Alcotest.(check bool) "identical" true res
-
-
-
 
 let all = [
   "add",              `Quick, add ;
@@ -182,7 +166,5 @@ let all = [
   "leq",              `Quick, leq ;
   "leq_eq",           `Quick, leq_eq ;
   "leq_not",          `Quick, leq_not ;
-  "ite",              `Quick, ite ;
-  "ite_true",         `Quick, ite_true ;
 
 ]
